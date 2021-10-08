@@ -60,13 +60,14 @@ act_net, rt1_net, rxn_net, rt2_net = load_modules_from_checkpoint(
 
 def func(emb):
     """
-    Generates the synthetic tree for the input moleular embedding.
+    Generates the synthetic tree for the input molecular embedding.
 
     Args:
         emb (np.ndarray): Molecular embedding to decode.
 
     Returns:
-        np.ndarray or None: State of the generated synthetic tree.
+        np.ndarray: TODO
+        SyntheticTree: The generated synthetic tree.
     """
     emb = emb.reshape((1, -1))
     try:

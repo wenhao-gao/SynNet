@@ -311,7 +311,7 @@ def synthetic_tree_decoder(z_target,
                            rxn_net,
                            reactant2_net,
                            bb_emb,
-                           n_bits, 
+                           n_bits,
                            max_step=15):
     """
     Computes the synthetic tree given an input molecule embedding, using the

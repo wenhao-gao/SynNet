@@ -9,7 +9,7 @@ import multiprocessing as mp
 from time import time
 
 from syn_net.utils.data_utils import SyntheticTreeSet
-import synth_net.data_generation._mp_make as make
+import syn_net.data_generation._mp_make as make
 
 
 if __name__ == '__main__':

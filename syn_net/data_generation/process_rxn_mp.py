@@ -9,7 +9,7 @@ import multiprocessing as mp
 from time import time
 
 from syn_net.utils.data_utils import Reaction, ReactionSet
-import synth_net.data_generation._mp_process as process
+import syn_net.data_generation._mp_process as process
 import shutup
 shutup.please()
 

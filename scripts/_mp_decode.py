@@ -70,7 +70,7 @@ def func(emb):
     """
     emb = emb.reshape((1, -1))
     try:
-        tree, action = synthetic_tree_decoder(emb, building_blocks, bb_dict, rxns, mol_embedder, act_net, rt1_net, rxn_net, rt2_net, bb_emb, n_bits=nbits, max_step=15)
+        tree, action = synthetic_tree_decoder(emb, building_blocks, bb_dict, rxns, mol_embedder, act_net, rt1_net, rxn_net, rt2_net, bb_emb, rxn_template=rxn_template, n_bits=nbits, max_step=15)
     except Exception as e:
         print(e)
         action = -1

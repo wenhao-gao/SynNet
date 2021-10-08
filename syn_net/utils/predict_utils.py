@@ -18,6 +18,7 @@ from syn_net.models.mlp import MLP
 np.random.seed(6)
 
 
+# general functions
 def can_react(state, rxns):
     """
     Determines if two molecules can react using any of the input reactions.
@@ -311,6 +312,7 @@ def synthetic_tree_decoder(z_target,
                            rxn_net,
                            reactant2_net,
                            bb_emb,
+                           rxn_template,
                            n_bits,
                            max_step=15):
     """
@@ -328,6 +330,7 @@ def synthetic_tree_decoder(z_target,
         rxn_net (synth_net.models.mlp.MLP): The reaction network
         reactant2_net (synth_net.models.mlp.MLP): The reactant2 network
         bb_emb (list): Contains purchasable building block embeddings.
+        rxn_template (str): Specifies the set of reaction templates to use.
         n_bits (int): Length of fingerprint.
         max_step (int, optional): Maximum number of steps to include in the synthetic tree
 
@@ -447,182 +450,182 @@ def load_modules_from_checkpoint(path_to_act, path_to_rt1, path_to_rxn, path_to_
     if featurize == 'fp':
 
         act_net = MLP.load_from_checkpoint(path_to_act,
-                            input_dim=int(3 * nbits),
-                            output_dim=4,
-                            hidden_dim=1000,
-                            num_layers=5,
-                            dropout=0.5,
-                            num_dropout_layers=1,
-                            task='classification',
-                            loss='cross_entropy',
-                            valid_loss='accuracy',
-                            optimizer='adam',
-                            learning_rate=1e-4,
-                            ncpu=ncpu)
+                                           input_dim=int(3 * nbits),
+                                           output_dim=4,
+                                           hidden_dim=1000,
+                                           num_layers=5,
+                                           dropout=0.5,
+                                           num_dropout_layers=1,
+                                           task='classification',
+                                           loss='cross_entropy',
+                                           valid_loss='accuracy',
+                                           optimizer='adam',
+                                           learning_rate=1e-4,
+                                           ncpu=ncpu)
 
         rt1_net = MLP.load_from_checkpoint(path_to_rt1,
-                            input_dim=int(3 * nbits),
-                            output_dim=out_dim,
-                            hidden_dim=1200,
-                            num_layers=5,
-                            dropout=0.5,
-                            num_dropout_layers=1,
-                            task='regression',
-                            loss='mse',
-                            valid_loss='mse',
-                            optimizer='adam',
-                            learning_rate=1e-4,
-                            ncpu=ncpu)
+                                           input_dim=int(3 * nbits),
+                                           output_dim=out_dim,
+                                           hidden_dim=1200,
+                                           num_layers=5,
+                                           dropout=0.5,
+                                           num_dropout_layers=1,
+                                           task='regression',
+                                           loss='mse',
+                                           valid_loss='mse',
+                                           optimizer='adam',
+                                           learning_rate=1e-4,
+                                           ncpu=ncpu)
 
         if rxn_template == 'hb':
 
             rxn_net = MLP.load_from_checkpoint(path_to_rxn,
-                                input_dim=int(4 * nbits),
-                                output_dim=91,
-                                hidden_dim=3000,
-                                num_layers=5,
-                                dropout=0.5,
-                                num_dropout_layers=1,
-                                task='classification',
-                                loss='cross_entropy',
-                                valid_loss='accuracy',
-                                optimizer='adam',
-                                learning_rate=1e-4,
-                                ncpu=ncpu)
+                                               input_dim=int(4 * nbits),
+                                               output_dim=91,
+                                               hidden_dim=3000,
+                                               num_layers=5,
+                                               dropout=0.5,
+                                               num_dropout_layers=1,
+                                               task='classification',
+                                               loss='cross_entropy',
+                                               valid_loss='accuracy',
+                                               optimizer='adam',
+                                               learning_rate=1e-4,
+                                               ncpu=ncpu)
 
             rt2_net = MLP.load_from_checkpoint(path_to_rt2,
-                                input_dim=int(4 * nbits + 91),
-                                output_dim=out_dim,
-                                hidden_dim=3000,
-                                num_layers=5,
-                                dropout=0.5,
-                                num_dropout_layers=1,
-                                task='regression',
-                                loss='mse',
-                                valid_loss='mse',
-                                optimizer='adam',
-                                learning_rate=1e-4,
-                                ncpu=ncpu)
+                                               input_dim=int(4 * nbits + 91),
+                                               output_dim=out_dim,
+                                               hidden_dim=3000,
+                                               num_layers=5,
+                                               dropout=0.5,
+                                               num_dropout_layers=1,
+                                               task='regression',
+                                               loss='mse',
+                                               valid_loss='mse',
+                                               optimizer='adam',
+                                               learning_rate=1e-4,
+                                               ncpu=ncpu)
 
         elif rxn_template == 'pis':
 
             rxn_net = MLP.load_from_checkpoint(path_to_rxn,
-                                input_dim=int(4 * nbits),
-                                output_dim=4700,
-                                hidden_dim=4500,
-                                num_layers=5,
-                                dropout=0.5,
-                                num_dropout_layers=1,
-                                task='classification',
-                                loss='cross_entropy',
-                                valid_loss='accuracy',
-                                optimizer='adam',
-                                learning_rate=1e-4,
-                                ncpu=ncpu)
+                                               input_dim=int(4 * nbits),
+                                               output_dim=4700,
+                                               hidden_dim=4500,
+                                               num_layers=5,
+                                               dropout=0.5,
+                                               num_dropout_layers=1,
+                                               task='classification',
+                                               loss='cross_entropy',
+                                               valid_loss='accuracy',
+                                               optimizer='adam',
+                                               learning_rate=1e-4,
+                                               ncpu=ncpu)
 
             rt2_net = MLP.load_from_checkpoint(path_to_rt2,
-                                input_dim=int(4 * nbits + 4700),
-                                output_dim=out_dim,
-                                hidden_dim=3000,
-                                num_layers=5,
-                                dropout=0.5,
-                                num_dropout_layers=1,
-                                task='regression',
-                                loss='mse',
-                                valid_loss='mse',
-                                optimizer='adam',
-                                learning_rate=1e-4,
-                                ncpu=ncpu)
+                                               input_dim=int(4 * nbits + 4700),
+                                               output_dim=out_dim,
+                                               hidden_dim=3000,
+                                               num_layers=5,
+                                               dropout=0.5,
+                                               num_dropout_layers=1,
+                                               task='regression',
+                                               loss='mse',
+                                               valid_loss='mse',
+                                               optimizer='adam',
+                                               learning_rate=1e-4,
+                                               ncpu=ncpu)
 
     elif featurize == 'gin':
 
         act_net = MLP.load_from_checkpoint(path_to_act,
-                            input_dim=int(2 * nbits + out_dim),
-                            output_dim=4,
-                            hidden_dim=1000,
-                            num_layers=5,
-                            dropout=0.5,
-                            num_dropout_layers=1,
-                            task='classification',
-                            loss='cross_entropy',
-                            valid_loss='accuracy',
-                            optimizer='adam',
-                            learning_rate=1e-4,
-                            ncpu=ncpu)
+                                           input_dim=int(2 * nbits + out_dim),
+                                           output_dim=4,
+                                           hidden_dim=1000,
+                                           num_layers=5,
+                                           dropout=0.5,
+                                           num_dropout_layers=1,
+                                           task='classification',
+                                           loss='cross_entropy',
+                                           valid_loss='accuracy',
+                                           optimizer='adam',
+                                           learning_rate=1e-4,
+                                           ncpu=ncpu)
 
         rt1_net = MLP.load_from_checkpoint(path_to_rt1,
-                            input_dim=int(2 * nbits + out_dim),
-                            output_dim=out_dim,
-                            hidden_dim=1200,
-                            num_layers=5,
-                            dropout=0.5,
-                            num_dropout_layers=1,
-                            task='regression',
-                            loss='mse',
-                            valid_loss='mse',
-                            optimizer='adam',
-                            learning_rate=1e-4,
-                            ncpu=ncpu)
+                                           input_dim=int(2 * nbits + out_dim),
+                                           output_dim=out_dim,
+                                           hidden_dim=1200,
+                                           num_layers=5,
+                                           dropout=0.5,
+                                           num_dropout_layers=1,
+                                           task='regression',
+                                           loss='mse',
+                                           valid_loss='mse',
+                                           optimizer='adam',
+                                           learning_rate=1e-4,
+                                           ncpu=ncpu)
 
         if rxn_template == 'hb':
 
             rxn_net = MLP.load_from_checkpoint(path_to_rxn,
-                                input_dim=int(3 * nbits + out_dim),
-                                output_dim=91,
-                                hidden_dim=3000,
-                                num_layers=5,
-                                dropout=0.5,
-                                num_dropout_layers=1,
-                                task='classification',
-                                loss='cross_entropy',
-                                valid_loss='accuracy',
-                                optimizer='adam',
-                                learning_rate=1e-4,
-                                ncpu=ncpu)
+                                               input_dim=int(3 * nbits + out_dim),
+                                               output_dim=91,
+                                               hidden_dim=3000,
+                                               num_layers=5,
+                                               dropout=0.5,
+                                               num_dropout_layers=1,
+                                               task='classification',
+                                               loss='cross_entropy',
+                                               valid_loss='accuracy',
+                                               optimizer='adam',
+                                               learning_rate=1e-4,
+                                               ncpu=ncpu)
 
             rt2_net = MLP.load_from_checkpoint(path_to_rt2,
-                                input_dim=int(3 * nbits + out_dim + 91),
-                                output_dim=out_dim,
-                                hidden_dim=3000,
-                                num_layers=5,
-                                dropout=0.5,
-                                num_dropout_layers=1,
-                                task='regression',
-                                loss='mse',
-                                valid_loss='mse',
-                                optimizer='adam',
-                                learning_rate=1e-4,
-                                ncpu=ncpu)
+                                               input_dim=int(3 * nbits + out_dim + 91),
+                                               output_dim=out_dim,
+                                               hidden_dim=3000,
+                                               num_layers=5,
+                                               dropout=0.5,
+                                               num_dropout_layers=1,
+                                               task='regression',
+                                               loss='mse',
+                                               valid_loss='mse',
+                                               optimizer='adam',
+                                               learning_rate=1e-4,
+                                               ncpu=ncpu)
 
         elif rxn_template == 'pis':
 
             rxn_net = MLP.load_from_checkpoint(path_to_rxn,
-                                input_dim=int(3 * nbits + out_dim),
-                                output_dim=4700,
-                                hidden_dim=3000,
-                                num_layers=5,
-                                dropout=0.5,
-                                num_dropout_layers=1,
-                                task='classification',
-                                loss='cross_entropy',
-                                valid_loss='accuracy',
-                                optimizer='adam',
-                                learning_rate=1e-4,
-                                ncpu=ncpu)
+                                               input_dim=int(3 * nbits + out_dim),
+                                               output_dim=4700,
+                                               hidden_dim=3000,
+                                               num_layers=5,
+                                               dropout=0.5,
+                                               num_dropout_layers=1,
+                                               task='classification',
+                                               loss='cross_entropy',
+                                               valid_loss='accuracy',
+                                               optimizer='adam',
+                                               learning_rate=1e-4,
+                                               ncpu=ncpu)
 
             rt2_net = MLP.load_from_checkpoint(path_to_rt2,
-                                input_dim=int(3 * nbits + out_dim + 4700),
-                                output_dim=out_dim,
-                                hidden_dim=3000,
-                                num_layers=5,
-                                dropout=0.5,
-                                num_dropout_layers=1,
-                                task='regression',
-                                loss='mse',
-                                valid_loss='mse',
-                                optimizer='adam',
-                                learning_rate=1e-4,
-                                ncpu=ncpu)
+                                               input_dim=int(3 * nbits + out_dim + 4700),
+                                               output_dim=out_dim,
+                                               hidden_dim=3000,
+                                               num_layers=5,
+                                               dropout=0.5,
+                                               num_dropout_layers=1,
+                                               task='regression',
+                                               loss='mse',
+                                               valid_loss='mse',
+                                               optimizer='adam',
+                                               learning_rate=1e-4,
+                                               ncpu=ncpu)
 
     act_net.eval()
     rt1_net.eval()
@@ -658,3 +661,194 @@ def tanimoto_similarity(target_fp, smis):
     """
     fps = [mol_fp(smi, 2, 4096) for smi in smis]
     return [_tanimoto_similarity(target_fp, fp) for fp in fps]
+
+
+# functions used in the *_multireactant.py
+def nn_search_rt1(_e, _tree, _k=1):
+    dist, ind = _tree.query(_e, k=_k)
+    return dist[0], ind[0]
+
+def synthetic_tree_decoder_rt1(z_target,
+                                building_blocks,
+                                bb_dict,
+                                reaction_templates,
+                                mol_embedder,
+                                action_net,
+                                reactant1_net,
+                                rxn_net,
+                                reactant2_net,
+                                bb_emb,
+                                rxn_template,
+                                n_bits,
+                                max_step=15,
+                                rt1_index=0):
+    # TODO docstring
+    # Initialization
+    tree = SyntheticTree()
+    mol_recent = None
+    kdtree = BallTree(bb_emb, metric=cosine_distance)  # TODO
+
+    # Start iteration
+    # try:
+    for i in range(max_step):
+        # Encode current state
+        # from ipdb import set_trace; set_trace(context=11)
+        state = tree.get_state() # a set
+        z_state = set_embedding(z_target, state, nbits=n_bits, mol_fp=mol_fp)
+
+        # Predict action type, masked selection
+        # Action: (Add: 0, Expand: 1, Merge: 2, End: 3)
+        action_proba = action_net(torch.Tensor(z_state))
+        action_proba = action_proba.squeeze().detach().numpy() + 1e-10
+        action_mask = get_action_mask(tree.get_state(), reaction_templates)
+        act = np.argmax(action_proba * action_mask)
+
+        # import ipdb; ipdb.set_trace(context=9)
+
+        # z_mol1 = reactant1_net(torch.Tensor(np.concatenate([z_state, one_hot_encoder(act, 4)], axis=1)))
+        z_mol1 = reactant1_net(torch.Tensor(z_state))
+        z_mol1 = z_mol1.detach().numpy()
+
+        # Select first molecule
+        if act == 3:
+            # End
+            break
+        elif act == 0:
+            # Add
+            if mol_recent is not None:
+                dist, ind = nn_search(z_mol1)
+                mol1 = building_blocks[ind]
+            else:
+                dist, ind = nn_search_rt1(z_mol1, _tree=kdtree, _k=rt1_index+1)
+                mol1 = building_blocks[ind[rt1_index]]
+        else:
+            # Expand or Merge
+            mol1 = mol_recent
+
+        # z_mol1 = get_mol_embedding(mol1, mol_embedder)
+        z_mol1 = mol_fp(mol1)
+
+        # import ipdb; ipdb.set_trace()
+
+        # Select reaction
+        reaction_proba = rxn_net(torch.Tensor(np.concatenate([z_state, z_mol1], axis=1)))
+        reaction_proba = reaction_proba.squeeze().detach().numpy() + 1e-10
+
+        if act != 2:
+            reaction_mask, available_list = get_reaction_mask(mol1, reaction_templates)
+        else:
+            _, reaction_mask = can_react(tree.get_state(), reaction_templates)
+            available_list = [[] for rxn in reaction_templates]
+
+        if reaction_mask is None:
+            if len(state) == 1:
+                act = 3
+                break
+            else:
+                break
+
+        rxn_id = np.argmax(reaction_proba * reaction_mask)
+        rxn = reaction_templates[rxn_id]
+
+        if rxn.num_reactant == 2:
+            # Select second molecule
+            if act == 2:
+                # Merge
+                temp = set(state) - set([mol1])
+                mol2 = temp.pop()
+            else:
+                # Add or Expand
+                if rxn_template == 'hb':
+                    z_mol2 = reactant2_net(torch.Tensor(np.concatenate([z_state, z_mol1, one_hot_encoder(rxn_id, 91)], axis=1)))
+                elif rxn_template == 'pis':
+                    z_mol2 = reactant2_net(torch.Tensor(np.concatenate([z_state, z_mol1, one_hot_encoder(rxn_id, 4700)], axis=1)))
+                z_mol2 = z_mol2.detach().numpy()
+                available = available_list[rxn_id]
+                available = [bb_dict[available[i]] for i in range(len(available))]
+                temp_emb = bb_emb[available]
+                available_tree = BallTree(temp_emb, metric=cosine_distance)
+                dist, ind = nn_search(z_mol2, _tree=available_tree)
+                mol2 = building_blocks[available[ind]]
+        else:
+            mol2 = None
+
+        # Run reaction
+        mol_product = rxn.run_reaction([mol1, mol2])
+        if mol_product is None or Chem.MolFromSmiles(mol_product) is None:
+            act = 3
+            break
+
+        # Update
+        tree.update(act, int(rxn_id), mol1, mol2, mol_product)
+        mol_recent = mol_product
+
+    if act != 3:
+        tree = tree
+    else:
+        tree.update(act, None, None, None, None)
+
+    return tree, act
+
+def synthetic_tree_decoder_multireactant(z_target,
+                                         building_blocks,
+                                         bb_dict,
+                                         reaction_templates,
+                                         mol_embedder,
+                                         action_net,
+                                         reactant1_net,
+                                         rxn_net,
+                                         reactant2_net,
+                                         bb_emb,
+                                         rxn_template,
+                                         n_bits,
+                                         beam_width : int=3,
+                                         max_step : int=15):
+    """
+    Computes the synthetic tree given an input molecule embedding, using the
+    Action, Reaction, Reactant1, and Reactant2 networks and a greedy search
+
+    Args:
+        z_target (np.ndarray): Embedding for the target molecule
+        building_blocks (list of str): Contains available building blocks
+        bb_dict (dict): Building block dictionary
+        reaction_templates (list of Reactions): Contains reaction templates
+        mol_embedder (dgllife.model.gnn.gin.GIN): GNN to use for obtaining molecular embeddings
+        action_net (synth_net.models.mlp.MLP): The action network
+        reactant1_net (synth_net.models.mlp.MLP): The reactant1 network
+        rxn_net (synth_net.models.mlp.MLP): The reaction network
+        reactant2_net (synth_net.models.mlp.MLP): The reactant2 network
+        bb_emb (list): Contains purchasable building block embeddings.
+        rxn_template (str): Specifies the set of reaction templates to use.
+        n_bits (int): Length of fingerprint.
+        beam_width (int): The beam width to use for Reactant 1 search. Defaults to 3.
+        max_step (int, optional): Maximum number of steps to include in the synthetic tree
+
+    Returns:
+        tree (SyntheticTree): The final synthetic tree
+        act (int): The final action (to know if the tree was "properly" terminated)
+    """
+    trees = []
+    smiles = []
+    similarities = []
+    acts = []
+
+    for i in range(beam_width):
+        tree, act = synthetic_tree_decoder_rt1(z_target, building_blocks, bb_dict, reaction_templates, mol_embedder,
+                                                action_net, reactant1_net, rxn_net, reactant2_net, bb_emb=bb_emb, rxn_template=rxn_template, n_bits=n_bits, max_step=max_step, rt1_index=i)
+
+
+        similarities_ = np.array(tanimoto_similarity(z_target, [node.smiles for node in tree.chemicals]))
+        max_simi_idx = np.where(similarities_ == np.max(similarities_))[0][0]
+
+        similarities.append(np.max(similarities_))
+        smiles.append(tree.chemicals[max_simi_idx].smiles)
+        trees.append(tree)
+        acts.append(act)
+
+    max_simi_idx = np.where(similarities == np.max(similarities))[0][0]
+    similarity = similarities[max_simi_idx]
+    tree = trees[max_simi_idx]
+    smi = smiles[max_simi_idx]
+    act = acts[max_simi_idx]
+
+    return smi, similarity, tree, act

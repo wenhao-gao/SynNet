@@ -127,7 +127,7 @@ def graph_construction_and_featurization(smiles):
             parsed by RDKit.
     """
     graphs = []
-    success = [][type]
+    success = []
     for smi in tqdm(smiles):
         try:
             mol = Chem.MolFromSmiles(smi)

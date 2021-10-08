@@ -1,3 +1,6 @@
+"""
+Computes the sum of a single molecular embedding.
+"""
 import numpy as np
 
 

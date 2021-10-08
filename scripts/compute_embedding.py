@@ -1,82 +1,39 @@
 """
-This file contains functions for learning graph embeddings using GIN from SMILES.
+This file contains functions for generating molecular embeddings from SMILES using GIN.
 """
 import pandas as pd
 import numpy as np
 from tqdm import tqdm
-from typing import Tuple
-import multiprocessing as mp
-
-import rdkit
 import rdkit.Chem as Chem
 import rdkit.Chem.AllChem as AllChem
 from rdkit import DataStructs
-
 import torch
 from dgl.nn.pytorch.glob import AvgPooling
 from dgllife.model import load_pretrained
 from dgllife.utils import mol_to_bigraph, PretrainAtomFeaturizer, PretrainBondFeaturizer
-
 from tdc.chem_utils import MolConvert
+
+
+# define the RDKit 2D descriptors conversion function
 rdkit2d = MolConvert(src = 'SMILES', dst = 'RDKit2D')
 
+# define model to use for molecular embedding
 model_type = 'gin_supervised_contextpred'
 device = 'cpu'
-
 model = load_pretrained(model_type).to(device) # used to learn embedding
 model.eval()
-readout = AvgPooling()  # TODO would not be better if this was sum?
+readout = AvgPooling()
 
-def graph_construction_and_featurization(smiles : list) -> Tuple[list, list]:
-    """Constructs graphs from SMILES and featurizes them.
-
-    Parameters
-    ----------
-    smiles : list of str
-        SMILES of molecules for embedding computation
-
-    Returns
-    -------
-    graphs : list of DGLGraph
-        List of graphs constructed and featurized
-    success : list of bool
-        Indicators for whether the SMILES string can be parsed by RDKit
+def mol_embedding(smi, device='cuda:0'):
     """
-    graphs = []
-    success = []
-    for smi in tqdm(smiles):
-        try:
-            mol = Chem.MolFromSmiles(smi)
-            if mol is None:
-                success.append(False)
-                continue
+    Constructs a graph embedding for an input SMILES.
 
-            # convert RDKit.Mol into featurized bi-directed DGLGraph 
-            g = mol_to_bigraph(mol, add_self_loop=True,
-                               node_featurizer=PretrainAtomFeaturizer(),
-                               edge_featurizer=PretrainBondFeaturizer(),
-                               canonical_atom_order=False)
-            graphs.append(g)
-            success.append(True)
-        except:
-            success.append(False)
+    Args:
+        smi (str): A SMILES string.
+        device (str): Indicates the device to run on. Default 'cuda:0'
 
-    return graphs, success
-
-def mol_embedding(smi : str, device : str='cuda:0') -> torch.Tensor:
-    """Constructs a graph embedding for an input SMILES.
-
-    Parameters
-    ----------
-    smi : str
-        A SMILES string
-    device : str
-        Indicates the device to run on. Default 'cuda:0'
-
-    Returns
-    -------
-    torch.Tensor
-        The graph embedding
+    Returns:
+        np.ndarray: Either a zeros array or the graph embedding.
     """
     if smi is None:
         return np.zeros(300)
@@ -98,6 +55,17 @@ def mol_embedding(smi : str, device : str='cuda:0') -> torch.Tensor:
 
 
 def fp_embedding(smi, _radius=2, _nBits=4096):
+    """
+    General function for building variable-size & -radius Morgan fingerprints.
+
+    Args:
+        smi (str): The SMILES to encode.
+        _radius (int, optional): Morgan fingerprint radius. Defaults to 2.
+        _nBits (int, optional): Morgan fingerprint length. Defaults to 4096.
+
+    Returns:
+        np.ndarray: A Morgan fingerprint generated using the specified parameters.
+    """
     if smi is None:
         return np.zeros(_nBits).reshape((-1, )).tolist()
     else:
@@ -130,8 +98,18 @@ def rdkit2d_embedding(smi):
 
 
 def get_mol_embedding_func(feature):
+    """
+    Returns the molecular embedding function.
+
+    Args:
+        feature (str): Indicates the type of featurization to use (GIN or Morgan
+            fingerprint), and the size.
+
+    Returns:
+        Callable: The embedding function.
+    """
     if feature == 'gin':
-        embedding_func = lambda smi: gin_embedding(smi, device='cpu')
+        embedding_func = lambda smi: model(smi, device='cpu')
     elif feature == 'fp_4096':
         embedding_func = lambda smi: fp_embedding(smi, _nBits=4096)
     elif feature == 'fp_2048':
@@ -162,7 +140,7 @@ if __name__ == '__main__':
 
     embeddings = []
     for smi in tqdm(data):
-        embeddings.append(gin_embedding(smi))
+        embeddings.append(model(smi))
 
     embedding = np.array(embeddings)
     np.save(path + 'enamine_us_emb_' + args.feature + '.npy', embeddings)

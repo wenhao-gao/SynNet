@@ -1,7 +1,10 @@
+"""
+Computes the molecular embeddings of the purchasable building blocks.
+"""
 import multiprocessing as mp
 from scripts.compute_embedding import *
-from rdkit import RDLogger 
-RDLogger.DisableLog('*') 
+from rdkit import RDLogger
+RDLogger.DisableLog('*')
 
 
 if __name__ == '__main__':
@@ -14,7 +17,10 @@ if __name__ == '__main__':
                                     help="Number of cpus")
     args = parser.parse_args()
 
+    # define the path to which data will be saved
     path = '/pool001/whgao/data/synth_net/st_hb/'
+
+    # load the building blocks
     data = pd.read_csv(path + 'enamine_us_matched.csv.gz', compression='gzip')['SMILES'].tolist()
     print('Total data: ', len(data))
 

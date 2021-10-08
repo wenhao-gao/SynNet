@@ -7,7 +7,7 @@ from rdkit import Chem
 from rdkit.Chem import AllChem
 from rdkit import DataStructs
 import pandas as pd
-from synth_net.utils.data_utils import *
+from syn_net.utils.data_utils import *
 
 
 data_path = '/pool001/whgao/data/synth_net/st_hb/st_train.json.gz'

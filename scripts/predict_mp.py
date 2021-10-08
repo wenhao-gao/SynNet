@@ -4,7 +4,7 @@ import pandas as pd
 import time
 import json
 import scripts._mp_predict as predict
-from synth_net.utils.data_utils import Reaction, ReactionSet, SyntheticTree, SyntheticTreeSet
+from syn_net.utils.data_utils import Reaction, ReactionSet, SyntheticTree, SyntheticTreeSet
 
 
 if __name__ == '__main__':

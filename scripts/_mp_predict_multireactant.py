@@ -3,7 +3,7 @@ This file contains a function to decode a single synthetic tree  # TODO update d
 """
 import pandas as pd
 import numpy as np
-from synth_net.utils.data_utils import ReactionSet
+from syn_net.utils.data_utils import ReactionSet
 from syn_net.utils.predict_utils import synthetic_tree_decoder_multireactant, load_modules_from_checkpoint, mol_fp
 
 

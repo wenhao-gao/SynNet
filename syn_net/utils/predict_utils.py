@@ -423,13 +423,13 @@ def synthetic_tree_decoder(z_target,
         # Run reaction
         mol_product = rxn.run_reaction([mol1, mol2])
         if mol_product is None or Chem.MolFromSmiles(mol_product) is None:
-            act = 3
-            break
-            # if len(tree.get_state()) == 1:
-            #     act = 3
-            #     break
-            # else:
-            #     break
+            #act = 3
+            #break
+            if len(tree.get_state()) == 1:
+                act = 3
+                break
+            else:
+                break
 
         # Update
         tree.update(act, int(rxn_id), mol1, mol2, mol_product)

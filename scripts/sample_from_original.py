@@ -5,7 +5,7 @@ from tdc import Oracle
 qed = Oracle(name='qed')
 import numpy as np
 import pandas as pd
-from synth_net.utils.data_utils import *
+from syn_net.utils.data_utils import *
 
 def is_valid(smi):
     mol = Chem.MolFromSmiles(smi)

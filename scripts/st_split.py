@@ -4,7 +4,7 @@ Reads synthetic tree data and splits it into training, validation and testing se
 Usage:
     python read_st_data.py
 """
-from synth_net.utils.data_utils import *
+from syn_net.utils.data_utils import *
 
 
 if __name__ == "__main__":

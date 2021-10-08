@@ -7,8 +7,8 @@ import numpy as np
 # import dill as pickle
 # import gzip
 
-from synth_net.data_generation.make_dataset import synthetic_tree_generator
-from synth_net.utils.data_utils import ReactionSet
+from syn_net.data_generation.make_dataset import synthetic_tree_generator
+from syn_net.utils.data_utils import ReactionSet
 
 
 path_reaction_file = '/pool001/whgao/data/synth_net/st_pis/reactions_pis.json.gz'

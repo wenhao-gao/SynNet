@@ -1,7 +1,7 @@
 """
 Filters out purchasable building blocks which don't match a single template.
 """
-from synth_net.utils.data_utils import *
+from syn_net.utils.data_utils import *
 import pandas as pd
 from tqdm import tqdm
 

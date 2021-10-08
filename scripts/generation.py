@@ -10,7 +10,7 @@ from tqdm import tqdm
 import torch
 from rdkit import Chem
 
-from synth_net.utils.data_utils import Reaction, ReactionSet, SyntheticTree, SyntheticTreeSet
+from syn_net.utils.data_utils import Reaction, ReactionSet, SyntheticTree, SyntheticTreeSet
 from sklearn.neighbors import KDTree
 
 import dgl
@@ -354,10 +354,10 @@ def synthetic_tree_decoder(z_target,
 
 if __name__ == '__main__':
 
-    from synth_net.models.action import Action
-    from synth_net.models.reactant1 import Reactant1
-    from synth_net.models.rxn import Rxn
-    from synth_net.models.reactant2 import Reactant2
+    from syn_net.models.action import Action
+    from syn_net.models.reactant1 import Reactant1
+    from syn_net.models.rxn import Rxn
+    from syn_net.models.reactant2 import Reactant2
 
     path_to_reaction_file = '/home/whgao/scGen/synth_net/data/reactions_hb.json.gz'
     path_to_building_blocks = '/home/whgao/scGen/synth_net/data/enamine_us_matched.csv.gz'

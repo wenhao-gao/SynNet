@@ -13,7 +13,7 @@ from rdkit import Chem
 from rdkit.Chem import AllChem
 from rdkit import DataStructs
 
-from synth_net.utils.data_utils import Reaction, ReactionSet, SyntheticTree, SyntheticTreeSet
+from syn_net.utils.data_utils import Reaction, ReactionSet, SyntheticTree, SyntheticTreeSet
 from sklearn.neighbors import KDTree
 
 import dgl
@@ -21,7 +21,7 @@ from dgl.nn.pytorch.glob import AvgPooling, SumPooling
 from dgllife.model import load_pretrained
 from dgllife.utils import mol_to_bigraph, PretrainAtomFeaturizer, PretrainBondFeaturizer
 from tdc.chem_utils import MolConvert
-from synth_net.models.mlp import MLP
+from syn_net.models.mlp import MLP
 
 if __name__ == '__main__':
 

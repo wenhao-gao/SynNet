@@ -8,7 +8,7 @@ import numpy as np
 import rdkit
 from tqdm import tqdm
 
-from synth_net.utils.data_utils import SyntheticTree, SyntheticTreeSet
+from syn_net.utils.data_utils import SyntheticTree, SyntheticTreeSet
 
 # TODO add docstrings, types, clean up comments
 

@@ -8,7 +8,7 @@ import numpy as np
 import multiprocessing as mp
 from time import time
 
-from synth_net.utils.data_utils import SyntheticTreeSet
+from syn_net.utils.data_utils import SyntheticTreeSet
 import synth_net.data_generation._mp_make as make
 
 

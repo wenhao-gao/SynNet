@@ -1,7 +1,7 @@
 """
 Sketches the synthetic trees in a specified file.
 """
-from synth_net.utils.data_utils import *
+from syn_net.utils.data_utils import *
 import argparse
 from typing import Tuple
 from rdkit.Chem import MolFromSmiles

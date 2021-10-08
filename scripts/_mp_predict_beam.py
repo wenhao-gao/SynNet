@@ -3,7 +3,7 @@ This file contains a function to decode a single synthetic tree
 """
 import pandas as pd
 import numpy as np
-from synth_net.utils.data_utils import ReactionSet
+from syn_net.utils.data_utils import ReactionSet
 from dgllife.model import load_pretrained
 from syn_net.utils.predict_utils import tanimoto_similarity, load_modules_from_checkpoint, mol_fp
 from syn_net.utils.predict_beam_utils import synthetic_tree_decoder

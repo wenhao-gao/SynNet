@@ -1,4 +1,4 @@
-from synth_net.models.mlp import MLP, load_array
+from syn_net.models.mlp import MLP, load_array
 from scipy import sparse
 import numpy as np
 from sklearn.neighbors import BallTree

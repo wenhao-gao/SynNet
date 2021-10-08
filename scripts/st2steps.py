@@ -1,7 +1,7 @@
 """
 TODO
 """
-from synth_net.utils.data_utils import *
+from syn_net.utils.data_utils import *
 import os
 import gzip
 import dill as pickle

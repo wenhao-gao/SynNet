@@ -1,4 +1,4 @@
-from synth_net.utils.ga_utils import crossover, mutation
+from syn_net.utils.ga_utils import crossover, mutation
 import multiprocessing as mp
 import numpy as np
 import pandas as pd

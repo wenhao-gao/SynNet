@@ -5,7 +5,7 @@ import time
 import torch
 import pytorch_lightning as pl
 from pytorch_lightning import loggers as pl_loggers
-from synth_net.models.mlp import MLP, load_array
+from syn_net.models.mlp import MLP, load_array
 from scipy import sparse
 
 

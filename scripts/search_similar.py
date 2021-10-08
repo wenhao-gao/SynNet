@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-from synth_net.utils.data_utils import *
+from syn_net.utils.data_utils import *
 import rdkit 
 from rdkit import Chem
 from rdkit.Chem import AllChem

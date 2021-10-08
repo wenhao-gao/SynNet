@@ -36,8 +36,6 @@ path_to_rt1 = param_path + 'rt1.ckpt'
 path_to_rxn = param_path + 'rxn.ckpt'
 path_to_rt2 = param_path + 'rt2.ckpt'
 
-np.random.seed(6)
-
 # load the purchasable building block SMILES to a dictionary
 building_blocks = pd.read_csv(path_to_building_blocks, compression='gzip')['SMILES'].tolist()
 bb_dict = {building_blocks[i]: i for i in range(len(building_blocks))}
@@ -47,6 +45,7 @@ rxn_set = ReactionSet()
 rxn_set.load(path_to_reaction_file)
 rxns = rxn_set.rxns
 
+# load the pre-trained modules
 act_net, rt1_net, rxn_net, rt2_net = load_modules_from_checkpoint(
     path_to_act=path_to_act,
     path_to_rt1=path_to_rt1,
@@ -71,7 +70,7 @@ def func(emb):
     """
     emb = emb.reshape((1, -1))
     try:
-        tree, action = synthetic_tree_decoder(emb, building_blocks, bb_dict, rxns, mol_embedder, act_net, rt1_net, rxn_net, rt2_net, bb_emb, max_step=15)
+        tree, action = synthetic_tree_decoder(emb, building_blocks, bb_dict, rxns, mol_embedder, act_net, rt1_net, rxn_net, rt2_net, bb_emb, n_bits=nbits, max_step=15)
     except Exception as e:
         print(e)
         action = -1

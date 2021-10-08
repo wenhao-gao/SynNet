@@ -1,5 +1,5 @@
 """
-This file contains a function to decode a single synthetic tree.
+This file contains various utils for decoding synthetic trees.
 """
 import numpy as np
 import rdkit
@@ -8,20 +8,14 @@ import torch
 from rdkit import Chem
 from rdkit.Chem import AllChem
 from rdkit import DataStructs
-
-from synth_net.utils.data_utils import SyntheticTree
+from syn_net.utils.data_utils import SyntheticTree
 from sklearn.neighbors import BallTree
-
 from dgl.nn.pytorch.glob import AvgPooling
-from dgllife.model import load_pretrained
 from dgllife.utils import mol_to_bigraph, PretrainAtomFeaturizer, PretrainBondFeaturizer
-from synth_net.models.mlp import MLP
+from syn_net.models.mlp import MLP
 
-nbits = 4096
-out_dim = 256
-rxn_template = 'hb'
-featurize = 'fp'
-param_dir = 'hb_fp_2_4096_256'
+
+np.random.seed(6)
 
 
 def can_react(state, rxns):
@@ -166,11 +160,6 @@ def one_hot_encoder(dim, space):
     vec[0, dim] = 1
     return vec
 
-model_type = 'gin_supervised_contextpred'
-device = 'cpu'
-mol_embedder = load_pretrained(model_type).to(device)
-mol_embedder.eval()
-
 def get_mol_embedding(smi, model, device='cpu', readout=AvgPooling()):
     """
     Computes the molecular graph embedding for the input SMILES.
@@ -223,6 +212,17 @@ def mol_fp(smi, _radius=2, _nBits=4096):
         return features.reshape((1, -1))
 
 def cosine_distance(v1, v2, eps=1e-15):
+    """
+    Computes the cosine similarity between two vectors.
+
+    Args:
+        v1 (np.ndarray): First vector.
+        v2 (np.ndarray): Second vector.
+        eps (float, optional): Small value, for numerical stability. Defaults to 1e-15.
+
+    Returns:
+        float: The cosine similarity.
+    """
     return 1 - np.dot(v1, v2) / (np.linalg.norm(v1, ord=2) * np.linalg.norm(v2, ord=2) + eps)
 
 def nn_search(_e, _tree, _k=1):
@@ -274,7 +274,7 @@ def graph_construction_and_featurization(smiles):
 
     return graphs, success
 
-def set_embedding(z_target, state, _mol_embedding=get_mol_embedding):
+def set_embedding(z_target, state, nbits, _mol_embedding=get_mol_embedding):
     """
     Computes embeddings for all molecules in the input space.
 
@@ -282,6 +282,7 @@ def set_embedding(z_target, state, _mol_embedding=get_mol_embedding):
         z_target (np.ndarray): Embedding for the target molecule.
         state (list): Contains molecules in the current state, if not the
             initial state.
+        nbits (int): Length of fingerprint.
         _mol_embedding (Callable, optional): Function to use for computing the
             embeddings of the first and second molecules in the state. Defaults
             to `get_mol_embedding`.
@@ -304,12 +305,13 @@ def synthetic_tree_decoder(z_target,
                            building_blocks,
                            bb_dict,
                            reaction_templates,
-                           mol_embedder,  # TODO mol_embedder isn't used
+                           mol_embedder,
                            action_net,
                            reactant1_net,
                            rxn_net,
                            reactant2_net,
                            bb_emb,
+                           n_bits, 
                            max_step=15):
     """
     Computes the synthetic tree given an input molecule embedding, using the
@@ -326,6 +328,7 @@ def synthetic_tree_decoder(z_target,
         rxn_net (synth_net.models.mlp.MLP): The reaction network
         reactant2_net (synth_net.models.mlp.MLP): The reactant2 network
         bb_emb (list): Contains purchasable building block embeddings.
+        n_bits (int): Length of fingerprint.
         max_step (int, optional): Maximum number of steps to include in the synthetic tree
 
     Returns:
@@ -343,7 +346,7 @@ def synthetic_tree_decoder(z_target,
         # Encode current state
         # from ipdb import set_trace; set_trace(context=11)
         state = tree.get_state() # a set
-        z_state = set_embedding(z_target, state, mol_fp)
+        z_state = set_embedding(z_target, state, nbits=n_bits, mol_fp=mol_fp)
 
         # Predict action type, masked selection
         # Action: (Add: 0, Expand: 1, Merge: 2, End: 3)

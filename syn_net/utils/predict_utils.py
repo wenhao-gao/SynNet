@@ -226,6 +226,22 @@ def cosine_distance(v1, v2, eps=1e-15):
     """
     return 1 - np.dot(v1, v2) / (np.linalg.norm(v1, ord=2) * np.linalg.norm(v2, ord=2) + eps)
 
+def ce_distance(y, y_pred, eps=1e-15):
+    """
+    Computes the cross-entropy between two vectors.
+
+    Args:
+        y (np.ndarray): First vector.
+        y_pred (np.ndarray): Second vector.
+        eps (float, optional): Small value, for numerical stability. Defaults to 1e-15.
+
+    Returns:
+        float: The cross-entropy.
+    """
+    y_pred = np.clip(y_pred, eps, 1 - eps)
+    return - np.sum((y * np.log(y_pred) + (1 - y) * np.log(1 - y_pred)))
+
+
 def nn_search(_e, _tree, _k=1):
     """
     Conducts a nearest neighbor search to find the molecule from the tree most

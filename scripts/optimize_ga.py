@@ -7,6 +7,8 @@ import json
 import scripts._mp_decode as decode
 # import scripts._mp_sum as decode
 from tdc import Oracle
+
+# define the following oracle functions from the TDC
 logp = Oracle(name = 'LogP')
 qed = Oracle(name = 'QED')
 jnk = Oracle(name = 'JNK3')

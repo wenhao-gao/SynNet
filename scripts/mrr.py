@@ -1,17 +1,13 @@
+"""
+This function is used to compute the mean reciprocal ranking for reactant 1 
+selection using the different distance metrics in the k-NN search.
+"""
 from syn_net.models.mlp import MLP, load_array
 from scipy import sparse
 import numpy as np
 from sklearn.neighbors import BallTree
 import torch
-
-
-def ce_distance(y, y_pred, eps=1e-15):
-    y_pred = np.clip(y_pred, eps, 1 - eps)
-    return - np.sum((y * np.log(y_pred) + (1 - y) * np.log(1 - y_pred)))
-
-
-def cosine_distance(v1, v2, eps=1e-15):
-    return 1 - np.dot(v1, v2) / (np.linalg.norm(v1, ord=2) * np.linalg.norm(v2, ord=2) + eps)
+from syn_net.utils.predict_utils import cosine_distance, ce_distance
 
 
 if __name__ == '__main__':
@@ -108,7 +104,7 @@ if __name__ == '__main__':
 
     kdtree_fp_256 = BallTree(bb_emb_fp_256, metric=kw_metric)
 
-    ranks = []  
+    ranks = []
     for X, y in data_iter:
         X, y = X.to(args.device), y.to(args.device)
         y_hat = rt1_net(X)
@@ -128,4 +124,3 @@ if __name__ == '__main__':
     print(f"The Top-15 recovery rate is: {sum(ranks < 15) / len(ranks) :.3f}, {sum(ranks < 15)} / {len(ranks)}")
     print(f"The Top-30 recovery rate is: {sum(ranks < 30) / len(ranks) :.3f}, {sum(ranks < 30)} / {len(ranks)}")
     print()
-

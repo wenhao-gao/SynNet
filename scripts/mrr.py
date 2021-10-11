@@ -15,25 +15,25 @@ if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument("-f", "--featurize", type=str, default='fp',
-                                help="Choose from ['fp', 'gin']")
+                        help="Choose from ['fp', 'gin']")
     parser.add_argument("-r", "--rxn_template", type=str, default='hb',
-                                help="Choose from ['hb', 'pis']")
+                        help="Choose from ['hb', 'pis']")
     parser.add_argument("--param_dir", type=str, default='hb_fp_2_4096_256',
-                                help="")
+                        help="")
     parser.add_argument("--radius", type=int, default=2,
-                                help="Radius for Morgan fingerprint.")
+                        help="Radius for Morgan fingerprint.")
     parser.add_argument("--nbits", type=int, default=4096,
-                                    help="Number of Bits for Morgan fingerprint.")
+                        help="Number of Bits for Morgan fingerprint.")
     parser.add_argument("--out_dim", type=int, default=256,
-                                    help="Output dimension.")
+                        help="Output dimension.")
     parser.add_argument("--ncpu", type=int, default=8,
-                                    help="Number of cpus")
+                        help="Number of cpus")
     parser.add_argument("--batch_size", type=int, default=64,
-                                    help="Batch size")
+                        help="Batch size")
     parser.add_argument("--device", type=str, default="cuda:0",
-                                    help="")
+                        help="")
     parser.add_argument("--distance", type=str, default="euclidean",
-                                    help="Choose from ['euclidean', 'manhattan', 'chebyshev', 'cross_entropy', 'cosine']")
+                        help="Choose from ['euclidean', 'manhattan', 'chebyshev', 'cross_entropy', 'cosine']")
     args = parser.parse_args()
 
     if args.out_dim == 300:

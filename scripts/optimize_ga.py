@@ -1,3 +1,8 @@
+"""
+Generates synthetic trees where the root molecule optimizes for a specific objective
+based on Therapeutic Data Commons (TDC) oracle functions. Uses a genetic algorithm
+to optimize embeddings before decoding.
+"""
 from syn_net.utils.ga_utils import crossover, mutation
 import multiprocessing as mp
 import numpy as np
@@ -155,26 +160,26 @@ if __name__ == '__main__':
     parser.add_argument("-i", "--input_file", type=str, default=None,
                                         help="A file contains the starting mating pool.")
     parser.add_argument("--objective", type=str, default="qed",
-                                        help="Objective function to optimize")
+                        help="Objective function to optimize")
     parser.add_argument("--radius", type=int, default=2,
-                                help="Radius for Morgan fingerprint.")
+                        help="Radius for Morgan fingerprint.")
     parser.add_argument("--nbits", type=int, default=4096,
-                                    help="Number of Bits for Morgan fingerprint.")
+                        help="Number of Bits for Morgan fingerprint.")
     parser.add_argument("--num_population", type=int, default=100,
-                                    help="Number of parents sets to keep.")
+                        help="Number of parents sets to keep.")
     parser.add_argument("--num_offspring", type=int, default=300,
-                                    help="Number of offsprings to generate each iteration.")
+                        help="Number of offsprings to generate each iteration.")
     parser.add_argument("--num_gen", type=int, default=30,
-                                    help="Number of generations to proceed.")
+                        help="Number of generations to proceed.")
     parser.add_argument("--ncpu", type=int, default=16,
-                                    help="Number of cpus")
+                        help="Number of cpus")
     parser.add_argument("--mut_probability", type=float, default=0.5,
-                                        help="Probability to mutate for one offspring.")
+                        help="Probability to mutate for one offspring.")
     parser.add_argument("--num_mut_per_ele", type=int, default=1,
-                                        help="Number of bits to mutate in one fingerprint.")
+                        help="Number of bits to mutate in one fingerprint.")
     parser.add_argument('--restart', action='store_true')
     parser.add_argument("--seed", type=int, default=1,
-                                        help="Random seed.")
+                        help="Random seed.")
     args = parser.parse_args()
 
     np.random.seed(args.seed)

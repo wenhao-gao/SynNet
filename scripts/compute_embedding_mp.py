@@ -12,9 +12,9 @@ if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument("--feature", type=str, default="gin",
-                                        help="Objective function to optimize")
+                        help="Objective function to optimize")
     parser.add_argument("--ncpu", type=int, default=16,
-                                    help="Number of cpus")
+                        help="Number of cpus")
     args = parser.parse_args()
 
     # define the path to which data will be saved

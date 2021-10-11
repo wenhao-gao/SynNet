@@ -1,10 +1,11 @@
+"""
+Generate synthetic trees for a set of specified query molecules. Multiprocessing.
+"""
 import multiprocessing as mp
 import numpy as np
 import pandas as pd
-import time
-import json
 import scripts._mp_predict as predict
-from syn_net.utils.data_utils import Reaction, ReactionSet, SyntheticTree, SyntheticTreeSet
+from syn_net.utils.data_utils import SyntheticTreeSet
 
 
 if __name__ == '__main__':
@@ -12,17 +13,18 @@ if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument("-f", "--featurize", type=str, default='fp',
-                                        help="Choose from ['fp', 'gin']")
+                        help="Choose from ['fp', 'gin']")
     parser.add_argument("-r", "--rxn_template", type=str, default='hb',
-                                        help="Choose from ['hb', 'pis']")
+                        help="Choose from ['hb', 'pis']")
     parser.add_argument("--ncpu", type=int, default=16,
-                                    help="Number of cpus")
+                        help="Number of cpus")
     parser.add_argument("-n", "--num", type=int, default=-1,
-                                        help="Number of molecules to predict.")
+                        help="Number of molecules to predict.")
     parser.add_argument("-d", "--data", type=str, default='test',
-                                        help="Choose from ['train', 'valid', 'test']")
+                        help="Choose from ['train', 'valid', 'test']")
     args = parser.parse_args()
 
+    # load the query molecules (i.e. molecules to decode)
     path_to_data = '/pool001/whgao/data/synth_net/st_' + args.rxn_template + '/st_' + args.data +'.json.gz'
     print('Reading data from ', path_to_data)
     sts = SyntheticTreeSet()
@@ -34,7 +36,6 @@ if __name__ == '__main__':
         smis_query = smis_query[:args.num]
 
     print('Start to decode!')
-
     with mp.Pool(processes=args.ncpu) as pool:
         results = pool.map(predict.func, smis_query)
 

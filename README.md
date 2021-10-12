@@ -154,7 +154,7 @@ This script uses a genetic algorithm to optimize molecular embeddings and return
 One can use --help to see the instruction of each argument.
 If user wants to start from a checkpoint of previous run, run:
 ```
-optimize_ga.py -i path/to/population_docking.npy --radius 2 --nbits 4096 --num_population 128 --num_offspring 512 --num_gen 200 --ncpu 32 --objective gsk --restart
+optimize_ga.py -i path/to/population.npy --radius 2 --nbits 4096 --num_population 128 --num_offspring 512 --num_gen 200 --ncpu 32 --objective gsk --restart
 ```
 Note: the input file indictaed by -i is seed molecules in csv for initial run and numpy array of population for restarting run.
 

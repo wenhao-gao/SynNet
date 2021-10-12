@@ -14,7 +14,7 @@ The model consists of four modules, each containing a multi-layer perceptron (ML
 3. A *Reaction* selection function whose output is a probability distribution over available reaction templates, from which inapplicable reactions are masked (based on reactant 1) and a suitable template is then sampled using a greedy search.
 4. A *Second Reactant* selection function that identifies the second reactant if the sampled template is bi-molecular. The model predicts an embedding for the second reactant, and a candidate is then sampled via a k-NN search from the masked set of building blocks.
 
-![the model](./figures/network.pdf "model scheme")
+![the model](./figures/network.png "model scheme")
 
 These four modules predict the probability distributions of actions to be taken within a single reaction step, and determine the nodes to be added to the synthetic tree under construction. All of these networks are conditioned on the target molecule embedding.
 

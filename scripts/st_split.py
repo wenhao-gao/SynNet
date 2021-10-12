@@ -1,8 +1,5 @@
 """
 Reads synthetic tree data and splits it into training, validation and testing sets.
-
-Usage:
-    python read_st_data.py
 """
 from syn_net.utils.data_utils import *
 
@@ -31,14 +28,13 @@ if __name__ == "__main__":
     print("Saving training dataset: ", len(data_train))
     tree_set = SyntheticTreeSet(data_train)
     tree_set.save('/pool001/whgao/data/synth_net/st_pis/st_train.json.gz')
-    
+
     print("Saving validation dataset: ", len(data_valid))
     tree_set = SyntheticTreeSet(data_valid)
     tree_set.save('/pool001/whgao/data/synth_net/st_pis/st_valid.json.gz')
-    
+
     print("Saving testing dataset: ", len(data_test))
     tree_set = SyntheticTreeSet(data_test)
     tree_set.save('/pool001/whgao/data/synth_net/st_pis/st_test.json.gz')
-    
-    print("Finish!")
 
+    print("Finish!")

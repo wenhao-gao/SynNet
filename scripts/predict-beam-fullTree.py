@@ -55,7 +55,6 @@ if __name__ == '__main__':
     # load the purchasable building block embeddings
     bb_emb = np.load('/pool001/whgao/data/synth_net/st_' + args.rxn_template + '/enamine_us_emb.npy')
 
-
     # define path to the reaction templates and purchasable building blocks
     path_to_reaction_file   = ('/pool001/whgao/data/synth_net/st_' + args.rxn_template
                                + '/reactions_' + args.rxn_template + '.json.gz')

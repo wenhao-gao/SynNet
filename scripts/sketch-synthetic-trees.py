@@ -8,9 +8,10 @@ from rdkit.Chem import MolFromSmiles
 from rdkit.Chem.Draw import MolToImage
 import networkx as nx
 import matplotlib.pyplot as plt
-from matplotlib.patches import Rectangle, FancyBboxPatch
+from matplotlib.patches import Rectangle
 
 
+# define some color maps for plotting
 edges_cmap = {
     0 : "tab:brown",  # Add
     1 : "tab:pink",   # Expand
@@ -25,16 +26,20 @@ nodes_cmap = {
 
 
 def get_states_and_steps(synthetic_tree : "SyntheticTree") -> Tuple[list, list]:
-    """[summary]
+    """
+    Gets the different nodes of the input synthetic tree, and the "action type"
+    that was used to get to those nodes.
+
     Args:
-        synthetic_tree (SyntheticTree): [description]
+        synthetic_tree (SyntheticTree):
 
     Returns:
-        Tuple[list, list]: Contains lists of the states and steps in the Synthetic Tree.
+        Tuple[list, list]: Contains lists of the states and steps (actions) from
+            the Synthetic Tree.
     """
     states = []
     steps = []
-    
+
     target = synthetic_tree.root.smiles
     most_recent_mol = None
     other_root_mol = None
@@ -52,7 +57,7 @@ def get_states_and_steps(synthetic_tree : "SyntheticTree") -> Tuple[list, list]:
             state = [mol1, mol2, r.parent]
         else:
             state = [most_recent_mol, other_root_mol, target]
-        
+
         if action == 2:
             most_recent_mol = r.parent
             other_root_mol = None
@@ -70,11 +75,13 @@ def get_states_and_steps(synthetic_tree : "SyntheticTree") -> Tuple[list, list]:
     return states, steps
 
 def draw_tree(states : list, steps : list, tree_name : str) -> None:
-    """[summary]
+    """
+    Draws the synthetic tree based on the input list of states (reactant/product
+    nodes) and steps (actions).
 
     Args:
-        states (list): [description]
-        steps (list): [description]
+        states (list): Molecular nodes (i.e. reactants and products).
+        steps (list): Action types (e.g. "Add" and "Merge").
         tree_name (str): Name of tree to use for file saving purposes.
     """
     G = nx.Graph()
@@ -135,10 +142,10 @@ def draw_tree(states : list, steps : list, tree_name : str) -> None:
             G.add_edge(str(prev_target_idx), str(new_target_idx))  # connect the previous target to the current most recent mol
             edge_color_dict[(str(prev_target_idx), str(new_target_idx))] = edges_cmap[step]
         prev_target_idx = node_idx - 1
-    
+
     # sketch the tree
     fig, ax = plt.subplots()
-    
+
     nx.draw_networkx_edges(
         G,
         pos=pos_dict,
@@ -152,12 +159,12 @@ def draw_tree(states : list, steps : list, tree_name : str) -> None:
         min_source_margin=15,
         min_target_margin=15,
     )
-    
+
     # Transform from data coordinates (scaled between xlim and ylim) to display coordinates
     tr_figure = ax.transData.transform
     # Transform from display to figure coordinates
     tr_axes = fig.transFigure.inverted().transform
-    
+
     # Select the size of the image (relative to the X axis)
     x = 0
     for positions in pos_dict.values():
@@ -166,7 +173,7 @@ def draw_tree(states : list, steps : list, tree_name : str) -> None:
 
     _, _ = ax.set_xlim(0, x)
     _, _ = ax.set_ylim(0, 0.6)
-    icon_size = 0.2  
+    icon_size = 0.2
     icon_center = icon_size / 2.0
 
     # add a legend for the edge colors
@@ -174,9 +181,9 @@ def draw_tree(states : list, steps : list, tree_name : str) -> None:
     markers_nodes = [plt.Line2D([0,0],[0,0],color=color, linewidth=2, marker='s', linestyle='') for color in nodes_cmap.values()]
     markers_labels = ["Add", "Reactant 1", "Expand", "Reactant 2", "Merge", "Product"]
     markers =[markers_edges[0], markers_nodes[0], markers_edges[1], markers_nodes[1], markers_edges[2], markers_nodes[2]]
-    plt.legend(markers, markers_labels, loc='upper center', 
+    plt.legend(markers, markers_labels, loc='upper center',
                bbox_to_anchor=(0.5, 1.15), ncol=3, fancybox=True, shadow=True)
-    
+
     # Add the respective image to each node
     for n in G.nodes:
         xf, yf = tr_figure(pos_dict[n])
@@ -186,8 +193,6 @@ def draw_tree(states : list, steps : list, tree_name : str) -> None:
         a.imshow(G.nodes[n]["image"])
         # add colored boxes around each node:
         plt.gca().add_patch(Rectangle((0,0),295,295, linewidth=2, edgecolor=node_color_dict[n], facecolor="none"))
-        #plt.gca().add_patch(FancyBboxPatch((0,0),295,295, boxstyle="round", linewidth=2, edgecolor=node_color_dict[n], facecolor="none"))
-        #plt.gca().add_patch(FancyBboxPatch((0,0),0,0, boxstyle="round,pad=20", linewidth=2, edgecolor=node_color_dict[n], facecolor="none", snap=True))
         a.axis("off")
 
     ax.axis("off")
@@ -222,18 +227,17 @@ if __name__ == '__main__':
         try:
             print("* Getting states and steps...")
             states, steps = get_states_and_steps(synthetic_tree=st)
-            
+
             print("* Sketching tree...")
             draw_tree(states=states, steps=steps, tree_name=f"{args.saveto}tree{st_idx}")
 
             trees_sketched += 1
-            
+
         except Exception as e:
             print(e)
             continue
-        
+
         if not (args.nsketches == -1) and trees_sketched > args.nsketches:
             break
 
     print("Done!")
-

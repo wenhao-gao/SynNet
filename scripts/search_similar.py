@@ -1,10 +1,12 @@
+"""
+Computes the fingerprint similarity of molecules in the validation and test set to
+molecules in the training set.
+"""
 import numpy as np
 import pandas as pd
 from syn_net.utils.data_utils import *
-import rdkit 
 from rdkit import Chem
 from rdkit.Chem import AllChem
-from rdkit import DataStructs
 import multiprocessing as mp
 from scripts._mp_search_similar import func
 
@@ -49,4 +51,3 @@ if __name__ == '__main__':
     df = pd.concat([df1, df2], axis=0, ignore_index=True)
     df.to_csv('data_similarity.csv', index=False)
     print('Finish!')
-

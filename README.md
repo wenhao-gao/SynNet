@@ -130,11 +130,14 @@ Before running anything, you need to add the root directory to the Python path. 
 export PYTHONPATH=`pwd`:$PYTHONPATH
 ```
 
-### Use the tained model
-We release a set of model trained with datasets described in our paper, [Link](https://figshare.com/articles/software/Trained_model_parameters_for_SynNet/16799413). User can uncompress with
+## Using pre-trained models
+We have made available a set of pre-trained models at the following [link](https://figshare.com/articles/software/Trained_model_parameters_for_SynNet/16799413). The pretrained models correspond to the Action, Reactant 1, Reaction, and Reactant 2 networks, trained on the Hartenfeller-Button dataset using radius 2, length 4096 Morgan fingerprints for the molecular node embeddings, and length 256 fingerprints for the k-NN search. For further details, please see the publication.
+
+The models can be uncompressed with:
 ```
 tar -zxvf hb_fp_2_4096_256.tar.gz
 ```
+
 ### Synthesis Planning
 To perform synthesis planning described in the main text:
 [TODO add checkpoints to prediction scripts // save trees periodically. otherwise just saves at end and is problematic of job times out]
@@ -258,5 +261,3 @@ Under [synth_net/scripts/](./synth_net/scripts/), run:
 python mrr.py --distance cosine
 ```
 
-## Models trained on Hartenfeller-Button dataset
-Pretrained models for each of the Action, Reactant 1, Reaction, and Reactant 2 networks, trained on the Hartenfeller-Button dataset using radius 2, length 4096 Morgan fingerprints for the molecular node embeddings, and length 256 fingerprints for the k-NN search, are available as a tarball on [figshare](https://figshare.com/articles/software/Trained_model_parameters_for_SynNet/16799413). The models were saved at their respective best epochs, and correspond to the best results reported in the paper.

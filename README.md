@@ -46,9 +46,11 @@ conda env export > path/to/env.yml
 ```
 
 ### Unit tests
-To check that everything has been set-up correctly, you can run the unit tests from within the [tests/](./tests/) directory by typing:
+To check that everything has been set-up correctly, you can run the unit tests from within the [tests/](./tests/). If starting in the main SynNet/ directory, you can run the unit tests as follows:
 
 ```
+export PYTHONPATH=`pwd`:$PYTHONPATH
+cd tests/
 python -m unittest
 ```
 

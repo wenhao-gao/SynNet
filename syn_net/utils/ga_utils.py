@@ -1,10 +1,22 @@
 import numpy as np
 import scipy
 
-# TODO add docstrings, types, and comments to this file
-
 
 def crossover(parents, offspring_size, distribution='even'):
+    """
+    A function that sample an offspring set through a crossover from a mating pool
+
+    Args:
+        parents (numpy.ndarray): an array represents the mating pool.
+        offspring_size (int): the size of offspring pool.
+        distribution (str): Key word to indicate how to sample the parent vectors. Choose from ['even', 'linear', 'softmax_linear']
+                            "even" means sample parents with a even probability; "linear" means sample probability is linear to ranking, 
+                            one scored high has better probability to be selected; "softmax_linear" means the sample probability is 
+                            exponential of linear ranking, steeper than the "linear", for exploitation stages.
+
+    Returns:
+        offspring (numpy.ndarray): an array represents the oddspring pool.
+    """
     fp_length = parents.shape[1]
     num_parents = parents.shape[0]
     offspring = np.zeros((offspring_size, fp_length))
@@ -30,9 +42,23 @@ def crossover(parents, offspring_size, distribution='even'):
     return offspring
 
 def fitness_sum(element):
+    """
+    Test fitness function
+    """
     return np.sum(element)
 
 def mutation(offspring_crossover, num_mut_per_ele=1, mut_probability=0.5):
+    """
+    A function that sample an offspring set through a crossover from a mating pool
+
+    Args:
+        offspring_crossover (numpy.ndarray): an array represents the offspring pool before mutation.
+        num_mut_per_ele (int): number of bits to flip per mutation.
+        mut_probability (float): the probablity of a vector to mutate.
+
+    Returns:
+        offspring_crossover (numpy.ndarray): an array represents the offspring pool after mutation.
+    """
     b_dict = {1:0, 0:1}
     fp_length = offspring_crossover.shape[1]
     mut_proba = np.random.random(offspring_crossover.shape[0])

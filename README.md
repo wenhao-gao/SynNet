@@ -249,3 +249,6 @@ Under [synth_net/scripts/](./synth_net/scripts/), run:
 ```
 python mrr.py --distance cosine
 ```
+
+## Models trained on Hartenfeller-Button dataset
+Pretrained models for each of the Action, Reactant 1, Reaction, and Reactant 2 networks, trained on the Hartenfeller-Button dataset using radius 2, length 4096 Morgan fingerprints for the molecular node embeddings, and length 256 fingerprints for the k-NN search, are available as a tarball on [figshare](https://figshare.com/articles/software/Trained_model_parameters_for_SynNet/16799413). The models were saved at their respective best epochs, and correspond to the best results reported in the paper.

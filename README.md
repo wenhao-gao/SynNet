@@ -130,7 +130,35 @@ Before running anything, you need to add the root directory to the Python path. 
 export PYTHONPATH=`pwd`:$PYTHONPATH
 ```
 
-### Overview
+### Use the tained model
+We release a set of model trained with datasets described in our paper, [Link](https://figshare.com/articles/software/Trained_model_parameters_for_SynNet/16799413). User can uncompress with
+```
+tar -zxvf hb_fp_2_4096_256.tar.gz
+```
+### Synthesis Planning
+To perform synthesis planning described in the main text:
+[TODO add checkpoints to prediction scripts // save trees periodically. otherwise just saves at end and is problematic of job times out]
+```
+python predict_multireactant_mp.py -n -1 --ncpu 36 --data test
+``` 
+This script will feed a list of molecules from the test data and save the decoded results (predicted synthesis trees) to [synth_net/results/](./synth_net/results/). 
+One can use --help to see the instruction of each argument.
+Note: this file reads parameters from a directory, please specify the path to parameters previously.
+
+### Synthesizable Molecular Design
+To perform synthesizable molecualr design, under [synth_net/scripts/](./synth_net/scripts/), run:
+```
+optimize_ga.py -i path/to/zinc.csv --radius 2 --nbits 4096 --num_population 128 --num_offspring 512 --num_gen 200 --ncpu 32 --objective gsk
+```
+This script uses a genetic algorithm to optimize molecular embeddings and returns the predicted synthetic trees for the optimized molecular embedding.
+One can use --help to see the instruction of each argument.
+If user wants to start from a checkpoint of previous run, run:
+```
+optimize_ga.py -i path/to/population_docking.npy --radius 2 --nbits 4096 --num_population 128 --num_offspring 512 --num_gen 200 --ncpu 32 --objective gsk --restart
+```
+Note: the input file indictaed by -i is seed molecules in csv for initial run and numpy array of population for restarting run.
+
+### Train the model from scratch
 Before training any models, you will first need to preprocess the set of reaction templates which you would like to use. You can use either a new set of reaction templates, or the provided Hartenfeller-Button (HB) set of reaction templates (see [data/rxn_set_hb.txt](data/rxn_set_hb.txt)). To preprocess a new dataset, you will need to:
 1. Preprocess the data to identify applicable reactants for each reaction template
 2. Generate the synthetic trees by random selection
@@ -213,26 +241,6 @@ python act.py --radius 2 --nbits 4096
 ```
 
 This will train the network and save the model parameters at the state with the best validation loss in a logging directory, e.g., **`act_hb_fp_2_4096_logs`**. One can use tensorboard to monitor the training and validation loss.
-
-### Reconstructing a list of molecules
-To test how good the trained model is at reconstructing from a set of known molecules, we can evaluate the model for the task of single-shot retrosynthesis.
-
-[TODO add checkpoints to prediction scripts // save trees periodically. otherwise just saves at end and is problematic of job times out]
-```
-python predict.py --radius 2 --nbits 4096
-``` 
-
-This script will feed a list of molecules from the test data and save the decoded results (predicted synthesis trees) to [synth_net/results/](./synth_net/results/).
-
-Note: this file reads parameters from a directory with a name such as **`hb_fp_vx`**, where "hb" indicates the Hartenfeller-Button dataset, "fp" indicates to use the fingerprint featurization (as opposed to GIN embeddings), and "vx" indicates the version (x in this case).
-### Molecular optimization
-Under [synth_net/scripts/](./synth_net/scripts/), run:
-
-```
-python optimization_ga.py
-```
-
-This script uses a genetic algorithm to optimize molecular embeddings and returns the predicted synthetic trees for the optimized molecular embedding.
 
 ### Sketching synthetic trees
 To visualize the synthetic trees, run:

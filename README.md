@@ -1,7 +1,7 @@
 # SynNet
 This repo contains the code and analysis scripts for our amortized approach to synthetic tree generation using neural networks. Our model can serve as both a synthesis planning tool and as a tool for synthesizable molecular design.
 
-The method is described in detail in the publication "Amortized tree generation for bottom-up synthesis planning and synthesizable molecular design" [TODO add link to arXiv after publication] and summarized below.
+The method is described in detail in the publication "Amortized tree generation for bottom-up synthesis planning and synthesizable molecular design" available on the [arXiv](https://arxiv.org/abs/2110.06389) and summarized below.
 
 ## Summary
 ### Overview
@@ -115,6 +115,8 @@ synth_net/
 │   └── utils
 │       ├── data_utils.py
 │       ├── ga_utils.py
+│       ├── predict_beam_utils.py
+│       ├── predict_utils.py
 │       └── __init__.py
 └── tests
     ├── create-unittest-data.py

@@ -4,15 +4,18 @@ This file contains various utils for decoding synthetic trees.
 import numpy as np
 import rdkit
 from tqdm import tqdm
+from scipy import sparse
 import torch
 from rdkit import Chem
 from rdkit.Chem import AllChem
 from rdkit import DataStructs
-from syn_net.utils.data_utils import SyntheticTree
 from sklearn.neighbors import BallTree
 from dgl.nn.pytorch.glob import AvgPooling
+from dgllife.model import load_pretrained
+from tdc.chem_utils import MolConvert
 from dgllife.utils import mol_to_bigraph, PretrainAtomFeaturizer, PretrainBondFeaturizer
 from syn_net.models.mlp import MLP
+from syn_net.utils.data_utils import SyntheticTree
 
 
 np.random.seed(6)
@@ -178,17 +181,17 @@ def get_mol_embedding(smi, model, device='cpu', readout=AvgPooling()):
     """
     mol = Chem.MolFromSmiles(smi)
     g = mol_to_bigraph(mol, add_self_loop=True,
-                    node_featurizer=PretrainAtomFeaturizer(),
-                    edge_featurizer=PretrainBondFeaturizer(),
-                    canonical_atom_order=False)
+                       node_featurizer=PretrainAtomFeaturizer(),
+                       edge_featurizer=PretrainBondFeaturizer(),
+                       canonical_atom_order=False)
     bg = g.to(device)
     nfeats = [bg.ndata.pop('atomic_number').to(device),
-                bg.ndata.pop('chirality_type').to(device)]
+              bg.ndata.pop('chirality_type').to(device)]
     efeats = [bg.edata.pop('bond_type').to(device),
-                bg.edata.pop('bond_direction_type').to(device)]
+              bg.edata.pop('bond_direction_type').to(device)]
     with torch.no_grad():
         node_repr = model(bg, nfeats, efeats)
-    return readout(bg, node_repr).detach().cpu().numpy()
+    return readout(bg, node_repr).detach().cpu().numpy()[0]  # TODO added the [0], double-check nothing broke
 
 def mol_fp(smi, _radius=2, _nBits=4096):
     """
@@ -208,9 +211,10 @@ def mol_fp(smi, _radius=2, _nBits=4096):
     else:
         mol = Chem.MolFromSmiles(smi)
         features_vec = AllChem.GetMorganFingerprintAsBitVect(mol, _radius, _nBits)
-        features = np.zeros((1,))
-        DataStructs.ConvertToNumpyArray(features_vec, features)
-        return features.reshape((1, -1))
+        return np.array(features_vec)
+        #features = np.zeros((1,))  # TODO recently changed this, double-check nothing broke
+        #DataStructs.ConvertToNumpyArray(features_vec, features)
+        #return features.reshape((1, -1))
 
 def cosine_distance(v1, v2, eps=1e-15):
     """
@@ -698,11 +702,35 @@ def synthetic_tree_decoder_rt1(z_target,
                                 n_bits,
                                 max_step=15,
                                 rt1_index=0):
-    # TODO docstring
+    """
+    Computes the synthetic tree given an input molecule embedding, using the
+    Action, Reaction, Reactant1, and Reactant2 networks and a greedy search.  # TODO rt1?
+
+    Args:
+        z_target (np.ndarray): Embedding for the target molecule
+        building_blocks (list of str): Contains available building blocks
+        bb_dict (dict): Building block dictionary
+        reaction_templates (list of Reactions): Contains reaction templates
+        mol_embedder (dgllife.model.gnn.gin.GIN): GNN to use for obtaining molecular embeddings
+        action_net (synth_net.models.mlp.MLP): The action network
+        reactant1_net (synth_net.models.mlp.MLP): The reactant1 network
+        rxn_net (synth_net.models.mlp.MLP): The reaction network
+        reactant2_net (synth_net.models.mlp.MLP): The reactant2 network
+        bb_emb (list): Contains purchasable building block embeddings.
+        rxn_template (str): Specifies the set of reaction templates to use.
+        n_bits (int): Length of fingerprint.
+        beam_width (int): The beam width to use for Reactant 1 search. Defaults to 3.
+        max_step (int, optional): Maximum number of steps to include in the synthetic tree
+        rt1_index (int, optional): TODO
+
+    Returns:
+        tree (SyntheticTree): The final synthetic tree
+        act (int): The final action (to know if the tree was "properly" terminated)
+    """
     # Initialization
     tree = SyntheticTree()
     mol_recent = None
-    kdtree = BallTree(bb_emb, metric=cosine_distance)  # TODO
+    kdtree = BallTree(bb_emb, metric=cosine_distance)
 
     # Start iteration
     # try:
@@ -821,7 +849,7 @@ def synthetic_tree_decoder_multireactant(z_target,
                                          max_step : int=15):
     """
     Computes the synthetic tree given an input molecule embedding, using the
-    Action, Reaction, Reactant1, and Reactant2 networks and a greedy search
+    Action, Reaction, Reactant1, and Reactant2 networks and a greedy search.
 
     Args:
         z_target (np.ndarray): Embedding for the target molecule
@@ -868,3 +896,114 @@ def synthetic_tree_decoder_multireactant(z_target,
     act = acts[max_simi_idx]
 
     return smi, similarity, tree, act
+
+
+# st2steps functions
+def rdkit2d_embedding(smi):
+    """
+    Computes an embedding from the RDKit 2D descriptors.
+
+    Args:
+        smi (str): SMILES string.
+
+    Returns:
+        np.ndarray: A molecular embedding.
+    """
+    if smi is None:
+        return np.zeros(200).reshape((-1, ))
+    else:
+        # define the RDKit 2D descriptor
+        rdkit2d = MolConvert(src = 'SMILES', dst = 'RDKit2D')
+        return rdkit2d(smi).reshape(-1, )
+ 
+def organize(st, d_mol=300, target_embedding='fp', radius=2, nBits=4096, output_embedding='gin'):
+    """
+    Organizes the states and steps from the input synthetic tree into sparse matrices.
+
+    Args:
+        st (SyntheticTree): The input synthetic tree to organize.
+        d_mol (int, optional): The molecular embedding size. Defaults to 300.
+        target_embedding (str, optional): Indicates what kind of embedding to use
+            for the input target (Morgan fingerprint --> 'fp' or GIN --> 'gin').
+            Defaults to 'fp'.
+        radius (int, optional): Morgan fingerprint radius to use. Defaults to 2.
+        nBits (int, optional): Number of bits to use in the Morgan fingerprints.
+            Defaults to 4096.
+        output_embedding (str, optional): Indicates what type of embedding to use
+            for the output node states. Defaults to 'gin'.
+
+    Raises:
+        ValueError: Raised if target embedding not supported.
+
+    Returns:
+        sparse.csc_matrix: Node states pulled from the tree.
+        sparse.csc_matrix: Actions pulled from the tree.
+    """
+    # define model to use for molecular embedding
+    model_type = 'gin_supervised_contextpred'
+    device = 'cpu'
+    model = load_pretrained(model_type).to(device)
+    model.eval()
+
+    states = []
+    steps = []
+
+    if output_embedding == 'gin':
+        d_mol = 300
+    elif output_embedding == 'fp_4096':
+        d_mol = 4096
+    elif output_embedding == 'fp_256':
+        d_mol = 256
+    elif output_embedding == 'rdkit2d':
+        d_mol = 200
+
+    if target_embedding == 'fp':
+        target = mol_fp(st.root.smiles, radius, nBits).tolist()
+    elif target_embedding == 'gin':
+        target = get_mol_embedding(st.root.smiles, model=model).tolist()
+    else:
+        raise ValueError('Target embedding only supports fp and gin')
+
+    most_recent_mol = None
+    other_root_mol = None
+    for i, action in enumerate(st.actions):
+
+        most_recent_mol_embedding = mol_fp(most_recent_mol, radius, nBits).tolist()
+        other_root_mol_embedding = mol_fp(other_root_mol, radius, nBits).tolist()
+        state = most_recent_mol_embedding + other_root_mol_embedding + target
+
+        if action == 3:
+            step = [3] + [0] * d_mol + [-1] + [0] * d_mol + [0] * nBits
+
+        else:
+            r = st.reactions[i]
+            mol1 = r.child[0]
+            if len(r.child) == 2:
+                mol2 = r.child[1]
+            else:
+                mol2 = None
+
+            if output_embedding == 'gin':
+                step = [action] + get_mol_embedding(mol1, model=model).tolist() + [r.rxn_id] + get_mol_embedding(mol2, model=model).tolist() + mol_fp(mol1, radius, nBits).tolist()
+            elif output_embedding == 'fp_4096':
+                step = [action] + mol_fp(mol1, 2, 4096).tolist() + [r.rxn_id] + mol_fp(mol2, 2, 4096).tolist() + mol_fp(mol1, radius, nBits).tolist()
+            elif output_embedding == 'fp_256':
+                step = [action] + mol_fp(mol1, 2, 256).tolist() + [r.rxn_id] + mol_fp(mol2, 2, 256).tolist() + mol_fp(mol1, radius, nBits).tolist()
+            elif output_embedding == 'rdkit2d':
+                step = [action] + rdkit2d_embedding(mol1).tolist() + [r.rxn_id] + rdkit2d_embedding(mol2).tolist() + mol_fp(mol1, radius, nBits).tolist()
+
+        if action == 2:
+            most_recent_mol = r.parent
+            other_root_mol = None
+
+        elif action == 1:
+            most_recent_mol = r.parent
+
+        elif action == 0:
+            other_root_mol = most_recent_mol
+            most_recent_mol = r.parent
+
+        states.append(state)
+        steps.append(step)
+
+    return sparse.csc_matrix(np.array(states)), sparse.csc_matrix(np.array(steps))

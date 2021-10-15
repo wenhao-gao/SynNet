@@ -2,11 +2,11 @@
 Unit tests for the data preparation.
 """
 import unittest
-from syn_net.utils.data_utils import SyntheticTreeSet
 import os
 from tqdm import tqdm
 from scipy import sparse
-
+from syn_net.utils.predict_utils import organize  # TODO import gets stuck here
+from syn_net.utils.data_utils import SyntheticTreeSet
 
 class TestDataPrep(unittest.TestCase):
     """
@@ -24,28 +24,23 @@ class TestDataPrep(unittest.TestCase):
         Tests the featurization of the synthetic tree data into step-by-step
         data for training.
         """
-        from scripts.st2steps import organize
-        num_save=999999999999
         embedding='fp'
         radius=2
         nbits=4096
         dataset_type='train'
 
-        path_st = f"./tests/data/st_hb_test.json.gz"
-        save_dir = f"./tests/data/"
-        reference_data_dir = f"./tests/data/ref/"
+        path_st = f"./data/st_hb_test.json.gz"
+        save_dir = f"./data/"
+        reference_data_dir = f"./data/ref/"
 
         st_set = SyntheticTreeSet()
         st_set.load(path_st)
-        print('Original length: ', len(st_set.sts))
         data = st_set.sts
         del st_set
-        print('Working length: ', len(data))
 
         states = []
         steps = []
 
-        idx = 0
         save_idx = 0
         for st in tqdm(data):
             try:
@@ -55,26 +50,14 @@ class TestDataPrep(unittest.TestCase):
                 continue
             states.append(state)
             steps.append(step)
-            idx += 1
-            if idx % num_save == 0:
-                print('Saving......')
-                states = sparse.vstack(states)
-                steps = sparse.vstack(steps)
-                sparse.save_npz(save_dir + 'states_' + str(save_idx) + '_' + dataset_type + '.npz', states)
-                sparse.save_npz(save_dir + 'steps_' + str(save_idx) + '_' + dataset_type + '.npz', steps)
-                save_idx += 1
-                del states
-                del steps
-                states = []
-                steps = []
 
         del data
-    
+
         if len(steps) != 0:
+            # save the states and steps
             states = sparse.vstack(states)
             steps = sparse.vstack(steps)
 
-            print('Saving......')
             if not os.path.exists(save_dir):
                 os.makedirs(save_dir)
 

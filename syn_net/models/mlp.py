@@ -10,7 +10,6 @@ from pytorch_lightning import loggers as pl_loggers
 from sklearn.neighbors import BallTree
 import numpy as np
 
-# TODO add missing docstrings, typing
 
 class MLP(pl.LightningModule):
 
@@ -75,6 +74,19 @@ class MLP(pl.LightningModule):
 
     def validation_step(self, batch, batch_idx):
         if self.trainer.current_epoch % self.val_freq == 0:
+            out_feat = self.valid_loss[12:]
+            if out_feat == 'gin':
+                bb_emb_gin = np.load('/pool001/whgao/data/synth_net/st_hb/enamine_us_emb_gin.npy')
+                kdtree = BallTree(bb_emb_gin, metric='euclidean')
+            elif out_feat == 'fp_4096':
+                bb_emb_fp_4096 = np.load('/pool001/whgao/data/synth_net/st_hb/enamine_us_emb_fp_4096.npy')
+                kdtree = BallTree(bb_emb_fp_4096, metric='euclidean')
+            elif out_feat == 'fp_256':
+                bb_emb_fp_256 = np.load('/pool001/whgao/data/synth_net/st_hb/enamine_us_emb_fp_256.npy')
+                kdtree = BallTree(bb_emb_fp_256, metric=cosine_distance)
+            elif out_feat == 'rdkit2d':
+                bb_emb_rdkit2d = np.load('/pool001/whgao/data/synth_net/st_hb/enamine_us_emb_rdkit2d.npy')
+                kdtree = BallTree(bb_emb_rdkit2d, metric='euclidean')
             x, y = batch
             y_hat = self.layers(x)
             if self.valid_loss == 'cross_entropy':
@@ -83,8 +95,8 @@ class MLP(pl.LightningModule):
                 y_hat = torch.argmax(y_hat, axis=1)
                 loss = 1 - (sum(y_hat == y) / len(y))
             elif self.valid_loss[:11] == 'nn_accuracy':
-                y = nn_search_list(y.detach().cpu().numpy(), self.valid_loss[12:])
-                y_hat = nn_search_list(y_hat.detach().cpu().numpy(), self.valid_loss[12:])
+                y = nn_search_list(y.detach().cpu().numpy(), out_feat=out_feat, kdtree=kdtree)
+                y_hat = nn_search_list(y_hat.detach().cpu().numpy(), out_feat=out_feat, kdtree=kdtree)
                 loss = 1 - (sum(y_hat == y) / len(y))
                 # import ipdb; ipdb.set_trace(context=11)
             elif self.valid_loss == 'mse':
@@ -106,7 +118,6 @@ class MLP(pl.LightningModule):
             optimizer = torch.optim.SGD(self.parameters(), lr=self.learning_rate)
         return optimizer
 
-
 def load_array(data_arrays, batch_size, is_train=True, ncpu=-1):
     dataset = torch.utils.data.TensorDataset(*data_arrays)
     return torch.utils.data.DataLoader(dataset, batch_size, shuffle=is_train, num_workers=ncpu)
@@ -114,31 +125,19 @@ def load_array(data_arrays, batch_size, is_train=True, ncpu=-1):
 def cosine_distance(v1, v2, eps=1e-15):
     return 1 - np.dot(v1, v2) / (np.linalg.norm(v1, ord=2) * np.linalg.norm(v2, ord=2) + eps)
 
-bb_emb_gin = np.load('/pool001/whgao/data/synth_net/st_hb/enamine_us_emb_gin.npy')
-kdtree_gin = BallTree(bb_emb_gin, metric='euclidean')
-
-bb_emb_fp_4096 = np.load('/pool001/whgao/data/synth_net/st_hb/enamine_us_emb_fp_4096.npy')
-kdtree_fp_4096 = BallTree(bb_emb_fp_4096, metric='euclidean')
-
-bb_emb_fp_256 = np.load('/pool001/whgao/data/synth_net/st_hb/enamine_us_emb_fp_256.npy')
-kdtree_fp_256 = BallTree(bb_emb_fp_256, metric=cosine_distance)
-
-bb_emb_rdkit2d = np.load('/pool001/whgao/data/synth_net/st_hb/enamine_us_emb_rdkit2d.npy')
-kdtree_rdkit2d = BallTree(bb_emb_rdkit2d, metric='euclidean')
-
-def nn_search(_e, _tree=kdtree_fp_256, _k=1):
+def nn_search(_e, _tree, _k=1):
     dist, ind = _tree.query(_e, k=_k)
     return ind[0][0]
 
-def nn_search_list(y, out_feat):
+def nn_search_list(y, out_feat, kdtree):
     if out_feat == 'gin':
-        return np.array([nn_search(emb.reshape(1, -1), _tree=kdtree_gin) for emb in y])
+        return np.array([nn_search(emb.reshape(1, -1), _tree=kdtree) for emb in y])
     elif out_feat == 'fp_4096':
-        return np.array([nn_search(emb.reshape(1, -1), _tree=kdtree_fp_4096) for emb in y])
+        return np.array([nn_search(emb.reshape(1, -1), _tree=kdtree) for emb in y])
     elif out_feat == 'fp_256':
-        return np.array([nn_search(emb.reshape(1, -1), _tree=kdtree_fp_256) for emb in y])
+        return np.array([nn_search(emb.reshape(1, -1), _tree=kdtree) for emb in y])
     elif out_feat == 'rdkit2d':
-        return np.array([nn_search(emb.reshape(1, -1), _tree=kdtree_rdkit2d) for emb in y])
+        return np.array([nn_search(emb.reshape(1, -1), _tree=kdtree) for emb in y])
     else:
         raise ValueError
 

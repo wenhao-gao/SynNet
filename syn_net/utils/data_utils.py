@@ -37,9 +37,9 @@ class Reaction:
             self.num_agent = rxn.GetNumAgentTemplates()
             self.num_product = rxn.GetNumProductTemplates()
             if self.num_reactant == 1:
-                self.reactant_template = (self.smirks.split('>')[0], )
+                self.reactant_template = list((self.smirks.split('>')[0], ))
             else:
-                self.reactant_template = (self.smirks.split('>')[0].split('.')[0], self.smirks.split('>')[0].split('.')[1])
+                self.reactant_template = list((self.smirks.split('>')[0].split('.')[0], self.smirks.split('>')[0].split('.')[1]))
             self.product_template = self.smirks.split('>')[2]
             self.agent_template = self.smirks.split('>')[1]
 
@@ -56,10 +56,10 @@ class Reaction:
         self.num_reactant = num_reactant
         self.num_agent = num_agent
         self.num_product = num_product
-        self.reactant_template = reactant_template
+        self.reactant_template = list(reactant_template)
         self.product_template = product_template
         self.agent_template = agent_template
-        self.available_reactants = available_reactants
+        self.available_reactants = list(available_reactants)
         self.rxnname = rxnname
         self.smiles = smiles
         self.reference = reference
@@ -316,7 +316,7 @@ class Reaction:
         Args:
             building_block_list (list): the list of purchasable building blocks
         """
-        self.available_reactants = self._filter_reactants(building_block_list)
+        self.available_reactants = list(self._filter_reactants(building_block_list))
         return None
 
 

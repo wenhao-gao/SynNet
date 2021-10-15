@@ -2,7 +2,9 @@
 TODOs
 
 # Certain unittest files
-tests/data/*npz
+tests/data/states_0_train.npz
+tests/data/steps_0_train.npz
+tests/data/rxns_hb.json.gz
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

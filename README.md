@@ -161,7 +161,7 @@ If user wants to start from a checkpoint of previous run, run:
 ```
 optimize_ga.py -i path/to/population.npy --radius 2 --nbits 4096 --num_population 128 --num_offspring 512 --num_gen 200 --ncpu 32 --objective gsk --restart
 ```
-Note: the input file indictaed by -i is seed molecules in csv for initial run and numpy array of population for restarting run.
+Note: the input file indicated by -i contains the seed molecules in CSV format for an initial run, and as a pre-saved numpy array of the population for restarting the run.
 
 ### Train the model from scratch
 Before training any models, you will first need to preprocess the set of reaction templates which you would like to use. You can use either a new set of reaction templates, or the provided Hartenfeller-Button (HB) set of reaction templates (see [data/rxn_set_hb.txt](data/rxn_set_hb.txt)). To preprocess a new dataset, you will need to:

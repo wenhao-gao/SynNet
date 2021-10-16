@@ -8,6 +8,7 @@ export PYTHONPATH=`pwd`:$PYTHONPATH
 ```
 
 Then, activate the SynNet conda environment, and from the current unit tests directory, run:
+
 ```
 python -m unittest
 ```

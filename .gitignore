@@ -5,6 +5,7 @@ TODOs
 tests/data/states_0_train.npz
 tests/data/steps_0_train.npz
 tests/data/rxns_hb.json.gz
+tests/data/st_data.json.gz
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

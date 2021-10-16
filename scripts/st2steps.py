@@ -5,7 +5,7 @@ import os
 from tqdm import tqdm
 from scipy import sparse
 from syn_net.utils.data_utils import *
-from syn_net.utils.predict_utils import organize
+from syn_net.utils.prep_utils import organize
 
 
 

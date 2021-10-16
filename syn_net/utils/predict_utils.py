@@ -4,15 +4,11 @@ This file contains various utils for decoding synthetic trees.
 import numpy as np
 import rdkit
 from tqdm import tqdm
-from scipy import sparse
 import torch
 from rdkit import Chem
 from rdkit.Chem import AllChem
-from rdkit import DataStructs
 from sklearn.neighbors import BallTree
 from dgl.nn.pytorch.glob import AvgPooling
-from dgllife.model import load_pretrained
-from tdc.chem_utils import MolConvert
 from dgllife.utils import mol_to_bigraph, PretrainAtomFeaturizer, PretrainBondFeaturizer
 from syn_net.models.mlp import MLP
 from syn_net.utils.data_utils import SyntheticTree
@@ -896,114 +892,3 @@ def synthetic_tree_decoder_multireactant(z_target,
     act = acts[max_simi_idx]
 
     return smi, similarity, tree, act
-
-
-# st2steps functions
-def rdkit2d_embedding(smi):
-    """
-    Computes an embedding from the RDKit 2D descriptors.
-
-    Args:
-        smi (str): SMILES string.
-
-    Returns:
-        np.ndarray: A molecular embedding.
-    """
-    if smi is None:
-        return np.zeros(200).reshape((-1, ))
-    else:
-        # define the RDKit 2D descriptor
-        rdkit2d = MolConvert(src = 'SMILES', dst = 'RDKit2D')
-        return rdkit2d(smi).reshape(-1, )
- 
-def organize(st, d_mol=300, target_embedding='fp', radius=2, nBits=4096, output_embedding='gin'):
-    """
-    Organizes the states and steps from the input synthetic tree into sparse matrices.
-
-    Args:
-        st (SyntheticTree): The input synthetic tree to organize.
-        d_mol (int, optional): The molecular embedding size. Defaults to 300.
-        target_embedding (str, optional): Indicates what kind of embedding to use
-            for the input target (Morgan fingerprint --> 'fp' or GIN --> 'gin').
-            Defaults to 'fp'.
-        radius (int, optional): Morgan fingerprint radius to use. Defaults to 2.
-        nBits (int, optional): Number of bits to use in the Morgan fingerprints.
-            Defaults to 4096.
-        output_embedding (str, optional): Indicates what type of embedding to use
-            for the output node states. Defaults to 'gin'.
-
-    Raises:
-        ValueError: Raised if target embedding not supported.
-
-    Returns:
-        sparse.csc_matrix: Node states pulled from the tree.
-        sparse.csc_matrix: Actions pulled from the tree.
-    """
-    # define model to use for molecular embedding
-    model_type = 'gin_supervised_contextpred'
-    device = 'cpu'
-    model = load_pretrained(model_type).to(device)
-    model.eval()
-
-    states = []
-    steps = []
-
-    if output_embedding == 'gin':
-        d_mol = 300
-    elif output_embedding == 'fp_4096':
-        d_mol = 4096
-    elif output_embedding == 'fp_256':
-        d_mol = 256
-    elif output_embedding == 'rdkit2d':
-        d_mol = 200
-
-    if target_embedding == 'fp':
-        target = mol_fp(st.root.smiles, radius, nBits).tolist()
-    elif target_embedding == 'gin':
-        target = get_mol_embedding(st.root.smiles, model=model).tolist()
-    else:
-        raise ValueError('Target embedding only supports fp and gin')
-
-    most_recent_mol = None
-    other_root_mol = None
-    for i, action in enumerate(st.actions):
-
-        most_recent_mol_embedding = mol_fp(most_recent_mol, radius, nBits).tolist()
-        other_root_mol_embedding = mol_fp(other_root_mol, radius, nBits).tolist()
-        state = most_recent_mol_embedding + other_root_mol_embedding + target
-
-        if action == 3:
-            step = [3] + [0] * d_mol + [-1] + [0] * d_mol + [0] * nBits
-
-        else:
-            r = st.reactions[i]
-            mol1 = r.child[0]
-            if len(r.child) == 2:
-                mol2 = r.child[1]
-            else:
-                mol2 = None
-
-            if output_embedding == 'gin':
-                step = [action] + get_mol_embedding(mol1, model=model).tolist() + [r.rxn_id] + get_mol_embedding(mol2, model=model).tolist() + mol_fp(mol1, radius, nBits).tolist()
-            elif output_embedding == 'fp_4096':
-                step = [action] + mol_fp(mol1, 2, 4096).tolist() + [r.rxn_id] + mol_fp(mol2, 2, 4096).tolist() + mol_fp(mol1, radius, nBits).tolist()
-            elif output_embedding == 'fp_256':
-                step = [action] + mol_fp(mol1, 2, 256).tolist() + [r.rxn_id] + mol_fp(mol2, 2, 256).tolist() + mol_fp(mol1, radius, nBits).tolist()
-            elif output_embedding == 'rdkit2d':
-                step = [action] + rdkit2d_embedding(mol1).tolist() + [r.rxn_id] + rdkit2d_embedding(mol2).tolist() + mol_fp(mol1, radius, nBits).tolist()
-
-        if action == 2:
-            most_recent_mol = r.parent
-            other_root_mol = None
-
-        elif action == 1:
-            most_recent_mol = r.parent
-
-        elif action == 0:
-            other_root_mol = most_recent_mol
-            most_recent_mol = r.parent
-
-        states.append(state)
-        steps.append(step)
-
-    return sparse.csc_matrix(np.array(states)), sparse.csc_matrix(np.array(steps))

@@ -14,6 +14,7 @@ tests/data/X_rxn_train.npz
 tests/data/y_rxn_train.npz
 tests/data/X_rt2_train.npz
 tests/data/y_rt2_train.npz
+tests/gin_supervised_contextpred_pre_trained.pth
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

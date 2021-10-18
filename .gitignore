@@ -6,6 +6,14 @@ tests/data/states_0_train.npz
 tests/data/steps_0_train.npz
 tests/data/rxns_hb.json.gz
 tests/data/st_data.json.gz
+tests/data/X_act_train.npz
+tests/data/y_act_train.npz
+tests/data/X_rt1_train.npz
+tests/data/y_rt1_train.npz
+tests/data/X_rxn_train.npz
+tests/data/y_rxn_train.npz
+tests/data/X_rt2_train.npz
+tests/data/y_rt2_train.npz
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

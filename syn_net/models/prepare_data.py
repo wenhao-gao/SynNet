@@ -1,12 +1,10 @@
 """
 Prepares the training, testing, and validation data by reading in the states
 and steps for the reaction data and re-writing it as separate one-hot encoded
-action, reactant 1, reactant 2, and reaction files.
+Action, Reactant 1, Reactant 2, and Reaction files.
 """
-from sklearn.preprocessing import OneHotEncoder
-from scipy import sparse
+from syn_net.utils.prep_utils import prep_data
 
-# TODO add comments
 
 if __name__ == '__main__':
 
@@ -42,58 +40,7 @@ if __name__ == '__main__':
     elif output_emb == 'fp_256':
         out_dim = 256
 
+    prep_data(main_dir=main_dir, out_dim=out_dim)
 
-    for dataset in ['train', 'valid', 'test']:
-    # for dataset in ['valid']:
-
-        print('Reading ' + dataset + ' data ......')
-        states_list = []
-        steps_list = []
-        for i in range(1):
-            states_list.append(sparse.load_npz(main_dir + 'states_' + str(i) + '_' + dataset + '.npz'))
-            steps_list.append(sparse.load_npz(main_dir + 'steps_' + str(i) + '_' + dataset + '.npz'))
-
-        states = sparse.csc_matrix(sparse.vstack(states_list))
-        steps = sparse.csc_matrix(sparse.vstack(steps_list))
-
-        X = states
-        y = steps[:, 0]
-
-        sparse.save_npz(main_dir + 'X_act_' + dataset + '.npz', X)
-        sparse.save_npz(main_dir + 'y_act_' + dataset + '.npz', y)
-
-        states = sparse.csc_matrix(states.A[(steps[:, 0].A != 3).reshape(-1, )])
-        steps = sparse.csc_matrix(steps.A[(steps[:, 0].A != 3).reshape(-1, )])
-
-        X = sparse.hstack([states, steps[:, (2 * out_dim + 2):]])
-        y = steps[:, out_dim + 1]
-
-        sparse.save_npz(main_dir + 'X_rxn_' + dataset + '.npz', X)
-        sparse.save_npz(main_dir + 'y_rxn_' + dataset + '.npz', y)
-
-        states = sparse.csc_matrix(states.A[(steps[:, 0].A != 2).reshape(-1, )])
-        steps = sparse.csc_matrix(steps.A[(steps[:, 0].A != 2).reshape(-1, )])
-
-        enc = OneHotEncoder(handle_unknown='ignore')
-        enc.fit([[i] for i in range(num_rxn)])
-        # import ipdb; ipdb.set_trace(context=9)
-        X = sparse.hstack([states, steps[:, (2 * out_dim + 2):], sparse.csc_matrix(enc.transform(steps[:, out_dim+1].A.reshape((-1, 1))).toarray())])
-        y = steps[:, (out_dim+2): (2 * out_dim + 2)]
-
-        sparse.save_npz(main_dir + 'X_rt2_' + dataset + '.npz', X)
-        sparse.save_npz(main_dir + 'y_rt2_' + dataset + '.npz', y)
-
-        states = sparse.csc_matrix(states.A[(steps[:, 0].A != 1).reshape(-1, )])
-        steps = sparse.csc_matrix(steps.A[(steps[:, 0].A != 1).reshape(-1, )])
-
-        # enc = OneHotEncoder(handle_unknown='ignore')
-        # enc.fit([[i] for i in range(4)])
-
-        # X = sparse.hstack([states, sparse.csc_matrix(enc.transform(steps[:, 0].A.reshape((-1, 1))).toarray())])
-        X = states
-        y = steps[:, 1: (out_dim+1)]
-
-        sparse.save_npz(main_dir + 'X_rt1_' + dataset + '.npz', X)
-        sparse.save_npz(main_dir + 'y_rt1_' + dataset + '.npz', y)
 
     print('Finish!')

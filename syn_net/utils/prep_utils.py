@@ -5,10 +5,11 @@ import numpy as np
 from scipy import sparse
 from dgllife.model import load_pretrained
 from tdc.chem_utils import MolConvert
-from syn_net.utils.data_utils import SyntheticTree
+from sklearn.preprocessing import OneHotEncoder
 import numpy as np
-from syn_net.utils.data_utils import SyntheticTree, SyntheticTreeSet
+from syn_net.utils.data_utils import SyntheticTree
 from syn_net.utils.predict_utils import can_react, get_action_mask, get_reaction_mask, mol_fp, get_mol_embedding
+
 
 def rdkit2d_embedding(smi):
     """
@@ -206,3 +207,70 @@ def synthetic_tree_generator(building_blocks, reaction_templates, max_step=15):
         tree.update(action, None, None, None, None)
 
     return tree, action
+
+def prep_data(main_dir, num_rxn, out_dim):
+    """
+    Loads the states and steps from preprocessed *.npz files and saves data
+    specific to the Action, Reactant 1, Reaction, and Reactant 2 networks in
+    their own *.npz files.
+
+    Args:
+        main_dir (str): The path to the directory containing the *.npz files.
+        num_rxn (int): Number of reactions in the dataset.
+        out_dim (int): Size of the output feature vectors.
+    """
+
+    for dataset in ['train', 'valid', 'test']:
+
+        print('Reading ' + dataset + ' data ......')
+        states_list = []
+        steps_list = []
+        for i in range(1):
+            states_list.append(sparse.load_npz(main_dir + 'states_' + str(i) + '_' + dataset + '.npz'))
+            steps_list.append(sparse.load_npz(main_dir + 'steps_' + str(i) + '_' + dataset + '.npz'))
+
+        states = sparse.csc_matrix(sparse.vstack(states_list))
+        steps = sparse.csc_matrix(sparse.vstack(steps_list))
+
+        # extract Action data
+        X = states
+        y = steps[:, 0]
+        sparse.save_npz(main_dir + 'X_act_' + dataset + '.npz', X)
+        sparse.save_npz(main_dir + 'y_act_' + dataset + '.npz', y)
+
+        states = sparse.csc_matrix(states.A[(steps[:, 0].A != 3).reshape(-1, )])
+        steps = sparse.csc_matrix(steps.A[(steps[:, 0].A != 3).reshape(-1, )])
+
+        # extract Reaction data
+        X = sparse.hstack([states, steps[:, (2 * out_dim + 2):]])
+        y = steps[:, out_dim + 1]
+        sparse.save_npz(main_dir + 'X_rxn_' + dataset + '.npz', X)
+        sparse.save_npz(main_dir + 'y_rxn_' + dataset + '.npz', y)
+
+        states = sparse.csc_matrix(states.A[(steps[:, 0].A != 2).reshape(-1, )])
+        steps = sparse.csc_matrix(steps.A[(steps[:, 0].A != 2).reshape(-1, )])
+
+        enc = OneHotEncoder(handle_unknown='ignore')
+        enc.fit([[i] for i in range(num_rxn)])
+        # import ipdb; ipdb.set_trace(context=9)
+
+        # extract Reactant 2 data
+        X = sparse.hstack([states, steps[:, (2 * out_dim + 2):], sparse.csc_matrix(enc.transform(steps[:, out_dim+1].A.reshape((-1, 1))).toarray())])
+        y = steps[:, (out_dim+2): (2 * out_dim + 2)]
+        sparse.save_npz(main_dir + 'X_rt2_' + dataset + '.npz', X)
+        sparse.save_npz(main_dir + 'y_rt2_' + dataset + '.npz', y)
+
+        states = sparse.csc_matrix(states.A[(steps[:, 0].A != 1).reshape(-1, )])
+        steps = sparse.csc_matrix(steps.A[(steps[:, 0].A != 1).reshape(-1, )])
+
+        # enc = OneHotEncoder(handle_unknown='ignore')
+        # enc.fit([[i] for i in range(4)])
+        # X = sparse.hstack([states, sparse.csc_matrix(enc.transform(steps[:, 0].A.reshape((-1, 1))).toarray())])
+
+        # extract Reactant 1 data
+        X = states
+        y = steps[:, 1: (out_dim+1)]
+        sparse.save_npz(main_dir + 'X_rt1_' + dataset + '.npz', X)
+        sparse.save_npz(main_dir + 'y_rt1_' + dataset + '.npz', y)
+
+        return None

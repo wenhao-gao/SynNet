@@ -1,7 +1,7 @@
 # Unit tests
 
 ## Instructions
-To run the unit tests, start from the [main directory](../) and run:
+To run the unit tests, start from the main SynNet directory and run:
 
 ```
 export PYTHONPATH=`pwd`:$PYTHONPATH

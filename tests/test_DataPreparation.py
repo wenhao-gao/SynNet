@@ -169,16 +169,18 @@ class TestDataPrep(unittest.TestCase):
         one-hot encoded Action, Reactant 1, Reactant 2, and Reaction network
         files. In other words, the preparation of data for each specific network.
         """
+        main_dir = './data/'
+        ref_dir = './data/ref/'
+        # copy data from the reference directory to use for this particular test
+        copyfile(f'{ref_dir}states_0_train.npz', f'{main_dir}states_0_train.npz')
+        copyfile(f'{ref_dir}steps_0_train.npz', f'{main_dir}steps_0_train.npz')
+        
         # the lines below will save Action-, Reactant 1-, Reaction-, and Reactant 2-
         # specific files directly to the 'SynNet/tests/data/' directory (e.g.
         # 'X_act_{train/test/valid}.npz' and 'y_act_{train/test/valid}.npz'
         # 'X_rt1_{train/test/valid}.npz' and 'y_rt1_{train/test/valid}.npz'
         # 'X_rxn_{train/test/valid}.npz' and 'y_rxn_{train/test/valid}.npz'
         # 'X_rt2_{train/test/valid}.npz' and 'y_rt2_{train/test/valid}.npz'
-        main_dir = './data/'
-        ref_dir = './data/ref/'
-        copyfile(f'{ref_dir}states_0_train.npz', f'{main_dir}states_0_train.npz')
-        copyfile(f'{ref_dir}steps_0_train.npz', f'{main_dir}steps_0_train.npz')
         prep_data(main_dir=main_dir, num_rxn=3, out_dim=300)
 
         # check that the saved files match the reference files in

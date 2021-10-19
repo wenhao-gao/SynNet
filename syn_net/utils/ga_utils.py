@@ -19,7 +19,7 @@ def crossover(parents, offspring_size, distribution='even'):
             linear to ranking, one scored high has better probability to be
             selected; 'softmax_linear' means the sample probability is exponential
             of linear ranking, steeper than the 'linear', for exploitation stages.
-            Default 'even'.
+            Defaults to 'even'.
 
     Returns:
         offspring (numpy.ndarray): An array which represents the offspring pool.

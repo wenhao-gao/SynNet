@@ -23,7 +23,7 @@ class TestDataPrep(unittest.TestCase):
         # 'SynNet/data/rxn_set_hb.txt'
         path_to_rxn_templates = './data/rxn_set_hb_test.txt'
 
-        # load the reference building blocks (1K here)
+        # load the reference building blocks (100 here)
         path_to_building_blocks = './data/building_blocks_matched.csv.gz'
         building_blocks = pd.read_csv(path_to_building_blocks, compression='gzip')['SMILES'].tolist()
 
@@ -63,11 +63,11 @@ class TestDataPrep(unittest.TestCase):
         r_ref.load(path_to_rxns)
         rxns = r_ref.rxns
 
-        # load the reference building blocks (1K here)
+        # load the reference building blocks (100 here)
         path_to_building_blocks = './data/building_blocks_matched.csv.gz'
         building_blocks = pd.read_csv(path_to_building_blocks, compression='gzip')['SMILES'].tolist()
 
-        num_trials   = 14
+        num_trials   = 25
         num_finish   = 0
         num_error    = 0
         num_unfinish = 0
@@ -88,10 +88,10 @@ class TestDataPrep(unittest.TestCase):
         synthetic_tree_set = SyntheticTreeSet(sts=trees)
         synthetic_tree_set.save('./data/st_data.json.gz')
 
-        # check that the number of finished trees generated is == 10, and that
-        # the number of unfinished trees generated is == 4
-        self.assertEqual(num_finish, 10)
-        self.assertEqual(num_unfinish, 4)
+        # check that the number of finished trees generated is == 3, and that
+        # the number of unfinished trees generated is == 0
+        self.assertEqual(num_finish, 3)
+        self.assertEqual(num_unfinish, 0)
 
         # check here that the synthetic trees were correctly saved by
         # comparing to a provided reference file in 'SynNet/tests/data/ref/'

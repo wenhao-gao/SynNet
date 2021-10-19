@@ -2,9 +2,9 @@
 Filters out purchasable building blocks which don't match one of the 3 reaction
 templates used for unit testing.
 """
-from syn_net.utils.data_utils import *
 import pandas as pd
 from tqdm import tqdm
+from syn_net.utils.data_utils import *
 
 
 if __name__ == '__main__':

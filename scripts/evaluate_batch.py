@@ -5,7 +5,6 @@ root molecules which correspond to *unrecovered* molecules in all the generated 
 """
 from tdc import Evaluator
 import pandas as pd
-import numpy as np
 
 kl_divergence = Evaluator(name = 'KL_Divergence')
 fcd_distance = Evaluator(name = 'FCD_Distance')

@@ -51,7 +51,8 @@ def get_action_mask(state, rxns):
 
     Returns:
         np.ndarray: The action mask. Masks out unviable actions from the current
-            state using 0s, with 1s at the positions corresponding to viable actions.
+            state using 0s, with 1s at the positions corresponding to viable 
+            actions.
     """
     # Action: (Add: 0, Expand: 1, Merge: 2, End: 3)
     if len(state) == 0:
@@ -219,12 +220,14 @@ def cosine_distance(v1, v2, eps=1e-15):
     Args:
         v1 (np.ndarray): First vector.
         v2 (np.ndarray): Second vector.
-        eps (float, optional): Small value, for numerical stability. Defaults to 1e-15.
+        eps (float, optional): Small value, for numerical stability. Defaults 
+            to 1e-15.
 
     Returns:
         float: The cosine similarity.
     """
-    return 1 - np.dot(v1, v2) / (np.linalg.norm(v1, ord=2) * np.linalg.norm(v2, ord=2) + eps)
+    return (1 - np.dot(v1, v2) 
+            / (np.linalg.norm(v1, ord=2) * np.linalg.norm(v2, ord=2) + eps))
 
 def ce_distance(y, y_pred, eps=1e-15):
     """
@@ -233,7 +236,8 @@ def ce_distance(y, y_pred, eps=1e-15):
     Args:
         y (np.ndarray): First vector.
         y_pred (np.ndarray): Second vector.
-        eps (float, optional): Small value, for numerical stability. Defaults to 1e-15.
+        eps (float, optional): Small value, for numerical stability. Defaults 
+            to 1e-15.
 
     Returns:
         float: The cross-entropy.
@@ -272,7 +276,7 @@ def graph_construction_and_featurization(smiles):
         success (list of bool): Indicators for whether the SMILES string can be
             parsed by RDKit.
     """
-    graphs = []
+    graphs  = []
     success = []
     for smi in tqdm(smiles):
         try:
@@ -340,7 +344,8 @@ def synthetic_tree_decoder(z_target,
         building_blocks (list of str): Contains available building blocks
         bb_dict (dict): Building block dictionary
         reaction_templates (list of Reactions): Contains reaction templates
-        mol_embedder (dgllife.model.gnn.gin.GIN): GNN to use for obtaining molecular embeddings
+        mol_embedder (dgllife.model.gnn.gin.GIN): GNN to use for obtaining 
+            molecular embeddings
         action_net (synth_net.models.mlp.MLP): The action network
         reactant1_net (synth_net.models.mlp.MLP): The reactant1 network
         rxn_net (synth_net.models.mlp.MLP): The reaction network
@@ -348,15 +353,17 @@ def synthetic_tree_decoder(z_target,
         bb_emb (list): Contains purchasable building block embeddings.
         rxn_template (str): Specifies the set of reaction templates to use.
         n_bits (int): Length of fingerprint.
-        max_step (int, optional): Maximum number of steps to include in the synthetic tree
+        max_step (int, optional): Maximum number of steps to include in the 
+            synthetic tree
 
     Returns:
-        tree (SyntheticTree): The final synthetic tree
-        act (int): The final action (to know if the tree was "properly" terminated)
+        tree (SyntheticTree): The final synthetic tree.
+        act (int): The final action (to know if the tree was "properly" 
+            terminated).
     """
     # Initialization
-    tree = SyntheticTree()
-    kdtree = BallTree(bb_emb, metric=cosine_distance)
+    tree       = SyntheticTree()
+    kdtree     = BallTree(bb_emb, metric=cosine_distance)
     mol_recent = None
 
     # Start iteration
@@ -374,7 +381,11 @@ def synthetic_tree_decoder(z_target,
         action_mask = get_action_mask(tree.get_state(), reaction_templates)
         act = np.argmax(action_proba * action_mask)
 
-        z_mol1 = reactant1_net(torch.Tensor(z_state))
+        #z_mol1 = reactant1_net(torch.Tensor(z_state))  # TODO just fixed this, check nothing broke
+        reactant1_net_input = torch.Tensor(
+            np.concatenate([z_state, one_hot_encoder(act, 4)], axis=1)
+        )
+        z_mol1 = reactant1_net(reactant1_net_input)
         z_mol1 = z_mol1.detach().numpy()
 
         # Select first molecule
@@ -395,11 +406,13 @@ def synthetic_tree_decoder(z_target,
         # import ipdb; ipdb.set_trace()
 
         # Select reaction
-        reaction_proba = rxn_net(torch.Tensor(np.concatenate([z_state, z_mol1], axis=1)))
+        rxn_net_input  = torch.Tensor(np.concatenate([z_state, z_mol1], axis=1))
+        reaction_proba = rxn_net(rxn_net_input)
         reaction_proba = reaction_proba.squeeze().detach().numpy() + 1e-10
 
         if act != 2:
-            reaction_mask, available_list = get_reaction_mask(mol1, reaction_templates)
+            reaction_mask, available_list = get_reaction_mask(smi=mol1, 
+                                                              rxns=reaction_templates)
         else:
             _, reaction_mask = can_react(tree.get_state(), reaction_templates)
             available_list = [[] for rxn in reaction_templates]
@@ -423,9 +436,14 @@ def synthetic_tree_decoder(z_target,
             else:
                 # Add or Expand
                 if rxn_template == 'hb':
-                    z_mol2 = reactant2_net(torch.Tensor(np.concatenate([z_state, z_mol1, one_hot_encoder(rxn_id, 91)], axis=1)))
+                    num_rxns = 91
                 elif rxn_template == 'pis':
-                    z_mol2 = reactant2_net(torch.Tensor(np.concatenate([z_state, z_mol1, one_hot_encoder(rxn_id, 4700)], axis=1)))
+                    num_rxns = 4700
+                reactant2_net_input = torch.Tensor(
+                    np.concatenate([z_state, z_mol1, one_hot_encoder(rxn_id, num_rxns)], 
+                                   axis=1)
+                )
+                z_mol2 = reactant2_net(reactant2_net_input)
                 z_mol2 = z_mol2.detach().numpy()
                 available = available_list[rxn_id]
                 available = [bb_dict[available[i]] for i in range(len(available))]
@@ -439,8 +457,6 @@ def synthetic_tree_decoder(z_target,
         # Run reaction
         mol_product = rxn.run_reaction([mol1, mol2])
         if mol_product is None or Chem.MolFromSmiles(mol_product) is None:
-            #act = 3
-            #break
             if len(tree.get_state()) == 1:
                 act = 3
                 break
@@ -450,10 +466,6 @@ def synthetic_tree_decoder(z_target,
         # Update
         tree.update(act, int(rxn_id), mol1, mol2, mol_product)
         mol_recent = mol_product
-    # except Exception as e:
-    #     print(e)
-    #     act = -1
-    #     tree = None
 
     if act != 3:
         tree = tree

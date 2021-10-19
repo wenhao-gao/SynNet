@@ -232,7 +232,7 @@ class Reaction:
         reactant.
 
         Args:
-            ind (int): The index of the reactant. Default 0.
+            ind (int): The index of the reactant. Defaults to 0.
 
         Returns:
             reactant_template (str): SMARTS pattern representing the reactant.
@@ -255,7 +255,7 @@ class Reaction:
         Args:
             reactants (list): Contains SMILES strings for the reactants.
             keep_main (bool): Indicates whether to return only the main product,
-                or all possible products. Default True.
+                or all possible products. Defaults to True.
 
         Returns:
             uniqps (str): SMILES string representing the product.

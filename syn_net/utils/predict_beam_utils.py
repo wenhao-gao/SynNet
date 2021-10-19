@@ -13,7 +13,7 @@ np.random.seed(6)
 
 def softmax(x):
     """
-    Compute softmax values for each sets of scores in x.
+    Computes softmax values for each sets of scores in x.
 
     Args:
         x (np.ndarray or list): Values to normalize.
@@ -64,7 +64,8 @@ def synthetic_tree_decoder(z_target,
         building_blocks (list of str): Contains available building blocks
         bb_dict (dict): Building block dictionary
         reaction_templates (list of Reactions): Contains reaction templates
-        mol_embedder (dgllife.model.gnn.gin.GIN): GNN to use for obtaining molecular embeddings
+        mol_embedder (dgllife.model.gnn.gin.GIN): GNN to use for obtaining 
+            molecular embeddings
         action_net (synth_net.models.mlp.MLP): The action network
         reactant1_net (synth_net.models.mlp.MLP): The reactant1 network
         rxn_net (synth_net.models.mlp.MLP): The reaction network
@@ -73,11 +74,13 @@ def synthetic_tree_decoder(z_target,
         beam_width (int): The beam width to use for Reactant 1 search.
         rxn_template (str): Specifies the set of reaction templates to use.
         n_bits (int): Length of fingerprint.
-        max_step (int, optional): Maximum number of steps to include in the synthetic tree
+        max_step (int, optional): Maximum number of steps to include in the 
+            synthetic tree
 
     Returns:
-        tree (SyntheticTree): The final synthetic tree
-        act (int): The final action (to know if the tree was "properly" terminated)
+        tree (SyntheticTree): The final synthetic tree.
+        act (int): The final action (to know if the tree was "properly" 
+            terminated).
     """
     # Initialization
     tree = SyntheticTree()
@@ -99,9 +102,10 @@ def synthetic_tree_decoder(z_target,
         action_mask = get_action_mask(tree.get_state(), reaction_templates)
         act = np.argmax(action_proba * action_mask)
 
-        #import ipdb; ipdb.set_trace(context=9)
-
-        z_mol1 = reactant1_net(torch.Tensor(np.concatenate([z_state, one_hot_encoder(act, 4)], axis=1)))
+        reactant1_net_input = torch.Tensor(
+            np.concatenate([z_state, one_hot_encoder(act, 4)], axis=1)
+        )
+        z_mol1 = reactant1_net(reactant1_net_input)
         z_mol1 = z_mol1.detach().numpy()
 
         # Select first molecule
@@ -116,7 +120,6 @@ def synthetic_tree_decoder(z_target,
             dist, ind = nn_search(z_mol1, _tree=kdtree, _k=min(len(bb_emb), beam_width))
             try:
                 mol1_probas = softmax(- 0.1 * dist)
-                #mol1_nlls = [0.0] * args.beam_width  #-np.log(mol1_probas)
                 mol1_nlls = -np.log(mol1_probas)
             except:  # exception for beam search of length 1
                 mol1_nlls = [-np.log(0.5)]
@@ -158,8 +161,6 @@ def synthetic_tree_decoder(z_target,
                     mol2_list.append(None)
                     continue
                 else:
-                    #act = 3
-                    #nlls[mol1_idx] += -np.log(action_proba * reaction_mask)[act]  # correct the NLL
                     act_list[mol1_idx] = act
                     rxn_list.append(None)
                     rxn_id_list.append(None)
@@ -234,10 +235,6 @@ def synthetic_tree_decoder(z_target,
         # Update
         tree.update(act, int(rxn_id), mol1, mol2, mol_product)
         mol_recent = mol_product
-    # except Exception as e:
-    #     print(e)
-    #     act = -1
-    #     tree = None
 
     if act != 3:
         tree = tree

@@ -3,6 +3,7 @@ Unit tests for the data preparation.
 """
 import unittest
 import os
+from shutil import copyfile
 import pandas as pd
 from tqdm import tqdm
 from scipy import sparse
@@ -112,7 +113,7 @@ class TestDataPrep(unittest.TestCase):
         nbits        = 4096
         dataset_type = 'train'
 
-        path_st            = './data/st_hb_test.json.gz'
+        path_st            = './data/ref/st_data.json.gz'
         save_dir           = './data/'
         reference_data_dir = './data/ref/'
 
@@ -175,11 +176,13 @@ class TestDataPrep(unittest.TestCase):
         # 'X_rxn_{train/test/valid}.npz' and 'y_rxn_{train/test/valid}.npz'
         # 'X_rt2_{train/test/valid}.npz' and 'y_rt2_{train/test/valid}.npz'
         main_dir = './data/'
+        ref_dir = './data/ref/'
+        copyfile(f'{ref_dir}states_0_train.npz', f'{main_dir}states_0_train.npz')
+        copyfile(f'{ref_dir}steps_0_train.npz', f'{main_dir}steps_0_train.npz')
         prep_data(main_dir=main_dir, num_rxn=3, out_dim=300)
 
         # check that the saved files match the reference files in
         # 'SynNet/tests/data/ref':
-        ref_dir = './data/ref/'
 
         # Action network data
         X_act = sparse.load_npz(f'{main_dir}X_act_train.npz')

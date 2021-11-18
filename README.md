@@ -56,6 +56,13 @@ python -m unittest
 
 You should get no errors if everything ran correctly.
 
+### Data
+
+#### Templates
+The Hartenfeller-Button templates are available in the [./data/](./data/) directory.
+#### Building blocks
+The Enamine data can be freely downloaded from https://enamine.net/building-blocks/building-blocks-catalog for academic purposes. After downloading the Enamine building blocks, you will need to replace the paths to the Enamine building blocks in the code. This can be done by searching for the string "enamine".
+
 ## Code Structure
 The code is structured as follows:
 

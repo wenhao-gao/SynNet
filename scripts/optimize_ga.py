@@ -10,15 +10,14 @@ import pandas as pd
 import time
 import json
 import scripts._mp_decode as decode
-# import scripts._mp_sum as decode
 from tdc import Oracle
 
 # define the following oracle functions from the TDC
-logp = Oracle(name = 'LogP')
-qed = Oracle(name = 'QED')
-jnk = Oracle(name = 'JNK3')
-gsk = Oracle(name = 'GSK3B')
-drd2 = Oracle(name = 'DRD2')
+logp  = Oracle(name = 'LogP')
+qed   = Oracle(name = 'QED')
+jnk   = Oracle(name = 'JNK3')
+gsk   = Oracle(name = 'GSK3B')
+drd2  = Oracle(name = 'DRD2')
 _7l11 = Oracle(name = '7l11_docking')
 _drd3 = Oracle(name = 'drd3_docking')
 
@@ -75,13 +74,15 @@ def fitness(embs, _pool, obj):
         ValueError: Raised if the specified objective function is not implemented.
 
     Returns:
-        list: Contains the scores for the root molecules in the generated trees.
-        list: Contains the root molecules encoded as SMILES strings.
-        list: Contains the synthetic trees generated from the input embeddings.
+        scores (list): Contains the scores for the root molecules in the
+            generated trees.
+        smiles (list): Contains the root molecules encoded as SMILES strings.
+        trees (list): Contains the synthetic trees generated from the input
+            embeddings.
     """
     results = _pool.map(decode.func, embs)
-    smiles = [r[0] for r in results]
-    trees = [r[1] for r in results]
+    smiles  = [r[0] for r in results]
+    trees   = [r[1] for r in results]
     if obj == 'qed':
         scores = [qed(smi) for smi in smiles]
     elif obj == 'logp':
@@ -118,7 +119,7 @@ def distribution_schedule(n, total):
     else:
         return 'softmax_linear'
 
-def num_mut_per_ele_scheduler(n, total):  # TODO this function could be replaced with a single number
+def num_mut_per_ele_scheduler(n, total):
     """
     Determines the number of bits to mutate in each vector, based on the number
     of elapsed generations.
@@ -136,7 +137,7 @@ def num_mut_per_ele_scheduler(n, total):  # TODO this function could be replaced
     #     return 512
     return 24
 
-def mut_probability_scheduler(n, total):  # TODO this function could be replaced with a single number
+def mut_probability_scheduler(n, total):
     """
     Determines the probability of mutating a vector, based on the number of elapsed
     generations.
@@ -158,7 +159,7 @@ if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument("-i", "--input_file", type=str, default=None,
-                                        help="A file contains the starting mating pool.")
+                        help="A file contains the starting mating pool.")
     parser.add_argument("--objective", type=str, default="qed",
                         help="Objective function to optimize")
     parser.add_argument("--radius", type=int, default=2,
@@ -194,17 +195,21 @@ if __name__ == '__main__':
         else:
             starting_smiles = pd.read_csv(args.input_file).sample(args.num_population)
             starting_smiles = starting_smiles['smiles'].tolist()
-            population = np.array([decode.mol_fp(smi, args.radius, args.nbits) for smi in starting_smiles])
+            population = np.array(
+                [decode.mol_fp(smi, args.radius, args.nbits) for smi in starting_smiles]
+            )
             population = population.reshape((population.shape[0], population.shape[2]))
             print(f"Starting with {len(starting_smiles)} fps from {args.input_file}")
 
     with mp.Pool(processes=args.ncpu) as pool:
-        scores, mols, trees = fitness(population, pool, args.objective)
-    scores = np.array(scores)
-    score_x = np.argsort(scores)
+        scores, mols, trees = fitness(embs=population,
+                                      pool=pool,
+                                      obj=args.objective)
+    scores     = np.array(scores)
+    score_x    = np.argsort(scores)
     population = population[score_x[::-1]]
-    mols = [mols[i] for i in score_x[::-1]]
-    scores = scores[score_x[::-1]]
+    mols       = [mols[i] for i in score_x[::-1]]
+    scores     = scores[score_x[::-1]]
     print(f"Initial: {scores.mean():.3f} +/- {scores.std():.3f}")
     print(f"Scores: {scores}")
     print(f"Top-3 Smiles: {mols[:3]}")
@@ -216,17 +221,20 @@ if __name__ == '__main__':
 
         t = time.time()
 
-        dist_ = distribution_schedule(n, args.num_gen)
+        dist_            = distribution_schedule(n, args.num_gen)
         num_mut_per_ele_ = num_mut_per_ele_scheduler(n, args.num_gen)
         mut_probability_ = mut_probability_scheduler(n, args.num_gen)
 
-        offspring = crossover(population, args.num_offspring, distribution=dist_)
-        offspring = mutation(offspring, num_mut_per_ele=num_mut_per_ele_, mut_probability=mut_probability_)
+        offspring = crossover(parents=population,
+                              offspring_size=args.num_offspring,
+                              distribution=dist_)
+        offspring = mutation(offspring=offspring,
+                             num_mut_per_ele=num_mut_per_ele_,
+                             mut_probability=mut_probability_)
         new_population = np.unique(np.concatenate([population, offspring], axis=0), axis=0)
         with mp.Pool(processes=args.ncpu) as pool:
             new_scores, new_mols, trees = fitness(new_population, pool, args.objective)
         new_scores = np.array(new_scores)
-        # import ipdb; ipdb.set_trace()
         scores = []
         mols = []
 
@@ -261,11 +269,11 @@ if __name__ == '__main__':
         np.save('population_' + args.objective + '_' + str(n+1) + '.npy', population)
 
         data = {'objective': args.objective,
-                'top1': np.mean(scores[:1]),
-                'top10': np.mean(scores[:10]),
-                'top100': np.mean(scores[:100]),
-                'smiles': mols,
-                'scores': scores.tolist()}
+                'top1'     : np.mean(scores[:1]),
+                'top10'    : np.mean(scores[:10]),
+                'top100'   : np.mean(scores[:100]),
+                'smiles'   : mols,
+                'scores'   : scores.tolist()}
         with open('opt_' + args.objective + '.json', 'w') as f:
             json.dump(data, f)
 
@@ -274,11 +282,11 @@ if __name__ == '__main__':
             break
 
     data = {'objective': args.objective,
-            'top1': np.mean(scores[:1]),
-            'top10': np.mean(scores[:10]),
-            'top100': np.mean(scores[:100]),
-            'smiles': mols,
-            'scores': scores.tolist()}
+            'top1'     : np.mean(scores[:1]),
+            'top10'    : np.mean(scores[:10]),
+            'top100'   : np.mean(scores[:100]),
+            'smiles'   : mols,
+            'scores'   : scores.tolist()}
     with open('opt_' + args.objective + '.json', 'w') as f:
         json.dump(data, f)
 

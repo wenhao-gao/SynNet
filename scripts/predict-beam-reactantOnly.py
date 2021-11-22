@@ -107,15 +107,15 @@ if __name__ == '__main__':
             z_target = mol_fp(query_smi, args.radius, args.nbits)
         elif args.featurize == 'gin':
             z_target = get_mol_embedding(query_smi)
-        tree, action = synthetic_tree_decoder(z_target,
-                                              building_blocks,
-                                              bb_dict,
-                                              rxns,
-                                              mol_embedder,
-                                              act_net,
-                                              rt1_net,
-                                              rxn_net,
-                                              rt2_net,
+        tree, action = synthetic_tree_decoder(z_target=z_target,
+                                              building_blocks=building_blocks,
+                                              bb_dict=bb_dict,
+                                              reaction_templates=rxns,
+                                              mol_embedder=mol_embedder,
+                                              action_net=act_net,
+                                              reactant1_net=rt1_net,
+                                              rxn_net=rxn_net,
+                                              reactant2_net=rt2_net,
                                               bb_emb=bb_emb,
                                               beam_width=args.beam_width,
                                               rxn_template=args.rxn_template,
@@ -123,20 +123,20 @@ if __name__ == '__main__':
                                               max_step=15)
         return tree, action
 
-    path_to_data = '/pool001/whgao/data/synth_net/st_' + args.rxn_template + '/st_' + args.data +'.json.gz'
+    path_to_data = f'/pool001/whgao/data/synth_net/st_{args.rxn_template}/st_{args.data}.json.gz'
     print('Reading data from ', path_to_data)
     sts = SyntheticTreeSet()
     sts.load(path_to_data)
-    query_smis = [st.root.smiles for st in sts.sts]  # TODO here could filter "~"s
+    query_smis = [st.root.smiles for st in sts.sts]
     if args.num == -1:
         pass
     else:
         query_smis = query_smis[:args.num]
 
-    output_smis = []
-    similaritys = []
-    trees = []
-    num_finish = 0
+    output_smis  = []
+    similaritys  = []
+    trees        = []
+    num_finish   = 0
     num_unfinish = 0
 
     print('Start to decode!')
@@ -157,21 +157,27 @@ if __name__ == '__main__':
         else:
             num_finish += 1
             output_smis.append(tree.root.smiles)
-            ms = [Chem.MolFromSmiles(sm) for sm in [smi, tree.root.smiles]]
+            ms  = [Chem.MolFromSmiles(sm) for sm in [smi, tree.root.smiles]]
             fps = [Chem.RDKFingerprint(x) for x in ms]
             similaritys.append(DataStructs.FingerprintSimilarity(fps[0],fps[1]))
             trees.append(tree)
 
     print('Saving ......')
-    save_path = '../results/' + args.rxn_template + '_' + args.featurize + '/'
+    save_path = f'../results/{args.rxn_template}_{args.featurize}/'
     if not os.path.exists(save_path):
         os.makedirs(save_path)
-    df = pd.DataFrame({'query SMILES': query_smis, 'decode SMILES': output_smis, 'similarity': similaritys})
+    df = pd.DataFrame(
+        {'query SMILES' : query_smis,
+         'decode SMILES': output_smis,
+         'similarity'   : similaritys}
+    )
     print("mean similarities", df['similarity'].mean(), df['similarity'].std())
     print("NAs", df.isna().sum())
-    df.to_csv(save_path + 'decode_result_' + args.data + '_robw_' + str(args.beam_width) + '.csv.gz', compression='gzip', index=False)
+    df.to_csv(f'{save_path}decode_result_{args.data}_robw_{str(args.beam_width)}.csv.gz',
+              compression='gzip',
+              index=False)
 
     synthetic_tree_set = SyntheticTreeSet(sts=trees)
-    synthetic_tree_set.save(save_path + 'decoded_st_robw_' + str(args.beam_width) + '_' + args.data + '.json.gz')
+    synthetic_tree_set.save(f'{save_path}decoded_st_robw_{str(args.beam_width)}_{args.data}.json.gz')
 
     print('Finish!')

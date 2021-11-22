@@ -46,34 +46,31 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     # define model to use for molecular embedding
-    readout = AvgPooling()
-    model_type = 'gin_supervised_contextpred'
-    device = 'cuda:0'
+    readout      = AvgPooling()
+    model_type   = 'gin_supervised_contextpred'
+    device       = 'cuda:0'
     mol_embedder = load_pretrained(model_type).to(device)
     mol_embedder.eval()
 
     # load the purchasable building block embeddings
-    bb_emb = np.load('/pool001/whgao/data/synth_net/st_' + args.rxn_template + '/enamine_us_emb.npy')
+    bb_emb = np.load(f'/pool001/whgao/data/synth_net/st_{args.rxn_template}/enamine_us_emb.npy')
 
     # define path to the reaction templates and purchasable building blocks
-    path_to_reaction_file   = ('/pool001/whgao/data/synth_net/st_' + args.rxn_template
-                               + '/reactions_' + args.rxn_template + '.json.gz')
-    path_to_building_blocks = ('/pool001/whgao/data/synth_net/st_' + args.rxn_template
-                               + '/enamine_us_matched.csv.gz')
+    path_to_reaction_file   = f'/pool001/whgao/data/synth_net/st_{args.rxn_template}/reactions_{args.rxn_template}.json.gz'
+    path_to_building_blocks = f'/pool001/whgao/data/synth_net/st_{args.rxn_template}/enamine_us_matched.csv.gz'
 
     # define paths to pretrained modules
-    param_path  = (f"/home/rociomer/SynthNet/pre-trained-models/{args.rxn_template}"
-                   f"_{args.featurize}_{args.radius}_{args.nbits}_v{args.version}/")
-    path_to_act = param_path + 'act.ckpt'
-    path_to_rt1 = param_path + 'rt1.ckpt'
-    path_to_rxn = param_path + 'rxn.ckpt'
-    path_to_rt2 = param_path + 'rt2.ckpt'
+    param_path  = f'/home/rociomer/SynthNet/pre-trained-models/{args.rxn_template}_{args.featurize}_{args.radius}_{args.nbits}_v{args.version}/'
+    path_to_act = f'{param_path}act.ckpt'
+    path_to_rt1 = f'{param_path}rt1.ckpt'
+    path_to_rxn = f'{param_path}rxn.ckpt'
+    path_to_rt2 = f'{param_path}rt2.ckpt'
 
     np.random.seed(6)
 
     # load the purchasable building block SMILES to a dictionary
     building_blocks = pd.read_csv(path_to_building_blocks, compression='gzip')['SMILES'].tolist()
-    bb_dict = {building_blocks[i]: i for i in range(len(building_blocks))}
+    bb_dict         = {building_blocks[i]: i for i in range(len(building_blocks))}
 
     # load the reaction templates as a ReactionSet object
     rxn_set = ReactionSet()
@@ -108,15 +105,15 @@ if __name__ == '__main__':
             z_target = mol_fp(query_smi, nBits=args.nbits)
         elif args.featurize == 'gin':
             z_target = get_mol_embedding(query_smi)
-        tree, action = synthetic_tree_decoder_fullbeam(z_target,
-                                                       building_blocks,
-                                                       bb_dict,
-                                                       rxns,
-                                                       mol_embedder,
-                                                       act_net,
-                                                       rt1_net,
-                                                       rxn_net,
-                                                       rt2_net,
+        tree, action = synthetic_tree_decoder_fullbeam(z_target=z_target,
+                                                       building_blocks=building_blocks,
+                                                       bb_dict=bb_dict,
+                                                       reaction_templates=rxns,
+                                                       mol_embedder=mol_embedder,
+                                                       action_net=act_net,
+                                                       reactant1_net=rt1_net,
+                                                       rxn_net=rxn_net,
+                                                       reactant2_net=rt2_net,
                                                        bb_emb=bb_emb,
                                                        beam_width=args.beam_width,
                                                        rxn_template=args.rxn_template,
@@ -125,7 +122,7 @@ if __name__ == '__main__':
         return tree, action
 
     # load the purchasable building blocks to decode
-    path_to_data = '/pool001/whgao/data/synth_net/st_' + args.rxn_template + '/st_' + args.data +'.json.gz'
+    path_to_data = f'/pool001/whgao/data/synth_net/st_{args.rxn_template}/st_{args.data}.json.gz'
     print('Reading data from ', path_to_data)
     sts = SyntheticTreeSet()
     sts.load(path_to_data)
@@ -135,10 +132,10 @@ if __name__ == '__main__':
     else:
         query_smis = query_smis[:args.num]
 
-    output_smis = []
-    similaritys = []
-    trees = []
-    num_finish = 0
+    output_smis  = []
+    similaritys  = []
+    trees        = []
+    num_finish   = 0
     num_unfinish = 0
 
     print('Start to decode!')
@@ -171,9 +168,11 @@ if __name__ == '__main__':
     df = pd.DataFrame({'query SMILES': query_smis, 'decode SMILES': output_smis, 'similarity': similaritys})
     print("mean similarities", df['similarity'].mean(), df['similarity'].std())
     print("NAs", df.isna().sum())
-    df.to_csv(save_path + 'decode_result_' + args.data + '_bw_' + str(args.beam_width) + '.csv.gz', compression='gzip', index=False)
+    df.to_csv(f'{save_path}decode_result_{args.data}_bw_{args.beam_width}.csv.gz',
+              compression='gzip',
+              index=False)
 
     synthetic_tree_set = SyntheticTreeSet(sts=trees)
-    synthetic_tree_set.save(save_path + 'decoded_st_bw_' + str(args.beam_width) + '_' + args.data + '.json.gz')
+    synthetic_tree_set.save(f'{save_path}decoded_st_bw_{args.beam_width}_{args.data}.json.gz')
 
     print('Finish!')

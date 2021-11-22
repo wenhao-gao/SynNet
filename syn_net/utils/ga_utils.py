@@ -45,13 +45,21 @@ def crossover(parents, offspring_size, distribution='even'):
         parent2_idx = list(set(range(fp_length)).difference(set(parent1_idx)))
 
         if distribution == 'even':
-            parent_set = parents[np.random.choice(parents.shape[0], size=2, replace=False)]
+            parent_set = parents[np.random.choice(parents.shape[0],
+                                                  size=2,
+                                                  replace=False)]
         elif distribution == 'linear':
             p_         = np.arange(parents.shape[0])[::-1] + 10
-            parent_set = parents[np.random.choice(parents.shape[0], size=2, replace=False, p=p_/np.sum(p_))]
+            parent_set = parents[np.random.choice(parents.shape[0],
+                                                  size=2,
+                                                  replace=False,
+                                                  p=p_/np.sum(p_))]
         elif distribution == 'softmax_linear':
             p_         = np.arange(parents.shape[0])[::-1] + 10
-            parent_set = parents[np.random.choice(parents.shape[0], size=2, replace=False, p=scipy.special.softmax(p_))]
+            parent_set = parents[np.random.choice(parents.shape[0],
+                                                  size=2,
+                                                  replace=False,
+                                                  p=scipy.special.softmax(p_))]
 
         offspring[k, parent1_idx] = parent_set[0][parent1_idx]
         offspring[k, parent2_idx] = parent_set[1][parent2_idx]

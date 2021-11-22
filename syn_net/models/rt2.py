@@ -42,30 +42,27 @@ if __name__ == '__main__':
         validation_option = 'nn_accuracy_rdkit2d'
     else:
         raise ValueError
-    main_dir = '/pool001/whgao/data/synth_net/' + args.rxn_template + '_' + args.featurize + '_' + str(args.radius) + '_' + str(args.nbits) + '_' + validation_option[12:] + '/'
+
+    main_dir   = f'/pool001/whgao/data/synth_net/{args.rxn_template}_{args.featurize}_{args.radius}_{args.nbits}_{validation_option[12:]}/'
     batch_size = args.batch_size
-    ncpu = args.ncpu
+    ncpu       = args.ncpu
 
 
     X = sparse.load_npz(main_dir + 'X_rt2_train.npz')
     y = sparse.load_npz(main_dir + 'y_rt2_train.npz')
-    # X = sparse.load_npz(main_dir + 'X_rt2_valid.npz')
-    # y = sparse.load_npz(main_dir + 'y_rt2_valid.npz')
     X = torch.Tensor(X.A)
     y = torch.Tensor(y.A)
     train_data_iter = load_array((X, y), batch_size, ncpu=ncpu, is_train=True)
 
-    X = sparse.load_npz(main_dir + 'X_rt2_valid.npz')
-    y = sparse.load_npz(main_dir + 'y_rt2_valid.npz')
-    # X = sparse.load_npz(main_dir + 'X_rt2_test.npz')
-    # y = sparse.load_npz(main_dir + 'y_rt2_test.npz')
-    X = torch.Tensor(X.A)
-    y = torch.Tensor(y.A)
+    X    = sparse.load_npz(main_dir + 'X_rt2_valid.npz')
+    y    = sparse.load_npz(main_dir + 'y_rt2_valid.npz')
+    X    = torch.Tensor(X.A)
+    y    = torch.Tensor(y.A)
     _idx = np.random.choice(list(range(X.shape[0])), size=int(X.shape[0]/10), replace=False)
     valid_data_iter = load_array((X[_idx], y[_idx]), batch_size, ncpu=ncpu, is_train=False)
 
     pl.seed_everything(0)
-    if args.featurize == 'fp':  # TODO a lot of the code below repeats, maybe worth making a `models/utils.py`
+    if args.featurize == 'fp':
         if args.rxn_template == 'hb':
             mlp = MLP(input_dim=int(4 * args.nbits + 91),
                       output_dim=args.out_dim,
@@ -124,10 +121,12 @@ if __name__ == '__main__':
                       val_freq=10,
                       ncpu=ncpu)
 
-    tb_logger = pl_loggers.TensorBoardLogger('rt2_' + args.rxn_template + '_' + args.featurize  + '_' + str(args.radius) + '_' + str(args.nbits) + '_' + validation_option[12:] +  '_logs/')
+    tb_logger = pl_loggers.TensorBoardLogger(
+        f'rt2_{args.rxn_template}_{args.featurize}_{args.radius}_{args.nbits}_{validation_option[12:]}_logs/'
+    )
 
     trainer = pl.Trainer(gpus=[0], max_epochs=args.epoch, progress_bar_refresh_rate=20, logger=tb_logger)
-    t = time.time()
+    t       = time.time()
     trainer.fit(mlp, train_data_iter, valid_data_iter)
     print(time.time() - t, 's')
 

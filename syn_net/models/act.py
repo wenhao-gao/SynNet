@@ -19,7 +19,7 @@ if __name__ == '__main__':
                         help="Choose from ['hb', 'pis']")
     parser.add_argument("--radius", type=int, default=2,
                         help="Radius for Morgan fingerprint.")
-    parser.add_argument("--nbits", type=int, default=4096,  # TODO nbits in some scripts and -b in others
+    parser.add_argument("--nbits", type=int, default=4096,
                         help="Number of Bits for Morgan fingerprint.")
     parser.add_argument("--out_dim", type=int, default=300,
                         help="Output dimension.")
@@ -42,28 +42,21 @@ if __name__ == '__main__':
     else:
         raise ValueError
 
-    # TODO I think it's worth making the first part of `main_dir` (the path) and arg in argparser
-    main_dir = '/pool001/whgao/data/synth_net/' + args.rxn_template + '_' + args.featurize + '_' + str(args.radius) + '_' + str(args.nbits) + '_' + validation_option[12:] + '/'
+    main_dir   = f'/pool001/whgao/data/synth_net/{args.rxn_template}_{args.featurize}_{args.radius}_{args.nbits}_{validation_option[12:]}/'
     batch_size = args.batch_size
-    ncpu = args.ncpu
+    ncpu       = args.ncpu
 
     X = sparse.load_npz(main_dir + 'X_act_train.npz')
     y = sparse.load_npz(main_dir + 'y_act_train.npz')
-    # X = sparse.load_npz(main_dir + 'X_act_valid.npz')
-    # y = sparse.load_npz(main_dir + 'y_act_valid.npz')
     X = torch.Tensor(X.A)
     y = torch.LongTensor(y.A.reshape(-1, ))
     train_data_iter = load_array((X, y), batch_size, ncpu=ncpu, is_train=True)
 
     X = sparse.load_npz(main_dir + 'X_act_valid.npz')
     y = sparse.load_npz(main_dir + 'y_act_valid.npz')
-    # X = sparse.load_npz(main_dir + 'X_act_test.npz')
-    # y = sparse.load_npz(main_dir + 'y_act_test.npz')
     X = torch.Tensor(X.A)
     y = torch.LongTensor(y.A.reshape(-1, ))
     valid_data_iter = load_array((X, y), batch_size, ncpu=ncpu, is_train=False)
-
-    # import ipdb; ipdb.set_trace()
 
     pl.seed_everything(0)
     if args.featurize == 'fp':
@@ -94,10 +87,10 @@ if __name__ == '__main__':
                   learning_rate=1e-4,
                   val_freq=10,
                   ncpu=ncpu)
-    tb_logger = pl_loggers.TensorBoardLogger('act_' + args.rxn_template + '_' + args.featurize + '_' + str(args.radius) + '_' + str(args.nbits) + '_logs/')
 
-    trainer = pl.Trainer(gpus=[0], max_epochs=args.epoch, progress_bar_refresh_rate=20, logger=tb_logger)
-    t = time.time()
+    tb_logger = pl_loggers.TensorBoardLogger(f'act_{args.rxn_template}_{args.featurize}_{args.radius}_{args.nbits}_logs/')
+    trainer   = pl.Trainer(gpus=[0], max_epochs=args.epoch, progress_bar_refresh_rate=20, logger=tb_logger)
+    t         = time.time()
     trainer.fit(mlp, train_data_iter, valid_data_iter)
     print(time.time() - t, 's')
 

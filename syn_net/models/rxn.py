@@ -46,35 +46,28 @@ if __name__ == '__main__':
     else:
         raise ValueError
 
-    # TODO make path an arg so others can specify where they save this data
-    main_dir = '/pool001/whgao/data/synth_net/' + args.rxn_template + '_' + args.featurize + '_' + str(args.radius) + '_' + str(args.nbits) + '_' + validation_option[12:] + '/'
+    main_dir   = f'/pool001/whgao/data/synth_net/{args.rxn_template}_{args.featurize}_{args.radius}_{args.nbits}_{validation_option[12:]}/'
     batch_size = args.batch_size
-    ncpu = args.ncpu
+    ncpu       = args.ncpu
 
     X = sparse.load_npz(main_dir + 'X_rxn_train.npz')
     y = sparse.load_npz(main_dir + 'y_rxn_train.npz')
-    # X = sparse.load_npz(main_dir + 'X_rxn_valid.npz')
-    # y = sparse.load_npz(main_dir + 'y_rxn_valid.npz')
     X = torch.Tensor(X.A)
     y = torch.LongTensor(y.A.reshape(-1, ))
     train_data_iter = load_array((X, y), batch_size, ncpu=ncpu, is_train=True)
 
     X = sparse.load_npz(main_dir + 'X_rxn_valid.npz')
     y = sparse.load_npz(main_dir + 'y_rxn_valid.npz')
-    # X = sparse.load_npz(main_dir + 'X_rxn_test.npz')
-    # y = sparse.load_npz(main_dir + 'y_rxn_test.npz')
     X = torch.Tensor(X.A)
     y = torch.LongTensor(y.A.reshape(-1, ))
     valid_data_iter = load_array((X, y), batch_size, ncpu=ncpu, is_train=False)
 
     pl.seed_everything(0)
+    param_path  = f'/pool001/rociomer/data/pre-trained-models/{args.rxn_template}_{args.featurize}_{args.radius}_{args.nbits}_v{args.version}/'
+    path_to_rxn = f'{param_path}rxn.ckpt'
     if not args.restart:
 
-        param_path  = (f"/pool001/rociomer/data/pre-trained-models/{args.rxn_template}"
-                    f"_{args.featurize}_{args.radius}_{args.nbits}_v{args.version}/")
-        path_to_rxn = param_path + 'rxn.ckpt'
-
-        if args.featurize == 'fp':  # TODO again, a lot of repeat code below
+        if args.featurize == 'fp':
             if args.rxn_template == 'hb':
                 mlp = MLP(input_dim=int(4 * args.nbits),
                           output_dim=91,
@@ -134,7 +127,6 @@ if __name__ == '__main__':
                           ncpu=ncpu)
     else:
         if args.rxn_template == 'hb':
-
             mlp = MLP.load_from_checkpoint(
                 path_to_rxn,
                 input_dim=int(4 * args.nbits),
@@ -151,7 +143,6 @@ if __name__ == '__main__':
                 ncpu=ncpu
             )
         elif args.rxn_template == 'pis':
-
             mlp = MLP.load_from_checkpoint(
                 path_to_rxn,
                 input_dim=int(4 * args.nbits),
@@ -168,11 +159,12 @@ if __name__ == '__main__':
                 ncpu=ncpu
             )
 
-    tb_logger = pl_loggers.TensorBoardLogger('rxn_' + args.rxn_template + '_' + args.featurize + '_' + str(args.radius) + '_' + str(args.nbits) + '_logs/')
+    tb_logger = pl_loggers.TensorBoardLogger(f'rxn_{args.rxn_template}_{args.featurize}_{args.radius}_{args.nbits}_logs/')
+    trainer   = pl.Trainer(gpus=[0], max_epochs=args.epoch, progress_bar_refresh_rate=20, logger=tb_logger)
+    t         = time.time()
 
-    trainer = pl.Trainer(gpus=[0], max_epochs=args.epoch, progress_bar_refresh_rate=20, logger=tb_logger)
-    t = time.time()
     trainer.fit(mlp, train_data_iter, valid_data_iter)
+
     print(time.time() - t, 's')
 
     print('Finish!')

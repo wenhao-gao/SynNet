@@ -16,7 +16,6 @@ from rdkit.Chem import Draw
 from rdkit.Chem import AllChem
 from rdkit.Chem import rdChemReactions
 
-
 # the definition of reaction classes below
 class Reaction:
     """
@@ -427,11 +426,11 @@ class NodeChemical:
 
     Args:
         smiles (None or str): SMILES string representing molecule.
-        parent (None or int): TODO
+        parent (None or int):
         child (None or int): Indicates reaction which molecule participates in.
         is_leaf (bool): Indicates if this is a leaf node.
         is_root (bool): Indicates if this is a root node.
-        depth (float): TODO
+        depth (float):
         index (int): Indicates the order of this chemical node in the tree.
     """
     def __init__(self, smiles=None, parent=None, child=None, is_leaf=False,
@@ -453,10 +452,10 @@ class NodeRxn:
         rxn_id (None or int): Index corresponding to reaction in a one-hot vector
             of reaction templates.
         rtype (None or int): Indicates if uni- (1) or bi-molecular (2) reaction.
-        parent (None or list): TODO
+        parent (None or list):
         child (None or list): Contains SMILES strings of reactants which lead to
             the specified reaction.
-        depth (float): TODO
+        depth (float):
         index (int): Indicates the order of this reaction node in the tree.
     """
     def __init__(self, rxn_id=None, rtype=None, parent=[],

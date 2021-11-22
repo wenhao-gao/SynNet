@@ -51,7 +51,7 @@ def get_action_mask(state, rxns):
 
     Returns:
         np.ndarray: The action mask. Masks out unviable actions from the current
-            state using 0s, with 1s at the positions corresponding to viable 
+            state using 0s, with 1s at the positions corresponding to viable
             actions.
     """
     # Action: (Add: 0, Expand: 1, Merge: 2, End: 3)
@@ -188,7 +188,7 @@ def get_mol_embedding(smi, model, device='cpu', readout=AvgPooling()):
               bg.edata.pop('bond_direction_type').to(device)]
     with torch.no_grad():
         node_repr = model(bg, nfeats, efeats)
-    return readout(bg, node_repr).detach().cpu().numpy()[0]  # TODO added the [0], double-check nothing broke
+    return readout(bg, node_repr).detach().cpu().numpy()[0]
 
 def mol_fp(smi, _radius=2, _nBits=4096):
     """
@@ -209,9 +209,6 @@ def mol_fp(smi, _radius=2, _nBits=4096):
         mol = Chem.MolFromSmiles(smi)
         features_vec = AllChem.GetMorganFingerprintAsBitVect(mol, _radius, _nBits)
         return np.array(features_vec)
-        #features = np.zeros((1,))  # TODO recently changed this, double-check nothing broke
-        #DataStructs.ConvertToNumpyArray(features_vec, features)
-        #return features.reshape((1, -1))
 
 def cosine_distance(v1, v2, eps=1e-15):
     """
@@ -220,13 +217,13 @@ def cosine_distance(v1, v2, eps=1e-15):
     Args:
         v1 (np.ndarray): First vector.
         v2 (np.ndarray): Second vector.
-        eps (float, optional): Small value, for numerical stability. Defaults 
+        eps (float, optional): Small value, for numerical stability. Defaults
             to 1e-15.
 
     Returns:
         float: The cosine similarity.
     """
-    return (1 - np.dot(v1, v2) 
+    return (1 - np.dot(v1, v2)
             / (np.linalg.norm(v1, ord=2) * np.linalg.norm(v2, ord=2) + eps))
 
 def ce_distance(y, y_pred, eps=1e-15):
@@ -236,7 +233,7 @@ def ce_distance(y, y_pred, eps=1e-15):
     Args:
         y (np.ndarray): First vector.
         y_pred (np.ndarray): Second vector.
-        eps (float, optional): Small value, for numerical stability. Defaults 
+        eps (float, optional): Small value, for numerical stability. Defaults
             to 1e-15.
 
     Returns:
@@ -344,7 +341,7 @@ def synthetic_tree_decoder(z_target,
         building_blocks (list of str): Contains available building blocks
         bb_dict (dict): Building block dictionary
         reaction_templates (list of Reactions): Contains reaction templates
-        mol_embedder (dgllife.model.gnn.gin.GIN): GNN to use for obtaining 
+        mol_embedder (dgllife.model.gnn.gin.GIN): GNN to use for obtaining
             molecular embeddings
         action_net (synth_net.models.mlp.MLP): The action network
         reactant1_net (synth_net.models.mlp.MLP): The reactant1 network
@@ -353,12 +350,12 @@ def synthetic_tree_decoder(z_target,
         bb_emb (list): Contains purchasable building block embeddings.
         rxn_template (str): Specifies the set of reaction templates to use.
         n_bits (int): Length of fingerprint.
-        max_step (int, optional): Maximum number of steps to include in the 
+        max_step (int, optional): Maximum number of steps to include in the
             synthetic tree
 
     Returns:
         tree (SyntheticTree): The final synthetic tree.
-        act (int): The final action (to know if the tree was "properly" 
+        act (int): The final action (to know if the tree was "properly"
             terminated).
     """
     # Initialization
@@ -370,7 +367,6 @@ def synthetic_tree_decoder(z_target,
     # try:
     for i in range(max_step):
         # Encode current state
-        # from ipdb import set_trace; set_trace(context=11)
         state = tree.get_state() # a set
         z_state = set_embedding(z_target, state, nbits=n_bits, mol_fp=mol_fp)
 
@@ -381,7 +377,6 @@ def synthetic_tree_decoder(z_target,
         action_mask = get_action_mask(tree.get_state(), reaction_templates)
         act = np.argmax(action_proba * action_mask)
 
-        #z_mol1 = reactant1_net(torch.Tensor(z_state))  # TODO just fixed this, check nothing broke
         reactant1_net_input = torch.Tensor(
             np.concatenate([z_state, one_hot_encoder(act, 4)], axis=1)
         )
@@ -400,10 +395,7 @@ def synthetic_tree_decoder(z_target,
             # Expand or Merge
             mol1 = mol_recent
 
-        # z_mol1 = get_mol_embedding(mol1, mol_embedder)
         z_mol1 = mol_fp(mol1)
-
-        # import ipdb; ipdb.set_trace()
 
         # Select reaction
         rxn_net_input  = torch.Tensor(np.concatenate([z_state, z_mol1], axis=1))
@@ -411,7 +403,7 @@ def synthetic_tree_decoder(z_target,
         reaction_proba = reaction_proba.squeeze().detach().numpy() + 1e-10
 
         if act != 2:
-            reaction_mask, available_list = get_reaction_mask(smi=mol1, 
+            reaction_mask, available_list = get_reaction_mask(smi=mol1,
                                                               rxns=reaction_templates)
         else:
             _, reaction_mask = can_react(tree.get_state(), reaction_templates)
@@ -440,7 +432,7 @@ def synthetic_tree_decoder(z_target,
                 elif rxn_template == 'pis':
                     num_rxns = 4700
                 reactant2_net_input = torch.Tensor(
-                    np.concatenate([z_state, z_mol1, one_hot_encoder(rxn_id, num_rxns)], 
+                    np.concatenate([z_state, z_mol1, one_hot_encoder(rxn_id, num_rxns)],
                                    axis=1)
                 )
                 z_mol2 = reactant2_net(reactant2_net_input)
@@ -712,14 +704,15 @@ def synthetic_tree_decoder_rt1(z_target,
                                 rt1_index=0):
     """
     Computes the synthetic tree given an input molecule embedding, using the
-    Action, Reaction, Reactant1, and Reactant2 networks and a greedy search.  # TODO rt1?
+    Action, Reaction, Reactant1, and Reactant2 networks and a greedy search.
 
     Args:
         z_target (np.ndarray): Embedding for the target molecule
         building_blocks (list of str): Contains available building blocks
         bb_dict (dict): Building block dictionary
         reaction_templates (list of Reactions): Contains reaction templates
-        mol_embedder (dgllife.model.gnn.gin.GIN): GNN to use for obtaining molecular embeddings
+        mol_embedder (dgllife.model.gnn.gin.GIN): GNN to use for obtaining 
+            molecular embeddings
         action_net (synth_net.models.mlp.MLP): The action network
         reactant1_net (synth_net.models.mlp.MLP): The reactant1 network
         rxn_net (synth_net.models.mlp.MLP): The reaction network
@@ -727,13 +720,17 @@ def synthetic_tree_decoder_rt1(z_target,
         bb_emb (list): Contains purchasable building block embeddings.
         rxn_template (str): Specifies the set of reaction templates to use.
         n_bits (int): Length of fingerprint.
-        beam_width (int): The beam width to use for Reactant 1 search. Defaults to 3.
-        max_step (int, optional): Maximum number of steps to include in the synthetic tree
-        rt1_index (int, optional): TODO
+        beam_width (int): The beam width to use for Reactant 1 search. Defaults 
+            to 3.
+        max_step (int, optional): Maximum number of steps to include in the 
+            synthetic tree
+        rt1_index (int, optional): Index for molecule in the building blocks 
+            corresponding to reactant 1.
 
     Returns:
         tree (SyntheticTree): The final synthetic tree
-        act (int): The final action (to know if the tree was "properly" terminated)
+        act (int): The final action (to know if the tree was "properly" 
+            terminated).
     """
     # Initialization
     tree = SyntheticTree()
@@ -741,23 +738,18 @@ def synthetic_tree_decoder_rt1(z_target,
     kdtree = BallTree(bb_emb, metric=cosine_distance)
 
     # Start iteration
-    # try:
     for i in range(max_step):
         # Encode current state
-        # from ipdb import set_trace; set_trace(context=11)
-        state = tree.get_state() # a set
+        state   = tree.get_state() # a set
         z_state = set_embedding(z_target, state, nbits=n_bits, mol_fp=mol_fp)
 
         # Predict action type, masked selection
         # Action: (Add: 0, Expand: 1, Merge: 2, End: 3)
         action_proba = action_net(torch.Tensor(z_state))
         action_proba = action_proba.squeeze().detach().numpy() + 1e-10
-        action_mask = get_action_mask(tree.get_state(), reaction_templates)
-        act = np.argmax(action_proba * action_mask)
+        action_mask  = get_action_mask(tree.get_state(), reaction_templates)
+        act          = np.argmax(action_proba * action_mask)
 
-        # import ipdb; ipdb.set_trace(context=9)
-
-        # z_mol1 = reactant1_net(torch.Tensor(np.concatenate([z_state, one_hot_encoder(act, 4)], axis=1)))
         z_mol1 = reactant1_net(torch.Tensor(z_state))
         z_mol1 = z_mol1.detach().numpy()
 
@@ -780,8 +772,6 @@ def synthetic_tree_decoder_rt1(z_target,
         # z_mol1 = get_mol_embedding(mol1, mol_embedder)
         z_mol1 = mol_fp(mol1)
 
-        # import ipdb; ipdb.set_trace()
-
         # Select reaction
         reaction_proba = rxn_net(torch.Tensor(np.concatenate([z_state, z_mol1], axis=1)))
         reaction_proba = reaction_proba.squeeze().detach().numpy() + 1e-10
@@ -800,7 +790,7 @@ def synthetic_tree_decoder_rt1(z_target,
                 break
 
         rxn_id = np.argmax(reaction_proba * reaction_mask)
-        rxn = reaction_templates[rxn_id]
+        rxn    = reaction_templates[rxn_id]
 
         if rxn.num_reactant == 2:
             # Select second molecule
@@ -814,13 +804,13 @@ def synthetic_tree_decoder_rt1(z_target,
                     z_mol2 = reactant2_net(torch.Tensor(np.concatenate([z_state, z_mol1, one_hot_encoder(rxn_id, 91)], axis=1)))
                 elif rxn_template == 'pis':
                     z_mol2 = reactant2_net(torch.Tensor(np.concatenate([z_state, z_mol1, one_hot_encoder(rxn_id, 4700)], axis=1)))
-                z_mol2 = z_mol2.detach().numpy()
-                available = available_list[rxn_id]
-                available = [bb_dict[available[i]] for i in range(len(available))]
-                temp_emb = bb_emb[available]
+                z_mol2         = z_mol2.detach().numpy()
+                available      = available_list[rxn_id]
+                available      = [bb_dict[available[i]] for i in range(len(available))]
+                temp_emb       = bb_emb[available]
                 available_tree = BallTree(temp_emb, metric=cosine_distance)
-                dist, ind = nn_search(z_mol2, _tree=available_tree)
-                mol2 = building_blocks[available[ind]]
+                dist, ind      = nn_search(z_mol2, _tree=available_tree)
+                mol2           = building_blocks[available[ind]]
         else:
             mol2 = None
 
@@ -885,12 +875,24 @@ def synthetic_tree_decoder_multireactant(z_target,
     acts = []
 
     for i in range(beam_width):
-        tree, act = synthetic_tree_decoder_rt1(z_target, building_blocks, bb_dict, reaction_templates, mol_embedder,
-                                                action_net, reactant1_net, rxn_net, reactant2_net, bb_emb=bb_emb, rxn_template=rxn_template, n_bits=n_bits, max_step=max_step, rt1_index=i)
+        tree, act = synthetic_tree_decoder_rt1(z_target=z_target, 
+                                               building_blocks=building_blocks, 
+                                               bb_dict=bb_dict, 
+                                               reaction_templates=reaction_templates, 
+                                               mol_embedder=mol_embedder,
+                                               action_net=action_net, 
+                                               reactant1_net=reactant1_net, 
+                                               rxn_net=rxn_net, 
+                                               reactant2_net=reactant2_net, 
+                                               bb_emb=bb_emb, 
+                                               rxn_template=rxn_template, 
+                                               n_bits=n_bits, 
+                                               max_step=max_step, 
+                                               rt1_index=i)
 
 
         similarities_ = np.array(tanimoto_similarity(z_target, [node.smiles for node in tree.chemicals]))
-        max_simi_idx = np.where(similarities_ == np.max(similarities_))[0][0]
+        max_simi_idx  = np.where(similarities_ == np.max(similarities_))[0][0]
 
         similarities.append(np.max(similarities_))
         smiles.append(tree.chemicals[max_simi_idx].smiles)
@@ -898,9 +900,9 @@ def synthetic_tree_decoder_multireactant(z_target,
         acts.append(act)
 
     max_simi_idx = np.where(similarities == np.max(similarities))[0][0]
-    similarity = similarities[max_simi_idx]
-    tree = trees[max_simi_idx]
-    smi = smiles[max_simi_idx]
-    act = acts[max_simi_idx]
+    similarity   = similarities[max_simi_idx]
+    tree         = trees[max_simi_idx]
+    smi          = smiles[max_simi_idx]
+    act          = acts[max_simi_idx]
 
     return smi, similarity, tree, act

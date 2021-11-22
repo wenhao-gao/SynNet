@@ -43,26 +43,20 @@ if __name__ == '__main__':
     else:
         raise ValueError
 
-    # TODO make this path an arg
-    main_dir = '/pool001/whgao/data/synth_net/' + args.rxn_template + '_' + args.featurize + '_' + str(args.radius) + '_' + str(args.nbits) + '_' + validation_option[12:] + '/'
+    main_dir   = f'/pool001/whgao/data/synth_net/{args.rxn_template}_{args.featurize}_{args.radius}_{args.nbits}_{validation_option[12:]}/'
     batch_size = args.batch_size
-    ncpu = args.ncpu
-
+    ncpu       = args.ncpu
 
     X = sparse.load_npz(main_dir + 'X_rt1_train.npz')
     y = sparse.load_npz(main_dir + 'y_rt1_train.npz')
-    # X = sparse.load_npz(main_dir + 'X_rt1_valid.npz')
-    # y = sparse.load_npz(main_dir + 'y_rt1_valid.npz')
     X = torch.Tensor(X.A)
     y = torch.Tensor(y.A)
     train_data_iter = load_array((X, y), batch_size, ncpu=ncpu, is_train=True)
 
-    X = sparse.load_npz(main_dir + 'X_rt1_valid.npz')
-    y = sparse.load_npz(main_dir + 'y_rt1_valid.npz')
-    # X = sparse.load_npz(main_dir + 'X_rt1_test.npz')
-    # y = sparse.load_npz(main_dir + 'y_rt1_test.npz')
-    X = torch.Tensor(X.A)
-    y = torch.Tensor(y.A)
+    X    = sparse.load_npz(main_dir + 'X_rt1_valid.npz')
+    y    = sparse.load_npz(main_dir + 'y_rt1_valid.npz')
+    X    = torch.Tensor(X.A)
+    y    = torch.Tensor(y.A)
     _idx = np.random.choice(list(range(X.shape[0])), size=int(X.shape[0]/10), replace=False)
     valid_data_iter = load_array((X[_idx], y[_idx]), batch_size, ncpu=ncpu, is_train=False)
 
@@ -95,10 +89,12 @@ if __name__ == '__main__':
                   learning_rate=1e-4,
                   val_freq=10,
                   ncpu=ncpu)
-    tb_logger = pl_loggers.TensorBoardLogger('rt1_' + args.rxn_template + '_' + args.featurize  + '_' + str(args.radius) + '_' + str(args.nbits) + '_' + validation_option[12:] +  '_logs/')
+    tb_logger = pl_loggers.TensorBoardLogger(
+        f'rt1_{args.rxn_template}_{args.featurize}_{args.radius}_{args.nbits}_{validation_option[12:]}_logs/'
+    )
 
     trainer = pl.Trainer(gpus=[0], max_epochs=args.epoch, progress_bar_refresh_rate=20, logger=tb_logger)
-    t = time.time()
+    t       = time.time()
     trainer.fit(mlp, train_data_iter, valid_data_iter)
     print(time.time() - t, 's')
     print('Finish!')

@@ -152,12 +152,12 @@ To perform synthesis planning described in the main text:
 ```
 python predict_multireactant_mp.py -n -1 --ncpu 36 --data test
 ``` 
-This script will feed a list of molecules from the test data and save the decoded results (predicted synthesis trees) to [SynNet/results/](./SynNet/results/). 
+This script will feed a list of molecules from the test data and save the decoded results (predicted synthesis trees) to [./results/](./results/). 
 One can use --help to see the instruction of each argument.
 Note: this file reads parameters from a directory, please specify the path to parameters previously.
 
 ### Synthesizable Molecular Design
-To perform synthesizable molecualr design, under [SynNet/scripts/](./SynNet/scripts/), run:
+To perform synthesizable molecular design, under [./scripts/](./scripts/), run:
 ```
 optimize_ga.py -i path/to/zinc.csv --radius 2 --nbits 4096 --num_population 128 --num_offspring 512 --num_gen 200 --ncpu 32 --objective gsk
 ```
@@ -189,7 +189,7 @@ In addition to the aforementioned types of jobs, we have also provide below inst
 
 ### Processing the data: reaction templates and applicable reactants
 
-Given a set of reaction templates and a list of buyable building blocks, we first need to assign applicable reactants for each template. Under [SynNet/syn_net/data_generation/](./SynNet/syn_net/data_generation/), run:
+Given a set of reaction templates and a list of buyable building blocks, we first need to assign applicable reactants for each template. Under [./syn_net/data_generation/](./syn_net/data_generation/), run:
 
 ```
 python process_rxn_mp.py
@@ -204,13 +204,13 @@ python filter_unmatch.py
 This will filter out buyable building blocks which didn't match a single template.
 
 ### Generating the synthetic path data by random selection
-Under [SynNet/syn_net/data_generation/](./SynNet/syn_net/data_generation/), run:
+Under [./syn_net/data_generation/](./syn_net/data_generation/), run:
 
 ```
 python make_dataset_mp.py
 ```
 
-This will generate synthetic path data saved in a JSON file. Then, to make the dataset more pharmaceutically revelant, we can change to [SynNet/scripts/](./SynNet/scripts/) and run:
+This will generate synthetic path data saved in a JSON file. Then, to make the dataset more pharmaceutically revelant, we can change to [./scripts/](./scripts/) and run:
 
 ```
 python sample_from_original.py 
@@ -219,7 +219,7 @@ python sample_from_original.py
 This will filter out the samples where the root node QED is less than 0.5, or randomly with a probability less than 1 - QED/0.5.
 
 ### Splitting data into training, validation, and testing sets, and removing duplicates
-Under [SynNet/scripts/](./SynNet/scripts/), run:
+Under [./scripts/](./scripts/), run:
 
 ```
 python st_split.py
@@ -228,7 +228,7 @@ python st_split.py
 The default split ratio is 6:2:2 for training, validation, and testing sets.
 
 ### Featurizing data
-Under [SynNet/scripts/](./SynNet/scripts/), run:
+Under [./scripts/](./scripts/), run:
 
 ```
 python st2steps.py -r 2 -b 4096 -d train
@@ -237,7 +237,7 @@ python st2steps.py -r 2 -b 4096 -d train
 This will featurize the synthetic tree data into step-by-step data which can be used for training. The flag *-r* indicates the fingerprint radius, *-b* indicates the number of bits to use for the fingerprints, and *-d* indicates which dataset split to featurize. 
 
 ### Preparing training data for each network
-Under [SynNet/syn_net/models/](./SynNet/syn_net/models/), run:
+Under [./syn_net/models/](./syn_net/models/), run:
 
 ```
 python prepare_data.py --radius 2 --nbits 4096
@@ -263,7 +263,7 @@ python scripts/sketch-synthetic-trees.py --file /path/to/st_hb/st_train.json.gz 
 This will sketch 5 synthetic trees with 3 or more actions to the current ("./") directory (you can play around with these variables or just also leave them out to use the defaults).
 
 ### Testing the mean reciprocal rank (MRR) of reactant 1
-Under [SynNet/scripts/](./SynNet/scripts/), run:
+Under [./scripts/](./scripts/), run:
 
 ```
 python mrr.py --distance cosine

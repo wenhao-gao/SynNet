@@ -149,7 +149,6 @@ tar -zxvf hb_fp_2_4096_256.tar.gz
 
 ### Synthesis Planning
 To perform synthesis planning described in the main text:
-[TODO add checkpoints to prediction scripts // save trees periodically. otherwise just saves at end and is problematic of job times out]
 ```
 python predict_multireactant_mp.py -n -1 --ncpu 36 --data test
 ``` 

@@ -44,18 +44,18 @@ if __name__ == '__main__':
         results = pool.map(predict.func, smis_query)
 
     smis_decoded = [r[0] for r in results]
-    similaritys  = [r[1] for r in results]
+    similarities  = [r[1] for r in results]
     trees        = [r[2] for r in results]
 
-    print("Finish decoding")
-    print(f"Recovery rate {args.data}: {np.sum(np.array(similaritys) == 1.0) / len(similaritys)}")
-    print(f"Average similarity {args.data}: {np.mean(np.array(similaritys))}")
+    print('Finish decoding')
+    print(f'Recovery rate {args.data}: {np.sum(np.array(similarities) == 1.0) / len(similarities)}')
+    print(f'Average similarity {args.data}: {np.mean(np.array(similarities))}')
 
     print('Saving ......')
     save_path = '../results/'
-    df = pd.DataFrame({'query SMILES': smis_query, 
+    df = pd.DataFrame({'query SMILES' : smis_query, 
                        'decode SMILES': smis_decoded, 
-                       'similarity': similaritys})
+                       'similarity'   : similarities})
     df.to_csv(f'{save_path}decode_result_{args.data}.csv.gz', 
               compression='gzip', 
               index=False)

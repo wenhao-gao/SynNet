@@ -5,11 +5,13 @@ import unittest
 import os
 from shutil import copyfile
 import pandas as pd
+from syn_net.utils.predict_utils import get_mol_embedding
 from tqdm import tqdm
 from scipy import sparse
 import numpy as np
 from syn_net.utils.prep_utils import organize, synthetic_tree_generator, prep_data
 from syn_net.utils.data_utils import SyntheticTreeSet, Reaction, ReactionSet
+from dgllife.model import load_pretrained
 
 class TestDataPrep(unittest.TestCase):
     """
@@ -174,7 +176,7 @@ class TestDataPrep(unittest.TestCase):
         # copy data from the reference directory to use for this particular test
         copyfile(f'{ref_dir}states_0_train.npz', f'{main_dir}states_0_train.npz')
         copyfile(f'{ref_dir}steps_0_train.npz', f'{main_dir}steps_0_train.npz')
-        
+
         # the lines below will save Action-, Reactant 1-, Reaction-, and Reactant 2-
         # specific files directly to the 'SynNet/tests/data/' directory (e.g.
         # 'X_act_{train/test/valid}.npz' and 'y_act_{train/test/valid}.npz'
@@ -225,3 +227,34 @@ class TestDataPrep(unittest.TestCase):
 
         self.assertEqual(X_rt2.toarray().all(), X_rt2_ref.toarray().all())
         self.assertEqual(y_rt2.toarray().all(), y_rt2_ref.toarray().all())
+
+    def test_bb_emb(self):
+        """
+        Tests the building block embedding function.
+        """
+        # define some constants
+        main_dir = './data/'
+        ref_dir = './data/ref/'
+
+        # define model to use for molecular embedding
+        model_type = 'gin_supervised_contextpred'
+        device = 'cpu'
+        model = load_pretrained(model_type).to(device) # used to learn embedding
+        model.eval()
+
+        # load the building blocks
+        path_to_building_blocks = './data/building_blocks_matched.csv.gz'
+        building_blocks = pd.read_csv(path_to_building_blocks, compression='gzip')['SMILES'].tolist()
+
+        # compute the building block embeddings
+        embeddings = []
+        for smi in tqdm(building_blocks):
+            embeddings.append(get_mol_embedding(smi, model=model))
+
+        embeddings = np.array(embeddings)
+        np.save(f'{main_dir}building_blocks_emb.npy', embeddings)
+
+        # load the reference embeddings
+        embeddings_ref = np.load(f'{ref_dir}building_blocks_emb.npy')
+
+        self.assertEqual(embeddings.all(), embeddings_ref.all())

@@ -312,7 +312,7 @@ def set_embedding(z_target, state, nbits, _mol_embedding=get_mol_embedding):
     if len(state) == 0:
         return np.concatenate([np.zeros((1, 2 * nbits)), z_target], axis=1)
     else:
-        e1 = _mol_embedding(state[0])
+        e1 = np.expand_dims(_mol_embedding(state[0]), axis=0)
         if len(state) == 1:
             e2 = np.zeros((1, nbits))
         else:
@@ -368,7 +368,7 @@ def synthetic_tree_decoder(z_target,
     for i in range(max_step):
         # Encode current state
         state = tree.get_state() # a set
-        z_state = set_embedding(z_target, state, nbits=n_bits, mol_fp=mol_fp)
+        z_state = set_embedding(z_target, state, nbits=n_bits, _mol_embedding=mol_fp)
 
         # Predict action type, masked selection
         # Action: (Add: 0, Expand: 1, Merge: 2, End: 3)
@@ -467,7 +467,65 @@ def synthetic_tree_decoder(z_target,
     return tree, act
 
 def load_modules_from_checkpoint(path_to_act, path_to_rt1, path_to_rxn, path_to_rt2, featurize, rxn_template, out_dim, nbits, ncpu):
-    if featurize == 'fp':
+
+    if rxn_template == 'unittest':
+
+        act_net = MLP.load_from_checkpoint(path_to_act,
+                                           input_dim=int(3 * nbits),
+                                           output_dim=4,
+                                           hidden_dim=100,
+                                           num_layers=3,
+                                           dropout=0.5,
+                                           num_dropout_layers=1,
+                                           task='classification',
+                                           loss='cross_entropy',
+                                           valid_loss='accuracy',
+                                           optimizer='adam',
+                                           learning_rate=1e-4,
+                                           ncpu=ncpu)
+
+        rt1_net = MLP.load_from_checkpoint(path_to_rt1,
+                                           input_dim=int(3 * nbits),
+                                           output_dim=out_dim,
+                                           hidden_dim=100,
+                                           num_layers=3,
+                                           dropout=0.5,
+                                           num_dropout_layers=1,
+                                           task='regression',
+                                           loss='mse',
+                                           valid_loss='mse',
+                                           optimizer='adam',
+                                           learning_rate=1e-4,
+                                           ncpu=ncpu)
+
+        rxn_net = MLP.load_from_checkpoint(path_to_rxn,
+                                           input_dim=int(4 * nbits),
+                                           output_dim=3,
+                                           hidden_dim=100,
+                                           num_layers=5,
+                                           dropout=0.5,
+                                           num_dropout_layers=1,
+                                           task='classification',
+                                           loss='cross_entropy',
+                                           valid_loss='accuracy',
+                                           optimizer='adam',
+                                           learning_rate=1e-4,
+                                           ncpu=ncpu)
+
+        rt2_net = MLP.load_from_checkpoint(path_to_rt2,
+                                           input_dim=int(4 * nbits + 3),
+                                           output_dim=out_dim,
+                                           hidden_dim=100,
+                                           num_layers=3,
+                                           dropout=0.5,
+                                           num_dropout_layers=1,
+                                           task='regression',
+                                           loss='mse',
+                                           valid_loss='mse',
+                                           optimizer='adam',
+                                           learning_rate=1e-4,
+                                           ncpu=ncpu)
+    elif featurize == 'fp':
 
         act_net = MLP.load_from_checkpoint(path_to_act,
                                            input_dim=int(3 * nbits),
@@ -711,7 +769,7 @@ def synthetic_tree_decoder_rt1(z_target,
         building_blocks (list of str): Contains available building blocks
         bb_dict (dict): Building block dictionary
         reaction_templates (list of Reactions): Contains reaction templates
-        mol_embedder (dgllife.model.gnn.gin.GIN): GNN to use for obtaining 
+        mol_embedder (dgllife.model.gnn.gin.GIN): GNN to use for obtaining
             molecular embeddings
         action_net (synth_net.models.mlp.MLP): The action network
         reactant1_net (synth_net.models.mlp.MLP): The reactant1 network
@@ -720,16 +778,16 @@ def synthetic_tree_decoder_rt1(z_target,
         bb_emb (list): Contains purchasable building block embeddings.
         rxn_template (str): Specifies the set of reaction templates to use.
         n_bits (int): Length of fingerprint.
-        beam_width (int): The beam width to use for Reactant 1 search. Defaults 
+        beam_width (int): The beam width to use for Reactant 1 search. Defaults
             to 3.
-        max_step (int, optional): Maximum number of steps to include in the 
+        max_step (int, optional): Maximum number of steps to include in the
             synthetic tree
-        rt1_index (int, optional): Index for molecule in the building blocks 
+        rt1_index (int, optional): Index for molecule in the building blocks
             corresponding to reactant 1.
 
     Returns:
         tree (SyntheticTree): The final synthetic tree
-        act (int): The final action (to know if the tree was "properly" 
+        act (int): The final action (to know if the tree was "properly"
             terminated).
     """
     # Initialization
@@ -740,8 +798,12 @@ def synthetic_tree_decoder_rt1(z_target,
     # Start iteration
     for i in range(max_step):
         # Encode current state
-        state   = tree.get_state() # a set
-        z_state = set_embedding(z_target, state, nbits=n_bits, mol_fp=mol_fp)
+        state = tree.get_state() # a set
+        try:
+            z_state = set_embedding(z_target, state, nbits=n_bits, _mol_embedding=mol_fp)
+        except:
+            z_target = np.expand_dims(z_target, axis=0)
+            z_state = set_embedding(z_target, state, nbits=n_bits, _mol_embedding=mol_fp)
 
         # Predict action type, masked selection
         # Action: (Add: 0, Expand: 1, Merge: 2, End: 3)
@@ -773,7 +835,11 @@ def synthetic_tree_decoder_rt1(z_target,
         z_mol1 = mol_fp(mol1)
 
         # Select reaction
-        reaction_proba = rxn_net(torch.Tensor(np.concatenate([z_state, z_mol1], axis=1)))
+        try:
+            reaction_proba = rxn_net(torch.Tensor(np.concatenate([z_state, z_mol1], axis=1)))
+        except:
+            z_mol1 = np.expand_dims(z_mol1, axis=0)
+            reaction_proba = rxn_net(torch.Tensor(np.concatenate([z_state, z_mol1], axis=1)))
         reaction_proba = reaction_proba.squeeze().detach().numpy() + 1e-10
 
         if act != 2:
@@ -804,6 +870,8 @@ def synthetic_tree_decoder_rt1(z_target,
                     z_mol2 = reactant2_net(torch.Tensor(np.concatenate([z_state, z_mol1, one_hot_encoder(rxn_id, 91)], axis=1)))
                 elif rxn_template == 'pis':
                     z_mol2 = reactant2_net(torch.Tensor(np.concatenate([z_state, z_mol1, one_hot_encoder(rxn_id, 4700)], axis=1)))
+                elif rxn_template == 'unittest':
+                    z_mol2 = reactant2_net(torch.Tensor(np.concatenate([z_state, z_mol1, one_hot_encoder(rxn_id, 3)], axis=1)))
                 z_mol2         = z_mol2.detach().numpy()
                 available      = available_list[rxn_id]
                 available      = [bb_dict[available[i]] for i in range(len(available))]
@@ -875,19 +943,19 @@ def synthetic_tree_decoder_multireactant(z_target,
     acts = []
 
     for i in range(beam_width):
-        tree, act = synthetic_tree_decoder_rt1(z_target=z_target, 
-                                               building_blocks=building_blocks, 
-                                               bb_dict=bb_dict, 
-                                               reaction_templates=reaction_templates, 
+        tree, act = synthetic_tree_decoder_rt1(z_target=z_target,
+                                               building_blocks=building_blocks,
+                                               bb_dict=bb_dict,
+                                               reaction_templates=reaction_templates,
                                                mol_embedder=mol_embedder,
-                                               action_net=action_net, 
-                                               reactant1_net=reactant1_net, 
-                                               rxn_net=rxn_net, 
-                                               reactant2_net=reactant2_net, 
-                                               bb_emb=bb_emb, 
-                                               rxn_template=rxn_template, 
-                                               n_bits=n_bits, 
-                                               max_step=max_step, 
+                                               action_net=action_net,
+                                               reactant1_net=reactant1_net,
+                                               rxn_net=rxn_net,
+                                               reactant2_net=reactant2_net,
+                                               bb_emb=bb_emb,
+                                               rxn_template=rxn_template,
+                                               n_bits=n_bits,
+                                               max_step=max_step,
                                                rt1_index=i)
 
 

@@ -36,7 +36,7 @@ To do this, we optimize the molecular embedding of the molecule using a genetic 
 You can use conda to create an environment containing the necessary packages and dependencies for running SynNet by using the provided YAML file:
 
 ```
-conda env create -f env/synthenv.yml
+conda env create -f environment.yml
 ```
 
 If you update the environment and would like to save the updated environment as a new YAML file using conda, use:

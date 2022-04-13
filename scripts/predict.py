@@ -55,7 +55,8 @@ if __name__ == '__main__':
     # define path to the reaction templates and purchasable building blocks
     path_to_reaction_file   = ('/pool001/whgao/data/synth_net/st_' + args.rxn_template
                                + '/reactions_' + args.rxn_template + '.json.gz')
-    path_to_building_blocks = ('/home/ec2-user/SynNet/enamine_us_matched.csv.gz')
+    path_to_building_blocks = ('/pool001/whgao/data/synth_net/st_' + args.rxn_template
+                               + '/enamine_us_matched.csv.gz')
 
     # define paths to pretrained modules
     param_path = '/home/whgao/scGen/synth_net/synth_net/params/' + args.param + '/'

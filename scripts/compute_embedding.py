@@ -134,7 +134,7 @@ if __name__ == '__main__':
                         help="Number of cpus")
     args = parser.parse_args()
 
-    path = '/home/ec2-user/SynNet/'
+    path = '/pool001/whgao/data/synth_net/st_hb/'
     data = pd.read_csv(path + 'enamine_us_matched.csv.gz', compression='gzip')['SMILES'].tolist()
     print('Total data: ', len(data))
 

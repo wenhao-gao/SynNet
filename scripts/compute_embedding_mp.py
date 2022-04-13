@@ -26,7 +26,7 @@ if __name__ == '__main__':
 
     if args.feature == 'gin':
         with mp.Pool(processes=args.ncpu) as pool:
-            embeddings = pool.map(gin_embedding, data)
+            embeddings = pool.map(model, data)
     elif args.feature == 'fp_4096':
         with mp.Pool(processes=args.ncpu) as pool:
             embeddings = pool.map(fp_4096, data)

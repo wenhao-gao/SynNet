@@ -203,7 +203,7 @@ if __name__ == '__main__':
 
     with mp.Pool(processes=args.ncpu) as pool:
         scores, mols, trees = fitness(embs=population,
-                                      pool=pool,
+                                      _pool=pool,
                                       obj=args.objective)
     scores     = np.array(scores)
     score_x    = np.argsort(scores)

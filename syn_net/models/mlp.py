@@ -82,7 +82,7 @@ class MLP(pl.LightningModule):
                 bb_emb_fp_4096 = np.load('/pool001/whgao/data/synth_net/st_hb/enamine_us_emb_fp_4096.npy')
                 kdtree = BallTree(bb_emb_fp_4096, metric='euclidean')
             elif out_feat == 'fp_256':
-                bb_emb_fp_256 = np.load('/pool001/whgao/data/synth_net/st_hb/enamine_us_emb_fp_256.npy')
+                bb_emb_fp_256 = np.load('/home/ec2-user/SynNet/enamine_us_emb_fp_4096.npy')
                 kdtree = BallTree(bb_emb_fp_256, metric=cosine_distance)
             elif out_feat == 'rdkit2d':
                 bb_emb_rdkit2d = np.load('/pool001/whgao/data/synth_net/st_hb/enamine_us_emb_rdkit2d.npy')

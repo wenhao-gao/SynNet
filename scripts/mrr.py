@@ -90,7 +90,7 @@ if __name__ == '__main__':
     rt1_net.eval()
     rt1_net.to(args.device)
 
-    bb_emb_fp_256 = np.load('/pool001/whgao/data/synth_net/st_hb/enamine_us_emb_fp_256.npy')
+    bb_emb_fp_256 = np.load('/home/ec2-user/SynNet/enamine_us_emb_fp_4096.npy')
 
     # for kw_metric_ in ['euclidean', 'manhattan', 'chebyshev', 'cross_entropy', 'cosine']:
     kw_metric_ = args.distance

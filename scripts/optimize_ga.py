@@ -228,7 +228,7 @@ if __name__ == '__main__':
         offspring = crossover(parents=population,
                               offspring_size=args.num_offspring,
                               distribution=dist_)
-        offspring = mutation(offspring=offspring,
+        offspring = mutation(offspring_crossover=offspring,
                              num_mut_per_ele=num_mut_per_ele_,
                              mut_probability=mut_probability_)
         new_population = np.unique(np.concatenate([population, offspring], axis=0), axis=0)

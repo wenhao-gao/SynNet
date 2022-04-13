@@ -1,4 +1,4 @@
-name: rdkit
+name: synthenv
 channels:
   - pytorch
   - nvidia

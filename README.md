@@ -7,7 +7,7 @@ The method is described in detail in the publication "Amortized tree generation 
 ### Overview
 We model synthetic pathways as tree structures called *synthetic trees*. A valid synthetic tree has one root node (the final product molecule) linked to purchasable building blocks (encoded as SMILES strings) via feasible reactions according to a list of discrete reaction templates (examples of templates encoded as SMARTS strings in [data/rxn_set_hb.txt](./data/rxn_set_hb.txt)). At a high level, each synthetic tree is constructed one reaction step at a time in a bottom-up manner, starting from purchasable building blocks.
 
-The model consists of four modules, each containing a multi-layer perceptron (MLP): 
+The model consists of four modules, each containing a multi-layer perceptron (MLP):
 
 1. An *Action Type* selection function that classifies action types among the four possible actions (“Add”, “Expand”, “Merge”, and “End”) in building the synthetic tree.
 2. A *First Reactant* selection function that predicts an embedding for the first reactant. A candidate molecule is identified for the first reactant through a k-nearest neighbors (k-NN) search from the list of potential building blocks.
@@ -43,6 +43,13 @@ If you update the environment and would like to save the updated environment as 
 
 ```
 conda env export > path/to/env.yml
+```
+
+Before running any SynNet code, activate the environment and update the Python path so that the scripts can find the right files. You can do this by typing:
+
+```
+source activate synthenv
+export PYTHONPATH=`pwd`:$PYTHONPATH
 ```
 
 ### Unit tests
@@ -130,7 +137,7 @@ SynNet/
     └── test_DataPreparation.py
 ```
 
-The model implementations can be found in [syn_net/models/](syn_net/models/), with processing and analysis scripts located in [scripts/](./scripts/). 
+The model implementations can be found in [syn_net/models/](syn_net/models/), with processing and analysis scripts located in [scripts/](./scripts/).
 
 ## Instructions
 Before running anything, you need to add the root directory to the Python path. One option for doing this is to run the following command in the root `SynNet` directory:
@@ -151,8 +158,8 @@ tar -zxvf hb_fp_2_4096_256.tar.gz
 To perform synthesis planning described in the main text:
 ```
 python predict_multireactant_mp.py -n -1 --ncpu 36 --data test
-``` 
-This script will feed a list of molecules from the test data and save the decoded results (predicted synthesis trees) to [./results/](./results/). 
+```
+This script will feed a list of molecules from the test data and save the decoded results (predicted synthesis trees) to [./results/](./results/).
 One can use --help to see the instruction of each argument.
 Note: this file reads parameters from a directory, please specify the path to parameters previously.
 
@@ -198,7 +205,7 @@ python process_rxn_mp.py
 This will save the reaction templates and their corresponding building blocks in a JSON file. Then, run:
 
 ```
-python filter_unmatch.py 
+python filter_unmatch.py
 ```
 
 This will filter out buyable building blocks which didn't match a single template.
@@ -213,7 +220,7 @@ python make_dataset_mp.py
 This will generate synthetic path data saved in a JSON file. Then, to make the dataset more pharmaceutically revelant, we can change to [./scripts/](./scripts/) and run:
 
 ```
-python sample_from_original.py 
+python sample_from_original.py
 ```
 
 This will filter out the samples where the root node QED is less than 0.5, or randomly with a probability less than 1 - QED/0.5.
@@ -234,7 +241,7 @@ Under [./scripts/](./scripts/), run:
 python st2steps.py -r 2 -b 4096 -d train
 ```
 
-This will featurize the synthetic tree data into step-by-step data which can be used for training. The flag *-r* indicates the fingerprint radius, *-b* indicates the number of bits to use for the fingerprints, and *-d* indicates which dataset split to featurize. 
+This will featurize the synthetic tree data into step-by-step data which can be used for training. The flag *-r* indicates the fingerprint radius, *-b* indicates the number of bits to use for the fingerprints, and *-d* indicates which dataset split to featurize.
 
 ### Preparing training data for each network
 Under [./syn_net/models/](./syn_net/models/), run:

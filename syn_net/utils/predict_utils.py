@@ -529,7 +529,7 @@ def load_modules_from_checkpoint(path_to_act, path_to_rt1, path_to_rxn, path_to_
                                            ncpu=ncpu)
 
         rt1_net = MLP.load_from_checkpoint(path_to_rt1,
-                                           input_dim=int(3 * nbits + 4),  # TODO testing
+                                           input_dim=int(3 * nbits),
                                            output_dim=out_dim,
                                            hidden_dim=100,
                                            num_layers=3,
@@ -586,7 +586,7 @@ def load_modules_from_checkpoint(path_to_act, path_to_rt1, path_to_rxn, path_to_
                                            ncpu=ncpu)
 
         rt1_net = MLP.load_from_checkpoint(path_to_rt1,
-                                           input_dim=int(3 * nbits + 4),  # TODO testing
+                                           input_dim=int(3 * nbits),
                                            output_dim=out_dim,
                                            hidden_dim=1200,
                                            num_layers=5,

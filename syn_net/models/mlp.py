@@ -9,6 +9,7 @@ import pytorch_lightning as pl
 from pytorch_lightning import loggers as pl_loggers
 from sklearn.neighbors import BallTree
 import numpy as np
+from syn_net.parameters.args import paths, parameters
 
 
 class MLP(pl.LightningModule):
@@ -28,12 +29,12 @@ class MLP(pl.LightningModule):
                  ncpu=16):
         super().__init__()
 
-        self.loss = loss
-        self.valid_loss = valid_loss
-        self.optimizer = optimizer
+        self.loss          = loss
+        self.valid_loss    = valid_loss
+        self.optimizer     = optimizer
         self.learning_rate = learning_rate
-        self.ncpu = ncpu
-        self.val_freq = val_freq
+        self.ncpu          = ncpu
+        self.val_freq      = val_freq
 
         modules = []
         modules.append(nn.Linear(input_dim, hidden_dim))
@@ -76,28 +77,31 @@ class MLP(pl.LightningModule):
         if self.trainer.current_epoch % self.val_freq == 0:
             out_feat = self.valid_loss[12:]
             if out_feat == 'gin':
-                bb_emb_gin = np.load('/pool001/whgao/data/synth_net/st_hb/enamine_us_emb_gin.npy')
-                kdtree = BallTree(bb_emb_gin, metric='euclidean')
+                bb_emb_gin     = np.load(paths['bb_emb_gin'])
+                kdtree         = BallTree(bb_emb_gin, metric='euclidean')
             elif out_feat == 'fp_4096':
-                bb_emb_fp_4096 = np.load('/pool001/whgao/data/synth_net/st_hb/enamine_us_emb_fp_4096.npy')
-                kdtree = BallTree(bb_emb_fp_4096, metric='euclidean')
+                bb_emb_fp_4096 = np.load(paths['bb_emb_fp_4096'])
+                kdtree         = BallTree(bb_emb_fp_4096, metric='euclidean')
             elif out_feat == 'fp_256':
-                bb_emb_fp_256 = np.load('/pool001/whgao/data/synth_net/st_hb/enamine_us_emb_fp_256.npy')
-                kdtree = BallTree(bb_emb_fp_256, metric=cosine_distance)
+                bb_emb_fp_256  = np.load(paths['bb_emb_fp_256'])
+                kdtree         = BallTree(bb_emb_fp_256, metric=cosine_distance)
             elif out_feat == 'rdkit2d':
-                bb_emb_rdkit2d = np.load('/pool001/whgao/data/synth_net/st_hb/enamine_us_emb_rdkit2d.npy')
-                kdtree = BallTree(bb_emb_rdkit2d, metric='euclidean')
+                bb_emb_rdkit2d = np.load(paths['bb_emb_rdkit2d'])
+                kdtree         = BallTree(bb_emb_rdkit2d, metric='euclidean')
+            else:
+                bb_emb         = np.load(paths['bb_emb'])
+                kdtree         = BallTree(bb_emb, metric='euclidean')
             x, y = batch
             y_hat = self.layers(x)
             if self.valid_loss == 'cross_entropy':
                 loss = F.cross_entropy(y_hat, y)
             elif self.valid_loss == 'accuracy':
                 y_hat = torch.argmax(y_hat, axis=1)
-                loss = 1 - (sum(y_hat == y) / len(y))
+                loss  = 1 - (sum(y_hat == y) / len(y))
             elif self.valid_loss[:11] == 'nn_accuracy':
-                y = nn_search_list(y.detach().cpu().numpy(), out_feat=out_feat, kdtree=kdtree)
-                y_hat = nn_search_list(y_hat.detach().cpu().numpy(), out_feat=out_feat, kdtree=kdtree)
-                loss = 1 - (sum(y_hat == y) / len(y))
+                y     = nn_search_list(y.detach().cpu().numpy(), kdtree=kdtree)
+                y_hat = nn_search_list(y_hat.detach().cpu().numpy(), kdtree=kdtree)
+                loss  = 1 - (sum(y_hat == y) / len(y))
                 # import ipdb; ipdb.set_trace(context=11)
             elif self.valid_loss == 'mse':
                 loss = F.mse_loss(y_hat, y)
@@ -129,29 +133,19 @@ def nn_search(_e, _tree, _k=1):
     dist, ind = _tree.query(_e, k=_k)
     return ind[0][0]
 
-def nn_search_list(y, out_feat, kdtree):
-    if out_feat == 'gin':
-        return np.array([nn_search(emb.reshape(1, -1), _tree=kdtree) for emb in y])
-    elif out_feat == 'fp_4096':
-        return np.array([nn_search(emb.reshape(1, -1), _tree=kdtree) for emb in y])
-    elif out_feat == 'fp_256':
-        return np.array([nn_search(emb.reshape(1, -1), _tree=kdtree) for emb in y])
-    elif out_feat == 'rdkit2d':
-        return np.array([nn_search(emb.reshape(1, -1), _tree=kdtree) for emb in y])
-    else:
-        raise ValueError
-
+def nn_search_list(y, kdtree):
+    return np.array([nn_search(emb.reshape(1, -1), _tree=kdtree) for emb in y])
 
 if __name__ == '__main__':
 
     states_list = []
     steps_list = []
     for i in range(1):
-        states_list.append(np.load('/home/rociomer/data/synth_net/pis_fp/states_' + str(i) + '_valid.npz', allow_pickle=True))
-        steps_list.append(np.load('/home/rociomer/data/synth_net/pis_fp/steps_' + str(i) + '_valid.npz', allow_pickle=True))
+        states_list.append(np.load(f'{paths["states"]}states_' + str(i) + '_valid.npz', allow_pickle=True))
+        steps_list.append(np.load(f'{paths["steps"]}steps_' + str(i) + '_valid.npz', allow_pickle=True))
 
     states = np.concatenate(states_list, axis=0)
-    steps = np.concatenate(steps_list, axis=0)
+    steps  = np.concatenate(steps_list, axis=0)
 
     X = states
     y = steps[:, 0]
@@ -159,14 +153,14 @@ if __name__ == '__main__':
     X_train = torch.Tensor(X)
     y_train = torch.LongTensor(y)
 
-    batch_size = 64
+    batch_size      = 64
     train_data_iter = load_array((X_train, y_train), batch_size, is_train=True)
 
     pl.seed_everything(0)
-    mlp = MLP()
+    mlp       = MLP()
     tb_logger = pl_loggers.TensorBoardLogger('temp_logs/')
 
     trainer = pl.Trainer(gpus=[0], max_epochs=30, progress_bar_refresh_rate=20, logger=tb_logger)
-    t = time.time()
+    t       = time.time()
     trainer.fit(mlp, train_data_iter, train_data_iter)
     print(time.time() - t, 's')

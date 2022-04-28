@@ -7,15 +7,8 @@ from syn_net.utils.data_utils import ReactionSet
 from dgllife.model import load_pretrained
 from syn_net.utils.predict_utils import tanimoto_similarity, load_modules_from_checkpoint, mol_fp
 from syn_net.utils.predict_beam_utils import synthetic_tree_decoder
+from syn_net.parameters.args import paths, parameters
 
-
-# define some constants (here, for the Hartenfeller-Button test set)
-nbits        = 4096
-out_dim      = 300
-rxn_template = 'hb'
-featurize    = 'fp'
-param_dir    = 'hb_fp_2_4096'
-ncpu         = 16
 
 # define model to use for molecular embedding
 model_type   = 'gin_supervised_contextpred'
@@ -24,18 +17,17 @@ mol_embedder = load_pretrained(model_type).to(device)
 mol_embedder.eval()
 
 # load the purchasable building block embeddings
-bb_emb = np.load('/pool001/whgao/data/synth_net/st_hb/enamine_us_emb_fp_256.npy')
+bb_emb = np.load(paths['bb_emb'])
 
 # define path to the reaction templates and purchasable building blocks
-path_to_reaction_file   = f'/pool001/whgao/data/synth_net/st_{rxn_template}/reactions_{rxn_template}.json.gz'
-path_to_building_blocks = f'/pool001/whgao/data/synth_net/st_{rxn_template}/enamine_us_matched.csv.gz'
+path_to_reaction_file   = paths['reaction_file']
+path_to_building_blocks = paths['building_blocks']
 
 # define paths to pretrained modules
-param_path  = f'/home/whgao/scGen/synth_net/synth_net/params/{param_dir}/'
-path_to_act = f'{param_path}act.ckpt'
-path_to_rt1 = f'{param_path}rt1.ckpt'
-path_to_rxn = f'{param_path}rxn.ckpt'
-path_to_rt2 = f'{param_path}rt2.ckpt'
+path_to_act = paths['to_act']
+path_to_rt1 = paths['to_rt1']
+path_to_rxn = paths['to_rxn']
+path_to_rt2 = paths['to_rt2']
 
 # load the purchasable building block SMILES to a dictionary
 building_blocks = pd.read_csv(path_to_building_blocks, compression='gzip')['SMILES'].tolist()
@@ -52,11 +44,11 @@ act_net, rt1_net, rxn_net, rt2_net = load_modules_from_checkpoint(
     path_to_rt1=path_to_rt1,
     path_to_rxn=path_to_rxn,
     path_to_rt2=path_to_rt2,
-    featurize=featurize,
-    rxn_template=rxn_template,
-    out_dim=out_dim,
-    nbits=nbits,
-    ncpu=ncpu,
+    featurize=parameters['featurize'],
+    rxn_template=parameters['rxn_template'],
+    out_dim=parameters['out_dim'],
+    nbits=parameters['nbits'],
+    ncpu=parameters['ncpu'],
 )
 
 def func(smi):
@@ -84,8 +76,8 @@ def func(smi):
                                               reactant2_net=rt2_net,
                                               bb_emb=bb_emb,
                                               beam_width=10,
-                                              rxn_template=rxn_template,
-                                              n_bits=nbits,
+                                              rxn_template=parameters['rxn_template'],
+                                              n_bits=parameters['nbits'],
                                               max_step=15)
     except Exception as e:
         print(e)

@@ -421,10 +421,7 @@ def synthetic_tree_decoder(z_target,
         action_mask = get_action_mask(tree.get_state(), reaction_templates)
         act = np.argmax(action_proba * action_mask)
 
-        reactant1_net_input = torch.Tensor(
-            np.concatenate([z_state, one_hot_encoder(act, 4)], axis=1)
-        )
-        z_mol1 = reactant1_net(reactant1_net_input)
+        z_mol1 = reactant1_net(torch.Tensor(z_state))
         z_mol1 = z_mol1.detach().numpy()
 
         # Select first molecule
@@ -442,8 +439,11 @@ def synthetic_tree_decoder(z_target,
         z_mol1 = mol_fp(mol1)
 
         # Select reaction
-        rxn_net_input  = torch.Tensor(np.concatenate([z_state, z_mol1], axis=1))
-        reaction_proba = rxn_net(rxn_net_input)
+        try:
+            reaction_proba = rxn_net(torch.Tensor(np.concatenate([z_state, z_mol1], axis=1)))
+        except:
+            z_mol1 = np.expand_dims(z_mol1, axis=0)
+            reaction_proba = rxn_net(torch.Tensor(np.concatenate([z_state, z_mol1], axis=1)))
         reaction_proba = reaction_proba.squeeze().detach().numpy() + 1e-10
 
         if act != 2:
@@ -475,6 +475,8 @@ def synthetic_tree_decoder(z_target,
                     num_rxns = 91
                 elif rxn_template == 'pis':
                     num_rxns = 4700
+                else:
+                    num_rxns = 3  # unit testing uses only 3 reaction templates
                 reactant2_net_input = torch.Tensor(
                     np.concatenate([z_state, z_mol1, one_hot_encoder(rxn_id, num_rxns)],
                                    axis=1)

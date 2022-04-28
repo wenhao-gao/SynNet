@@ -12,15 +12,6 @@ import json
 import scripts._mp_decode as decode
 from tdc import Oracle
 
-# define the following oracle functions from the TDC
-logp  = Oracle(name = 'LogP')
-qed   = Oracle(name = 'QED')
-jnk   = Oracle(name = 'JNK3')
-gsk   = Oracle(name = 'GSK3B')
-drd2  = Oracle(name = 'DRD2')
-_7l11 = Oracle(name = '7l11_docking')
-_drd3 = Oracle(name = 'drd3_docking')
-
 
 def dock_drd3(smi):
     """
@@ -32,6 +23,9 @@ def dock_drd3(smi):
     Returns:
         float: Predicted docking score against the DRD3 target.
     """
+    # define the oracle function from the TDC
+    _drd3 = Oracle(name = 'drd3_docking')
+
     if smi is None:
         return 0.0
     else:
@@ -50,6 +44,8 @@ def dock_7l11(smi):
     Returns:
         float: Predicted docking score against the 7L11 target.
     """
+    # define the oracle function from the TDC
+    _7l11 = Oracle(name = '7l11_docking')
     if smi is None:
         return 0.0
     else:
@@ -83,15 +79,26 @@ def fitness(embs, _pool, obj):
     results = _pool.map(decode.func, embs)
     smiles  = [r[0] for r in results]
     trees   = [r[1] for r in results]
+
     if obj == 'qed':
+        # define the oracle function from the TDC
+        qed   = Oracle(name = 'QED')
         scores = [qed(smi) for smi in smiles]
     elif obj == 'logp':
+        # define the oracle function from the TDC
+        logp  = Oracle(name = 'LogP')
         scores = [logp(smi) for smi in smiles]
     elif obj == 'jnk':
+        # define the oracle function from the TDC
+        jnk   = Oracle(name = 'JNK3')
         scores = [jnk(smi) if smi is not None else 0.0 for smi in smiles]
     elif obj == 'gsk':
+        # define the oracle function from the TDC
+        gsk   = Oracle(name = 'GSK3B')
         scores = [gsk(smi) if smi is not None else 0.0 for smi in smiles]
     elif obj == 'drd2':
+        # define the oracle function from the TDC
+        drd2  = Oracle(name = 'DRD2')
         scores = [drd2(smi) if smi is not None else 0.0 for smi in smiles]
     elif obj == '7l11':
         scores = [dock_7l11(smi) for smi in smiles]

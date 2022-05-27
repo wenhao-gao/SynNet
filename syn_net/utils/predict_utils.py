@@ -1,20 +1,32 @@
 """
-This file contains various utils for decoding synthetic trees.
+This file contains various utils for creating molecular embeddings and for
+decoding synthetic trees.
 """
 import numpy as np
 import rdkit
 from tqdm import tqdm
 import torch
 from rdkit import Chem
+from rdkit import DataStructs
 from rdkit.Chem import AllChem
 from sklearn.neighbors import BallTree
 from dgl.nn.pytorch.glob import AvgPooling
+from dgl.nn.pytorch.glob import AvgPooling
+from dgllife.model import load_pretrained
 from dgllife.utils import mol_to_bigraph, PretrainAtomFeaturizer, PretrainBondFeaturizer
+from tdc.chem_utils import MolConvert
 from syn_net.models.mlp import MLP
 from syn_net.utils.data_utils import SyntheticTree
 
 
+# create a random seed for NumPy
 np.random.seed(6)
+
+# get a GIN pretrained model to use for creating molecular embeddings
+model_type = 'gin_supervised_contextpred'
+device = 'cpu'
+gin_pretrained_model = load_pretrained(model_type).to(device) # used to learn embedding
+gin_pretrained_model.eval()
 
 
 # general functions
@@ -160,6 +172,38 @@ def one_hot_encoder(dim, space):
     vec = np.zeros((1, space))
     vec[0, dim] = 1
     return vec
+
+def mol_embedding(smi, device='cpu', readout=AvgPooling()):
+    """
+    Constructs a graph embedding using the GIN network for an input SMILES.
+
+    Args:
+        smi (str): A SMILES string.
+        device (str): Indicates the device to run on ('cpu' or 'cuda:0'). Default 'cpu'.
+
+    Returns:
+        np.ndarray: Either a zeros array or the graph embedding.
+    """
+
+    # get the embedding
+    if smi is None:
+        return np.zeros(300)
+    else:
+        mol = Chem.MolFromSmiles(smi)
+        # convert RDKit.Mol into featurized bi-directed DGLGraph
+        g = mol_to_bigraph(mol, add_self_loop=True,
+                           node_featurizer=PretrainAtomFeaturizer(),
+                           edge_featurizer=PretrainBondFeaturizer(),
+                           canonical_atom_order=False)
+        bg = g.to(device)
+        nfeats = [bg.ndata.pop('atomic_number').to(device),
+                  bg.ndata.pop('chirality_type').to(device)]
+        efeats = [bg.edata.pop('bond_type').to(device),
+                  bg.edata.pop('bond_direction_type').to(device)]
+        with torch.no_grad():
+            node_repr = gin_pretrained_model(bg, nfeats, efeats)
+        return readout(bg, node_repr).detach().cpu().numpy().reshape(-1, ).tolist()
+
 
 def get_mol_embedding(smi, model, device='cpu', readout=AvgPooling()):
     """
@@ -377,10 +421,7 @@ def synthetic_tree_decoder(z_target,
         action_mask = get_action_mask(tree.get_state(), reaction_templates)
         act = np.argmax(action_proba * action_mask)
 
-        reactant1_net_input = torch.Tensor(
-            np.concatenate([z_state, one_hot_encoder(act, 4)], axis=1)
-        )
-        z_mol1 = reactant1_net(reactant1_net_input)
+        z_mol1 = reactant1_net(torch.Tensor(z_state))
         z_mol1 = z_mol1.detach().numpy()
 
         # Select first molecule
@@ -398,8 +439,11 @@ def synthetic_tree_decoder(z_target,
         z_mol1 = mol_fp(mol1)
 
         # Select reaction
-        rxn_net_input  = torch.Tensor(np.concatenate([z_state, z_mol1], axis=1))
-        reaction_proba = rxn_net(rxn_net_input)
+        try:
+            reaction_proba = rxn_net(torch.Tensor(np.concatenate([z_state, z_mol1], axis=1)))
+        except:
+            z_mol1 = np.expand_dims(z_mol1, axis=0)
+            reaction_proba = rxn_net(torch.Tensor(np.concatenate([z_state, z_mol1], axis=1)))
         reaction_proba = reaction_proba.squeeze().detach().numpy() + 1e-10
 
         if act != 2:
@@ -431,6 +475,8 @@ def synthetic_tree_decoder(z_target,
                     num_rxns = 91
                 elif rxn_template == 'pis':
                     num_rxns = 4700
+                else:
+                    num_rxns = 3  # unit testing uses only 3 reaction templates
                 reactant2_net_input = torch.Tensor(
                     np.concatenate([z_state, z_mol1, one_hot_encoder(rxn_id, num_rxns)],
                                    axis=1)
@@ -974,3 +1020,48 @@ def synthetic_tree_decoder_multireactant(z_target,
     act          = acts[max_simi_idx]
 
     return smi, similarity, tree, act
+
+def fp_embedding(smi, _radius=2, _nBits=4096):
+    """
+    General function for building variable-size & -radius Morgan fingerprints.
+
+    Args:
+        smi (str): The SMILES to encode.
+        _radius (int, optional): Morgan fingerprint radius. Defaults to 2.
+        _nBits (int, optional): Morgan fingerprint length. Defaults to 4096.
+
+    Returns:
+        np.ndarray: A Morgan fingerprint generated using the specified parameters.
+    """
+    if smi is None:
+        return np.zeros(_nBits).reshape((-1, )).tolist()
+    else:
+        mol = Chem.MolFromSmiles(smi)
+        features_vec = AllChem.GetMorganFingerprintAsBitVect(mol, _radius, _nBits)
+        features = np.zeros((1,))
+        DataStructs.ConvertToNumpyArray(features_vec, features)
+        return features.reshape((-1, )).tolist()
+
+def fp_4096(smi):
+    return fp_embedding(smi, _radius=2, _nBits=4096)
+
+def fp_2048(smi):
+    return fp_embedding(smi, _radius=2, _nBits=2048)
+
+def fp_1024(smi):
+    return fp_embedding(smi, _radius=2, _nBits=1024)
+
+def fp_512(smi):
+    return fp_embedding(smi, _radius=2, _nBits=512)
+
+def fp_256(smi):
+    return fp_embedding(smi, _radius=2, _nBits=256)
+
+def rdkit2d_embedding(smi):
+    # define the RDKit 2D descriptors conversion function
+    rdkit2d = MolConvert(src = 'SMILES', dst = 'RDKit2D')
+
+    if smi is None:
+        return np.zeros(200).reshape((-1, )).tolist()
+    else:
+        return rdkit2d(smi).tolist()

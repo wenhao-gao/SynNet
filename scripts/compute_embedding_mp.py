@@ -4,6 +4,7 @@ Computes the molecular embeddings of the purchasable building blocks.
 import multiprocessing as mp
 from scripts.compute_embedding import *
 from rdkit import RDLogger
+from syn_net.utils.predict_utils import mol_embedding, fp_4096, fp_2048, fp_1024, fp_512, fp_256, rdkit2d_embedding
 RDLogger.DisableLog('*')
 
 
@@ -19,14 +20,16 @@ if __name__ == '__main__':
 
     # define the path to which data will be saved
     path = '/pool001/whgao/data/synth_net/st_hb/'
+    ## path = './tests/data/'  ## for debugging
 
     # load the building blocks
     data = pd.read_csv(path + 'enamine_us_matched.csv.gz', compression='gzip')['SMILES'].tolist()
+    ## data = pd.read_csv(path + 'building_blocks_matched.csv.gz', compression='gzip')['SMILES'].tolist()  ## for debugging
     print('Total data: ', len(data))
 
     if args.feature == 'gin':
         with mp.Pool(processes=args.ncpu) as pool:
-            embeddings = pool.map(gin_embedding, data)
+            embeddings = pool.map(mol_embedding, data)
     elif args.feature == 'fp_4096':
         with mp.Pool(processes=args.ncpu) as pool:
             embeddings = pool.map(fp_4096, data)

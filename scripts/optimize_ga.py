@@ -10,6 +10,7 @@ import pandas as pd
 import time
 import json
 import scripts._mp_decode as decode
+from syn_net.utils.predict_utils import mol_fp
 from tdc import Oracle
 
 # define the following oracle functions from the TDC
@@ -196,14 +197,13 @@ if __name__ == '__main__':
             starting_smiles = pd.read_csv(args.input_file).sample(args.num_population)
             starting_smiles = starting_smiles['smiles'].tolist()
             population = np.array(
-                [decode.mol_fp(smi, args.radius, args.nbits) for smi in starting_smiles]
+                [mol_fp(smi, args.radius, args.nbits) for smi in starting_smiles]
             )
-            population = population.reshape((population.shape[0], population.shape[2]))
             print(f"Starting with {len(starting_smiles)} fps from {args.input_file}")
 
     with mp.Pool(processes=args.ncpu) as pool:
         scores, mols, trees = fitness(embs=population,
-                                      pool=pool,
+                                      _pool=pool,
                                       obj=args.objective)
     scores     = np.array(scores)
     score_x    = np.argsort(scores)
@@ -213,7 +213,6 @@ if __name__ == '__main__':
     print(f"Initial: {scores.mean():.3f} +/- {scores.std():.3f}")
     print(f"Scores: {scores}")
     print(f"Top-3 Smiles: {mols[:3]}")
-    print()
 
     recent_scores = []
 

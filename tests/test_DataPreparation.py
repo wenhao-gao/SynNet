@@ -1,17 +1,22 @@
 """
 Unit tests for the data preparation.
 """
+from pathlib import Path
 import unittest
 import os
 from shutil import copyfile
-import pandas as pd
-from syn_net.utils.predict_utils import get_mol_embedding
-from tqdm import tqdm
-from scipy import sparse
+
+from dgllife.model import load_pretrained
 import numpy as np
+import pandas as pd
+from scipy import sparse
+from tqdm import tqdm
+
+from syn_net.utils.predict_utils import get_mol_embedding
 from syn_net.utils.prep_utils import organize, synthetic_tree_generator, prep_data
 from syn_net.utils.data_utils import SyntheticTreeSet, Reaction, ReactionSet
-from dgllife.model import load_pretrained
+
+TEST_DIR = Path(__file__).parent
 
 class TestDataPrep(unittest.TestCase):
     """
@@ -24,10 +29,10 @@ class TestDataPrep(unittest.TestCase):
         """
         # the following file contains the three templates at the top of
         # 'SynNet/data/rxn_set_hb.txt'
-        path_to_rxn_templates = './data/rxn_set_hb_test.txt'
+        path_to_rxn_templates = f'{TEST_DIR}/data/rxn_set_hb_test.txt'
 
         # load the reference building blocks (100 here)
-        path_to_building_blocks = './data/building_blocks_matched.csv.gz'
+        path_to_building_blocks = f'{TEST_DIR}/data/building_blocks_matched.csv.gz'
         building_blocks = pd.read_csv(path_to_building_blocks, compression='gzip')['SMILES'].tolist()
 
         # load the reaction templates
@@ -40,10 +45,10 @@ class TestDataPrep(unittest.TestCase):
 
         # save the templates as a ReactionSet
         r = ReactionSet(rxn_templates)
-        r.save('./data/rxns_hb.json.gz')
+        r.save(f'{TEST_DIR}/data/rxns_hb.json.gz')
 
         # load the reference reaction templates
-        path_to_ref_rxn_templates = './data/ref/rxns_hb.json.gz'
+        path_to_ref_rxn_templates = f'{TEST_DIR}/data/ref/rxns_hb.json.gz'
         r_ref = ReactionSet()
         r_ref.load(path_to_ref_rxn_templates)
 
@@ -61,13 +66,13 @@ class TestDataPrep(unittest.TestCase):
         np.random.seed(6)
 
         # load the `Reactions` (built from 3 reaction templates)
-        path_to_rxns = './data/ref/rxns_hb.json.gz'
+        path_to_rxns = f'{TEST_DIR}/data/ref/rxns_hb.json.gz'
         r_ref = ReactionSet()
         r_ref.load(path_to_rxns)
         rxns = r_ref.rxns
 
         # load the reference building blocks (100 here)
-        path_to_building_blocks = './data/building_blocks_matched.csv.gz'
+        path_to_building_blocks = f'{TEST_DIR}/data/building_blocks_matched.csv.gz'
         building_blocks = pd.read_csv(path_to_building_blocks, compression='gzip')['SMILES'].tolist()
 
         num_trials   = 25
@@ -89,7 +94,7 @@ class TestDataPrep(unittest.TestCase):
                 num_unfinish += 1
 
         synthetic_tree_set = SyntheticTreeSet(sts=trees)
-        synthetic_tree_set.save('./data/st_data.json.gz')
+        synthetic_tree_set.save(f'{TEST_DIR}/data/st_data.json.gz')
 
         # check that the number of finished trees generated is == 3, and that
         # the number of unfinished trees generated is == 0
@@ -99,7 +104,7 @@ class TestDataPrep(unittest.TestCase):
         # check here that the synthetic trees were correctly saved by
         # comparing to a provided reference file in 'SynNet/tests/data/ref/'
         sts_ref = SyntheticTreeSet()
-        sts_ref.load('./data/ref/st_data.json.gz')
+        sts_ref.load(f'{TEST_DIR}/data/ref/st_data.json.gz')
         for st_idx, st in enumerate(sts_ref.sts):
             st = st.__dict__
             ref_st = sts_ref.sts[st_idx].__dict__
@@ -115,9 +120,9 @@ class TestDataPrep(unittest.TestCase):
         nbits        = 4096
         dataset_type = 'train'
 
-        path_st            = './data/ref/st_data.json.gz'
-        save_dir           = './data/'
-        reference_data_dir = './data/ref/'
+        path_st            = f'{TEST_DIR}/data/ref/st_data.json.gz'
+        save_dir           = f'{TEST_DIR}/data/'
+        reference_data_dir = f'{TEST_DIR}/data/ref/'
 
         st_set = SyntheticTreeSet()
         st_set.load(path_st)
@@ -171,8 +176,8 @@ class TestDataPrep(unittest.TestCase):
         one-hot encoded Action, Reactant 1, Reactant 2, and Reaction network
         files. In other words, the preparation of data for each specific network.
         """
-        main_dir = './data/'
-        ref_dir = './data/ref/'
+        main_dir = f'{TEST_DIR}/data/'
+        ref_dir = f'{TEST_DIR}/data/ref/'
         # copy data from the reference directory to use for this particular test
         copyfile(f'{ref_dir}states_0_train.npz', f'{main_dir}states_0_train.npz')
         copyfile(f'{ref_dir}steps_0_train.npz', f'{main_dir}steps_0_train.npz')
@@ -233,8 +238,8 @@ class TestDataPrep(unittest.TestCase):
         Tests the building block embedding function.
         """
         # define some constants
-        main_dir = './data/'
-        ref_dir = './data/ref/'
+        main_dir = f'{TEST_DIR}/data/'
+        ref_dir = f'{TEST_DIR}/data/ref/'
 
         # define model to use for molecular embedding
         model_type = 'gin_supervised_contextpred'
@@ -243,7 +248,7 @@ class TestDataPrep(unittest.TestCase):
         model.eval()
 
         # load the building blocks
-        path_to_building_blocks = './data/building_blocks_matched.csv.gz'
+        path_to_building_blocks = f'{TEST_DIR}/data/building_blocks_matched.csv.gz'
         building_blocks = pd.read_csv(path_to_building_blocks, compression='gzip')['SMILES'].tolist()
 
         # compute the building block embeddings

@@ -1,15 +1,20 @@
 """
 Unit tests for model training.
 """
+from pathlib import Path
 import unittest
 import shutil
-import torch
+
 import pytorch_lightning as pl
 from pytorch_lightning import loggers as pl_loggers
+from scipy import sparse
+import torch
+
 from syn_net.models.mlp import MLP, load_array
 from syn_net.utils.predict_utils import one_hot_encoder
-from scipy import sparse
 
+
+TEST_DIR = Path(__file__).parent
 
 class TestTraining(unittest.TestCase):
     """
@@ -27,7 +32,7 @@ class TestTraining(unittest.TestCase):
         epochs            = 2
         ncpu              = 2
         validation_option = 'accuracy'
-        ref_dir           = f'./data/ref/'
+        ref_dir           = f'{TEST_DIR}/data/ref/'
 
         X = sparse.load_npz(ref_dir + 'X_act_train.npz')
         y = sparse.load_npz(ref_dir + 'y_act_train.npz')
@@ -75,7 +80,7 @@ class TestTraining(unittest.TestCase):
         epochs            = 2
         ncpu              = 2
         validation_option = 'nn_accuracy'
-        ref_dir           = f'./data/ref/'
+        ref_dir           = f'{TEST_DIR}/data/ref/'
 
         # load the reaction data
         X = sparse.load_npz(ref_dir + 'X_rt1_train.npz')
@@ -124,7 +129,7 @@ class TestTraining(unittest.TestCase):
         ncpu              = 2
         n_templates       = 3  # num templates in 'data/rxn_set_hb_test.txt'
         validation_option = 'accuracy'
-        ref_dir           = f'./data/ref/'
+        ref_dir           = f'{TEST_DIR}/data/ref/'
 
         X = sparse.load_npz(ref_dir + 'X_rxn_train.npz')
         y = sparse.load_npz(ref_dir + 'y_rxn_train.npz')
@@ -173,7 +178,7 @@ class TestTraining(unittest.TestCase):
         ncpu              = 2
         n_templates       = 3  # num templates in 'data/rxn_set_hb_test.txt'
         validation_option = 'nn_accuracy'
-        ref_dir           = f'./data/ref/'
+        ref_dir           = f'{TEST_DIR}/data/ref/'
 
         X = sparse.load_npz(ref_dir + 'X_rt2_train.npz')
         y = sparse.load_npz(ref_dir + 'y_rt2_train.npz')

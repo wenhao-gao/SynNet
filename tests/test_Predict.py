@@ -1,12 +1,19 @@
 """
 Unit tests for the model predictions.
 """
+from pathlib import Path
 import unittest
+
 import numpy as np
 import pandas as pd
-from syn_net.utils.predict_utils import synthetic_tree_decoder_multireactant, mol_fp, load_modules_from_checkpoint
+
+from syn_net.utils.predict_utils import (
+    synthetic_tree_decoder_multireactant, mol_fp, load_modules_from_checkpoint
+)
 from syn_net.utils.data_utils import SyntheticTreeSet, ReactionSet
 
+
+TEST_DIR = Path(__file__).parent
 
 class TestPredict(unittest.TestCase):
     """
@@ -19,7 +26,7 @@ class TestPredict(unittest.TestCase):
         np.random.seed(seed=137)
 
         # define some constants (here, for the unit test rxn set)
-        ref_dir      = f'./data/ref/'
+        ref_dir      = f'{TEST_DIR}/data/ref/'
         nbits        = 4096
         out_dim      = 300
         featurize    = 'fp'
@@ -31,7 +38,7 @@ class TestPredict(unittest.TestCase):
 
         # define path to the reaction templates and purchasable building blocks
         path_to_reaction_file   = f'{ref_dir}rxns_hb.json.gz'
-        path_to_building_blocks = './data/building_blocks_matched.csv.gz'
+        path_to_building_blocks = f'{TEST_DIR}/data/building_blocks_matched.csv.gz'
 
         # define paths to pretrained modules
         path_to_act = f'{ref_dir}act.ckpt'

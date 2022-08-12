@@ -46,7 +46,9 @@ class TestTraining(unittest.TestCase):
         ref_dir = f"{TEST_DIR}/data/ref/"
 
         X = sparse.load_npz(ref_dir + "X_act_train.npz")
+        assert X.shape==(4,3*nbits) # (4,12288)
         y = sparse.load_npz(ref_dir + "y_act_train.npz")
+        assert y.shape==(4,1) # (4,1)
         X = torch.Tensor(X.A)
         y = torch.LongTensor(
             y.A.reshape(
@@ -105,8 +107,10 @@ class TestTraining(unittest.TestCase):
 
         # load the reaction data
         X = sparse.load_npz(ref_dir + "X_rt1_train.npz")
+        assert X.shape==(2,3*nbits) # (4,12288)
         X = torch.Tensor(X.A)
         y = sparse.load_npz(ref_dir + "y_rt1_train.npz")
+        assert y.shape==(2,300) # (2,300)
         y = torch.Tensor(y.A)
         train_data_iter = load_array((X, y), batch_size, ncpu=ncpu, is_train=True)
 
@@ -159,7 +163,9 @@ class TestTraining(unittest.TestCase):
         ref_dir = f"{TEST_DIR}/data/ref/"
 
         X = sparse.load_npz(ref_dir + "X_rxn_train.npz")
+        assert X.shape==(2,4*nbits) # (2,16384)
         y = sparse.load_npz(ref_dir + "y_rxn_train.npz")
+        assert y.shape==(2, 1) # (2, 1)
         X = torch.Tensor(X.A)
         y = torch.LongTensor(
             y.A.reshape(
@@ -218,7 +224,9 @@ class TestTraining(unittest.TestCase):
         ref_dir = f"{TEST_DIR}/data/ref/"
 
         X = sparse.load_npz(ref_dir + "X_rt2_train.npz")
+        assert X.shape==(2,4*nbits+n_templates) # (2,16387)
         y = sparse.load_npz(ref_dir + "y_rt2_train.npz")
+        assert y.shape==(2,300) # (2,300)
         X = torch.Tensor(X.A)
         y = torch.Tensor(y.A)
         train_data_iter = load_array((X, y), batch_size, ncpu=ncpu, is_train=True)

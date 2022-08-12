@@ -45,7 +45,7 @@ class TestTraining(unittest.TestCase):
         validation_option = "accuracy"
         ref_dir = f"{TEST_DIR}/data/ref/"
 
-        X = sparse.load_npz(ref_dir + "X_act_train.npz")
+        X = sparse.load_npz(ref_dir + "X_act_train.npz") 
         assert X.shape==(4,3*nbits) # (4,12288)
         y = sparse.load_npz(ref_dir + "y_act_train.npz")
         assert y.shape==(4,1) # (4,1)
@@ -86,10 +86,10 @@ class TestTraining(unittest.TestCase):
         trainer.fit(mlp, train_data_iter, valid_data_iter)
 
         train_loss = float(trainer.callback_metrics["train_loss"])
-        train_loss_ref = 1.4203987121582031
+        train_loss_ref = 1.2967982292175293
 
         shutil.rmtree(f"act_{embedding}_{radius}_{nbits}_logs/")
-        self.assertEqual(train_loss, train_loss_ref)
+        self.assertAlmostEqual(train_loss, train_loss_ref)
 
     def test_reactant1_network(self):
         """
@@ -98,14 +98,14 @@ class TestTraining(unittest.TestCase):
         embedding = "fp"
         radius = 2
         nbits = 4096
-        out_dim = 300
+        out_dim = 300  # Note: out_dim 300 = gin embedding
         batch_size = 10
         epochs = 2
         ncpu = 2
-        validation_option = "nn_accuracy"
+        validation_option = "nn_accuracy_gin"
         ref_dir = f"{TEST_DIR}/data/ref/"
 
-        # load the reaction data
+        # load the reaction data       
         X = sparse.load_npz(ref_dir + "X_rt1_train.npz")
         assert X.shape==(2,3*nbits) # (4,12288)
         X = torch.Tensor(X.A)
@@ -143,10 +143,10 @@ class TestTraining(unittest.TestCase):
         trainer.fit(mlp, train_data_iter, valid_data_iter)
 
         train_loss = float(trainer.callback_metrics["train_loss"])
-        train_loss_ref = 0.35571354627609253
+        train_loss_ref = 0.33368119597435
 
         shutil.rmtree(f"rt1_{embedding}_{radius}_{nbits}_logs/")
-        self.assertEqual(train_loss, train_loss_ref)
+        self.assertAlmostEqual(train_loss, train_loss_ref)
 
     def test_reaction_network(self):
         """
@@ -206,7 +206,7 @@ class TestTraining(unittest.TestCase):
         train_loss_ref = 1.1214743852615356
 
         shutil.rmtree(f"rxn_{embedding}_{radius}_{nbits}_logs/")
-        self.assertEqual(train_loss, train_loss_ref)
+        self.assertAlmostEqual(train_loss, train_loss_ref,places=-6)
 
     def test_reactant2_network(self):
         """
@@ -215,12 +215,12 @@ class TestTraining(unittest.TestCase):
         embedding = "fp"
         radius = 2
         nbits = 4096
-        out_dim = 300
+        out_dim = 300  # Note: out_dim 300 = gin embedding
         batch_size = 10
         epochs = 2
         ncpu = 2
-        n_templates = 3  # num templates in `REACTION_TEMPLATES_FILE`
-        validation_option = "nn_accuracy"
+        n_templates = 3  # num templates in 'data/rxn_set_hb_test.txt'
+        validation_option = "nn_accuracy_gin"
         ref_dir = f"{TEST_DIR}/data/ref/"
 
         X = sparse.load_npz(ref_dir + "X_rt2_train.npz")
@@ -260,7 +260,7 @@ class TestTraining(unittest.TestCase):
         trainer.fit(mlp, train_data_iter, valid_data_iter)
 
         train_loss = float(trainer.callback_metrics["train_loss"])
-        train_loss_ref = 0.41246509552001953
+        train_loss_ref = 0.3026905953884125
 
         shutil.rmtree(f"rt2_{embedding}_{radius}_{nbits}_logs/")
-        self.assertEqual(train_loss, train_loss_ref)
+        self.assertAlmostEqual(train_loss, train_loss_ref)

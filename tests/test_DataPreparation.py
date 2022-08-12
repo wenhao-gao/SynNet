@@ -31,10 +31,10 @@ class TestDataPrep(unittest.TestCase):
         """
         # the following file contains the three templates at the top of
         # 'SynNet/data/rxn_set_hb.txt'
-        path_to_rxn_templates = f"{TEST_DIR}/data/rxn_set_hb_test.txt"
+        path_to_rxn_templates = f"{TEST_DIR}/assets/rxn_set_hb_test.txt"
 
         # load the reference building blocks (100 here)
-        path_to_building_blocks = f"{TEST_DIR}/data/building_blocks_matched.csv.gz"
+        path_to_building_blocks = f"{TEST_DIR}/assets/building_blocks_matched.csv.gz"
         building_blocks = pd.read_csv(path_to_building_blocks, compression="gzip")[
             "SMILES"
         ].tolist()
@@ -76,7 +76,7 @@ class TestDataPrep(unittest.TestCase):
         rxns = r_ref.rxns
 
         # load the reference building blocks (100 here)
-        path_to_building_blocks = f"{TEST_DIR}/data/building_blocks_matched.csv.gz"
+        path_to_building_blocks = f"{TEST_DIR}/assets/building_blocks_matched.csv.gz"
         building_blocks = pd.read_csv(path_to_building_blocks, compression="gzip")[
             "SMILES"
         ].tolist()
@@ -255,7 +255,7 @@ class TestDataPrep(unittest.TestCase):
         model.eval()
 
         # load the building blocks
-        path_to_building_blocks = f"{TEST_DIR}/data/building_blocks_matched.csv.gz"
+        path_to_building_blocks = f"{TEST_DIR}/assets/building_blocks_matched.csv.gz"
         building_blocks = pd.read_csv(path_to_building_blocks, compression="gzip")[
             "SMILES"
         ].tolist()

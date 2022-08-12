@@ -42,7 +42,7 @@ class TestPredict(unittest.TestCase):
 
         # define path to the reaction templates and purchasable building blocks
         path_to_reaction_file = f"{ref_dir}rxns_hb.json.gz"
-        path_to_building_blocks = f"{TEST_DIR}/data/building_blocks_matched.csv.gz"
+        path_to_building_blocks = f"{TEST_DIR}/assets/building_blocks_matched.csv.gz"
 
         # define paths to pretrained modules
         path_to_act = f"{ref_dir}act.ckpt"

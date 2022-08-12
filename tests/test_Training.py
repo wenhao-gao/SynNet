@@ -15,6 +15,16 @@ from syn_net.models.mlp import MLP, load_array
 
 TEST_DIR = Path(__file__).parent
 
+REACTION_TEMPLATES_FILE =  f"{TEST_DIR}/assets/rxn_set_hb_test.txt"
+
+class TestReactionTemplateFile(unittest.TestCase):
+    
+    def test_number_of_reaction_templates(self):
+        """ Count number of lines in file, i.e. the number of reaction templates."""
+        with open(REACTION_TEMPLATES_FILE,"r") as f:
+            nReactionTemplates = sum(1 for _ in f)
+        self.assertEqual(nReactionTemplates,3)
+
 
 class TestTraining(unittest.TestCase):
     """
@@ -144,7 +154,7 @@ class TestTraining(unittest.TestCase):
         batch_size = 10
         epochs = 2
         ncpu = 2
-        n_templates = 3  # num templates in 'data/rxn_set_hb_test.txt'
+        n_templates = 3  # num templates in `REACTION_TEMPLATES_FILE`
         validation_option = "accuracy"
         ref_dir = f"{TEST_DIR}/data/ref/"
 
@@ -203,7 +213,7 @@ class TestTraining(unittest.TestCase):
         batch_size = 10
         epochs = 2
         ncpu = 2
-        n_templates = 3  # num templates in 'data/rxn_set_hb_test.txt'
+        n_templates = 3  # num templates in `REACTION_TEMPLATES_FILE`
         validation_option = "nn_accuracy"
         ref_dir = f"{TEST_DIR}/data/ref/"
 

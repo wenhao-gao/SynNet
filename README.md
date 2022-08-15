@@ -51,11 +51,12 @@ If you update the environment and would like to save the updated environment as 
 conda env export > path/to/env.yml
 ```
 
+pip install -e .
 Before running any SynNet code, activate the environment and install the package in development mode. This ensures the scripts can find the right files. You can do this by typing:
 
-```
+```shell
 source activate synthenv
-python setup.py install
+pip install -e .
 ```
 
 ### Unit tests
@@ -149,11 +150,7 @@ The model implementations can be found in [syn_net/models/](syn_net/models/), wi
 
 ## Instructions
 
-Before running anything, you need to add the root directory to the Python path. One option for doing this is to run the following command in the root `SynNet` directory:
-
-```
-export PYTHONPATH=`pwd`:$PYTHONPATH
-```
+Before running anything, set up the environment as decribed above.
 
 ## Using pre-trained models
 

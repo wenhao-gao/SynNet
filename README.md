@@ -60,16 +60,13 @@ python setup.py install
 
 ### Unit tests
 
-To check that everything has been set-up correctly, you can run the unit tests from within the [tests/](./tests/). If starting in the main SynNet/ directory, you can run the unit tests as follows:
+To check that everything has been set-up correctly, you can run the unit tests. If starting in the main directory, you can run the unit tests as follows:
 
-```
-source activate synthenv
-export PYTHONPATH=`pwd`:$PYTHONPATH
-cd tests/
+```python
 python -m unittest
 ```
 
-You should get no errors if everything ran correctly.
+Except for `tests/test_Training.py`, all tests should succedd. The `test_Training.py` still relies on the embedding of the building blocks, which is tracked in this repostory.
 
 ### Data
 

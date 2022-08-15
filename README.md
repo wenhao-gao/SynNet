@@ -51,11 +51,11 @@ If you update the environment and would like to save the updated environment as 
 conda env export > path/to/env.yml
 ```
 
-Before running any SynNet code, activate the environment and update the Python path so that the scripts can find the right files. You can do this by typing:
+Before running any SynNet code, activate the environment and install the package in development mode. This ensures the scripts can find the right files. You can do this by typing:
 
 ```
 source activate synthenv
-export PYTHONPATH=`pwd`:$PYTHONPATH
+python setup.py install
 ```
 
 ### Unit tests

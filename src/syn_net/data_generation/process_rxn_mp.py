@@ -10,8 +10,9 @@ from time import time
 
 from syn_net.utils.data_utils import Reaction, ReactionSet
 import syn_net.data_generation._mp_process as process
-import shutup
-shutup.please()
+# Silence RDKit loggers (https://github.com/rdkit/rdkit/issues/2683)
+from rdkit import RDLogger  
+RDLogger.DisableLog('rdApp.*') 
 
 
 if __name__ == '__main__':

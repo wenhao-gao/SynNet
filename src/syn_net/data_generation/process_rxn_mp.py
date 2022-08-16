@@ -24,7 +24,7 @@ if __name__ == '__main__':
     path_to_rxn_templates = f'{REACTION_TEMPLATE_DIR}/{name}.txt'
     rxn_templates = []
     for line in open(path_to_rxn_templates, 'rt'):
-        template = line.split("|")[1].strip() # reaction templates are prefix with "|"
+        template = line.strip() 
         rxn = Reaction(template)
         rxn_templates.append(rxn)
 

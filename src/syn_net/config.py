@@ -9,6 +9,7 @@ REACTION_TEMPLATE_DIR = f"{ASSETS_DIR}/reaction-templates"
 
 # Pre-processed data
 DATA_PREPROCESS_DIR = "database/pre-process"
+DATA_EMBEDDINGS_DIR = "database/pre-process/embeddings"
 
 # Prepared data
 DATA_PREPARED_DIR = "database/prepared"

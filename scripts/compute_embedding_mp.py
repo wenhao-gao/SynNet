@@ -1,57 +1,64 @@
 """
 Computes the molecular embeddings of the purchasable building blocks.
+
+The embeddings are also referred to as "output embedding". 
+In the embedding space, a kNN-search will identify the 1st or 2nd reactant.
 """
+import logging
 import multiprocessing as mp
-from scripts.compute_embedding import *
-from rdkit import RDLogger
-from syn_net.utils.predict_utils import mol_embedding, fp_4096, fp_2048, fp_1024, fp_512, fp_256, rdkit2d_embedding
-RDLogger.DisableLog('*')
+from pathlib import Path
+
+import numpy as np
+import pandas as pd
+
+from syn_net.config import DATA_EMBEDDINGS_DIR, DATA_PREPROCESS_DIR
+from syn_net.utils.predict_utils import fp_256, fp_512, fp_1024, fp_2048, fp_4096, mol_embedding, rdkit2d_embedding
+
+logger = logging.getLogger(__file__)
 
 
-if __name__ == '__main__':
+FUNCTIONS = {
+    "gin": mol_embedding,
+    "fp_4096": fp_4096,
+    "fp_2048": fp_2048,
+    "fp_1024": fp_1024,
+    "fp_512": fp_512,
+    "fp_256": fp_256,
+    "rdkit2d": rdkit2d_embedding,
+}
+
+
+if __name__ == "__main__":
 
     import argparse
+
     parser = argparse.ArgumentParser()
-    parser.add_argument("--feature", type=str, default="gin",
-                        help="Objective function to optimize")
-    parser.add_argument("--ncpu", type=int, default=16,
-                        help="Number of cpus")
+    parser.add_argument("--feature", type=str, default="fp_256", choices=FUNCTIONS.keys(), help="Objective function to optimize")
+    parser.add_argument("--ncpu", type=int, default=64, help="Number of cpus")
+    parser.add_argument("-rxn", "--rxn_template", type=str, default="hb", choices=["hb", "pis"], help="Choose from ['hb', 'pis']")
+    parser.add_argument("--input", type=str, help="Input file with SMILES strings (One per line).")
     args = parser.parse_args()
 
-    # define the path to which data will be saved
-    path = '/pool001/whgao/data/synth_net/st_hb/'
-    ## path = './tests/data/'  ## for debugging
+    reaction_template_id = args.rxn_template
+    building_blocks_id = "enamine_us-2021-smiles"
 
-    # load the building blocks
-    data = pd.read_csv(path + 'enamine_us_matched.csv.gz', compression='gzip')['SMILES'].tolist()
-    ## data = pd.read_csv(path + 'building_blocks_matched.csv.gz', compression='gzip')['SMILES'].tolist()  ## for debugging
-    print('Total data: ', len(data))
+    # Load building blocks
+    file = Path(DATA_PREPROCESS_DIR) / f"{reaction_template_id}-{building_blocks_id}-matched.csv.gz"
 
-    if args.feature == 'gin':
-        with mp.Pool(processes=args.ncpu) as pool:
-            embeddings = pool.map(mol_embedding, data)
-    elif args.feature == 'fp_4096':
-        with mp.Pool(processes=args.ncpu) as pool:
-            embeddings = pool.map(fp_4096, data)
-    elif args.feature == 'fp_2048':
-        with mp.Pool(processes=args.ncpu) as pool:
-            embeddings = pool.map(fp_2048, data)
-    elif args.feature == 'fp_1024':
-        with mp.Pool(processes=args.ncpu) as pool:
-            embeddings = pool.map(fp_1024, data)
-    elif args.feature == 'fp_512':
-        with mp.Pool(processes=args.ncpu) as pool:
-            embeddings = pool.map(fp_512, data)
-    elif args.feature == 'fp_256':
-        with mp.Pool(processes=args.ncpu) as pool:
-            embeddings = pool.map(fp_256, data)
-    elif args.feature == 'rdkit2d':
-        with mp.Pool(processes=args.ncpu) as pool:
-            embeddings = pool.map(rdkit2d_embedding, data)
+    data = pd.read_csv(file)["SMILES"].tolist()
+    logger.info(f"Successfully read {file}.")
+    logger.info(f"Total number of building blocks: {len(data)}.")
 
-    embedding = np.array(embeddings)
+    func = FUNCTIONS[args.feature]
+    with mp.Pool(processes=args.ncpu) as pool:
+        embeddings = pool.map(func, data)
 
-    # import ipdb; ipdb.set_trace(context=9)
-    np.save(path + 'enamine_us_emb_' + args.feature + '.npy', embeddings)
+    # Save embeddings
+    embeddings = np.array(embeddings)
 
-    print('Finish!')
+    path = Path(DATA_EMBEDDINGS_DIR)
+    path.mkdir(exist_ok=1, parents=1)
+    outfile = path / f"{reaction_template_id}-{building_blocks_id}-embeddings.npy"
+
+    np.save(outfile, embeddings)
+    logger.info(f"Successfully saved to {outfile}.")

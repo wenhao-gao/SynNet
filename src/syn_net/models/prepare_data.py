@@ -18,7 +18,7 @@ if __name__ == '__main__':
                         help="Radius for Morgan fingerprint.")
     parser.add_argument("--nbits", type=int, default=4096,
                         help="Number of Bits for Morgan fingerprint.")
-    parser.add_argument("--outputembedding", type=str, default='gin',
+    parser.add_argument("--outputembedding", type=str, default='fp_256',
                         help="Choose from ['fp_4096', 'fp_256', 'gin', 'rdkit2d']")
     args = parser.parse_args()
     rxn_template = args.rxn_template

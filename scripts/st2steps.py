@@ -13,8 +13,6 @@ if __name__ == '__main__':
 
     import argparse
     parser = argparse.ArgumentParser()
-    parser.add_argument("-n", "--numbersave", type=int, default=999999999999,
-                        help="Save number")
     parser.add_argument("-e", "--targetembedding", type=str, default='fp',
                         help="Choose from ['fp', 'gin']")
     parser.add_argument("-o", "--outputembedding", type=str, default='fp_256',
@@ -54,8 +52,6 @@ if __name__ == '__main__':
     steps = []
 
     num_save = args.numbersave
-    idx = 0
-    save_idx = 0
     for st in tqdm(data):
         try:
             state, step = organize(st, target_embedding=embedding,
@@ -67,28 +63,14 @@ if __name__ == '__main__':
             continue
         states.append(state)
         steps.append(step)
-        idx += 1
-        if idx % num_save == 0:
-            print('Saving......')
-            states = sparse.vstack(states)
-            steps = sparse.vstack(steps)
-            sparse.save_npz(save_dir / f"states_{save_idx}_{dataset_type}.npz", states)
-            sparse.save_npz(save_dir / f"steps_{save_idx}_{dataset_type}.npz", steps)
-            save_idx += 1
-            del states
-            del steps
-            states = []
-            steps = []
 
-    del data
 
-    # Finally, save again. (Potentially overwrite existing files)
-    if len(steps) != 0:
-        print('Saving......')
-        states = sparse.vstack(states)
-        steps = sparse.vstack(steps)
-        sparse.save_npz(save_dir / f"states_{save_idx}_{dataset_type}.npz", states)
-        sparse.save_npz(save_dir / f"steps_{save_idx}_{dataset_type}.npz", steps)
+    # Finally, save. 
+    print('Saving......')
+    states = sparse.vstack(states)
+    steps = sparse.vstack(steps)
+    sparse.save_npz(save_dir / f"states_{dataset_type}.npz", states)
+    sparse.save_npz(save_dir / f"steps_{dataset_type}.npz", steps)
 
     print('Finish!')
 

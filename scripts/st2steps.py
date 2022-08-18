@@ -7,6 +7,9 @@ from scipy import sparse
 from syn_net.utils.data_utils import SyntheticTreeSet
 from syn_net.utils.prep_utils import organize
 
+import logging
+logger = logging.getLogger(__file__)
+
 from syn_net.config import DATA_PREPARED_DIR, DATA_FEATURIZED_DIR
 
 if __name__ == '__main__':
@@ -26,6 +29,7 @@ if __name__ == '__main__':
     parser.add_argument("-rxn", "--rxn_template", type=str, default='hb', choices=["hb","pis"],
                         help="Choose from ['hb', 'pis']")
     args = parser.parse_args()
+    logger.info(vars(args))
 
     # Parse & set inputs
     reaction_template_id = args.rxn_template
@@ -38,10 +42,9 @@ if __name__ == '__main__':
     file = f'{DATA_PREPARED_DIR}/synthetic-trees-{dataset_type}.json.gz'
     st_set = SyntheticTreeSet()
     st_set.load(file)
-    print('Original length: ', len(st_set.sts))
+    logger.info("Number of synthetic trees: {len(st_set.sts}")
     data: list = st_set.sts
     del st_set
-    print('Working length: ', len(data))
     
     # Set output directory
     save_dir = Path(DATA_FEATURIZED_DIR) / f'{reaction_template_id}_{embedding}_{args.radius}_{args.nbits}_{args.outputembedding}/'
@@ -51,7 +54,6 @@ if __name__ == '__main__':
     states = []
     steps = []
 
-    num_save = args.numbersave
     for st in tqdm(data):
         try:
             state, step = organize(st, target_embedding=embedding,
@@ -59,18 +61,18 @@ if __name__ == '__main__':
             nBits=args.nbits,
             output_embedding=args.outputembedding)
         except Exception as e:
-            print(e)
+            logger.exception(exc_info=e)
             continue
         states.append(state)
         steps.append(step)
 
 
     # Finally, save. 
-    print('Saving......')
+    logger.info(f"Saving to {save_dir}")
     states = sparse.vstack(states)
     steps = sparse.vstack(steps)
     sparse.save_npz(save_dir / f"states_{dataset_type}.npz", states)
     sparse.save_npz(save_dir / f"steps_{dataset_type}.npz", steps)
 
-    print('Finish!')
+    logger.info("Save successful.")
 

@@ -251,9 +251,9 @@ def prep_data(main_dir, num_rxn, out_dim):
         print('Reading ' + dataset + ' data ......')
         states_list = []
         steps_list = []
-        for i in range(1):
-            states_list.append(sparse.load_npz(f'{main_dir}states_{i}_{dataset}.npz'))
-            steps_list.append(sparse.load_npz(f'{main_dir}steps_{i}_{dataset}.npz'))
+        
+        states_list.append(sparse.load_npz(f'{main_dir}states_{dataset}.npz'))
+        steps_list.append(sparse.load_npz(f'{main_dir}steps_{dataset}.npz'))
 
         states = sparse.csc_matrix(sparse.vstack(states_list))
         steps = sparse.csc_matrix(sparse.vstack(steps_list))

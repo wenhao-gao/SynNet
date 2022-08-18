@@ -4,43 +4,48 @@ and steps for the reaction data and re-writing it as separate one-hot encoded
 Action, Reactant 1, Reactant 2, and Reaction files.
 """
 from syn_net.utils.prep_utils import prep_data
-
+from syn_net.config import DATA_FEATURIZED_DIR
+from pathlib import Path
+import logging
+logger = logging.getLogger(__file__)
 
 if __name__ == '__main__':
 
     import argparse
     parser = argparse.ArgumentParser()
-    parser.add_argument("-f", "--featurize", type=str, default='fp',
+    parser.add_argument("-e", "--targetembedding", type=str, default='fp',
                         help="Choose from ['fp', 'gin']")
-    parser.add_argument("-r", "--rxn_template", type=str, default='hb',
-                        help="Choose from ['hb', 'pis']")
-    parser.add_argument("--radius", type=int, default=2,
-                        help="Radius for Morgan fingerprint.")
-    parser.add_argument("--nbits", type=int, default=4096,
-                        help="Number of Bits for Morgan fingerprint.")
-    parser.add_argument("--outputembedding", type=str, default='fp_256',
+    parser.add_argument("-o", "--outputembedding", type=str, default='fp_256',
                         help="Choose from ['fp_4096', 'fp_256', 'gin', 'rdkit2d']")
+    parser.add_argument("-r", "--radius", type=int, default=2,
+                        help="Radius for Morgan Fingerprint")
+    parser.add_argument("-b", "--nbits", type=int, default=4096,
+                        help="Number of Bits for Morgan Fingerprint")
+    parser.add_argument("-rxn", "--rxn_template", type=str, default='hb', choices=["hb","pis"],
+                        help="Choose from ['hb', 'pis']")
+
     args = parser.parse_args()
-    rxn_template = args.rxn_template
-    featurize = args.featurize
+    reaction_template_id = args.rxn_template
+    embedding = args.targetembedding
     output_emb = args.outputembedding
 
-    main_dir = '/pool001/whgao/data/synth_net/' + rxn_template + '_' + featurize + '_' + str(args.radius) + '_' + str(args.nbits) + '_' + str(args.outputembedding) + '/'
-    if rxn_template == 'hb':
+    main_dir = Path(DATA_FEATURIZED_DIR) / f'{reaction_template_id}_{embedding}_{args.radius}_{args.nbits}_{args.outputembedding}/' # must match with dir in `st2steps.py`
+    if reaction_template_id == 'hb':
         num_rxn = 91
-    elif rxn_template == 'pis':
+    elif reaction_template_id == 'pis':
         num_rxn = 4700
 
-    if output_emb == 'gin':
-        out_dim = 300
-    elif output_emb == 'rdkit2d':
-        out_dim = 200
-    elif output_emb == 'fp_4096':
-        out_dim = 4096
-    elif output_emb == 'fp_256':
-        out_dim = 256
+    # Get dimension of output embedding
+    OUTPUT_EMBEDDINGS = {
+        "gin": 300,
+        "fp_4096": 4096,
+        "fp_256": 256,
+        "rdkit2d": 200,
+    }
+    out_dim = OUTPUT_EMBEDDINGS[output_emb]
 
-    prep_data(main_dir=main_dir, out_dim=out_dim)
+    logger.info("Start splitting data.")
+    # Split datasets for each MLP
+    prep_data(main_dir, num_rxn, out_dim)
 
-
-    print('Finish!')
+    logger.info("Successfully splitted data.")

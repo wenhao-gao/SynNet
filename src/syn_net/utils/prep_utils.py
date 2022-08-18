@@ -10,7 +10,7 @@ from syn_net.utils.data_utils import SyntheticTree
 from syn_net.utils.predict_utils import (can_react, get_action_mask,
                                          get_reaction_mask, mol_fp, 
                                          get_mol_embedding)
-
+from pathlib import Path
 
 def rdkit2d_embedding(smi):
     """
@@ -245,15 +245,15 @@ def prep_data(main_dir, num_rxn, out_dim):
         num_rxn (int): Number of reactions in the dataset.
         out_dim (int): Size of the output feature vectors.
     """
-
+    main_dir = Path(main_dir)
     for dataset in ['train', 'valid', 'test']:
 
-        print('Reading ' + dataset + ' data ......')
+        print(f'Reading {dataset} data ...')
         states_list = []
         steps_list = []
         
-        states_list.append(sparse.load_npz(f'{main_dir}states_{dataset}.npz'))
-        steps_list.append(sparse.load_npz(f'{main_dir}steps_{dataset}.npz'))
+        states_list.append(sparse.load_npz(main_dir / f'states_{dataset}.npz'))
+        steps_list.append(sparse.load_npz(main_dir / f'steps_{dataset}.npz'))
 
         states = sparse.csc_matrix(sparse.vstack(states_list))
         steps = sparse.csc_matrix(sparse.vstack(steps_list))
@@ -261,17 +261,19 @@ def prep_data(main_dir, num_rxn, out_dim):
         # extract Action data
         X = states
         y = steps[:, 0]
-        sparse.save_npz(f'{main_dir}X_act_{dataset}.npz', X)
-        sparse.save_npz(f'{main_dir}y_act_{dataset}.npz', y)
+        sparse.save_npz(main_dir / f'X_act_{dataset}.npz', X)
+        sparse.save_npz(main_dir / f'y_act_{dataset}.npz', y)
 
         states = sparse.csc_matrix(states.A[(steps[:, 0].A != 3).reshape(-1, )])
         steps = sparse.csc_matrix(steps.A[(steps[:, 0].A != 3).reshape(-1, )])
+        print(f'  saved data for "Action"')
 
         # extract Reaction data
         X = sparse.hstack([states, steps[:, (2 * out_dim + 2):]])
         y = steps[:, out_dim + 1]
-        sparse.save_npz(f'{main_dir}X_rxn_{dataset}.npz', X)
-        sparse.save_npz(f'{main_dir}y_rxn_{dataset}.npz', y)
+        sparse.save_npz(main_dir / f'X_rxn_{dataset}.npz', X)
+        sparse.save_npz(main_dir / f'y_rxn_{dataset}.npz', y)
+        print(f'  saved data for "Reaction"')
 
         states = sparse.csc_matrix(states.A[(steps[:, 0].A != 2).reshape(-1, )])
         steps = sparse.csc_matrix(steps.A[(steps[:, 0].A != 2).reshape(-1, )])
@@ -287,8 +289,9 @@ def prep_data(main_dir, num_rxn, out_dim):
              sparse.csc_matrix(enc.transform(steps[:, out_dim+1].A.reshape((-1, 1))).toarray())]
         )
         y = steps[:, (out_dim+2): (2 * out_dim + 2)]
-        sparse.save_npz(f'{main_dir}X_rt2_{dataset}.npz', X)
-        sparse.save_npz(f'{main_dir}y_rt2_{dataset}.npz', y)
+        sparse.save_npz(main_dir / f'X_rt2_{dataset}.npz', X)
+        sparse.save_npz(main_dir / f'y_rt2_{dataset}.npz', y)
+        print(f'  saved data for "Reactant 2"')
 
         states = sparse.csc_matrix(states.A[(steps[:, 0].A != 1).reshape(-1, )])
         steps = sparse.csc_matrix(steps.A[(steps[:, 0].A != 1).reshape(-1, )])
@@ -296,7 +299,8 @@ def prep_data(main_dir, num_rxn, out_dim):
         # extract Reactant 1 data
         X = states
         y = steps[:, 1: (out_dim+1)]
-        sparse.save_npz(f'{main_dir}X_rt1_{dataset}.npz', X)
-        sparse.save_npz(f'{main_dir}y_rt1_{dataset}.npz', y)
+        sparse.save_npz(main_dir / f'X_rt1_{dataset}.npz', X)
+        sparse.save_npz(main_dir / f'y_rt1_{dataset}.npz', y)
+        print(f'  saved data for "Reactant 1"')
 
         return None

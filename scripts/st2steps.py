@@ -1,13 +1,13 @@
 """
 Splits a synthetic tree into states and steps.
 """
-import os
+from pathlib import Path
 from tqdm import tqdm
 from scipy import sparse
-from syn_net.utils.data_utils import *
+from syn_net.utils.data_utils import SyntheticTreeSet
 from syn_net.utils.prep_utils import organize
 
-
+from syn_net.config import DATA_PREPARED_DIR, DATA_FEATURIZED_DIR
 
 if __name__ == '__main__':
 
@@ -15,34 +15,41 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("-n", "--numbersave", type=int, default=999999999999,
                         help="Save number")
-    parser.add_argument("-v", "--verbose", action="store_true", default=False,
-                        help="Increase output verbosity")
     parser.add_argument("-e", "--targetembedding", type=str, default='fp',
                         help="Choose from ['fp', 'gin']")
-    parser.add_argument("-o", "--outputembedding", type=str, default='gin',
+    parser.add_argument("-o", "--outputembedding", type=str, default='fp_256',
                         help="Choose from ['fp_4096', 'fp_256', 'gin', 'rdkit2d']")
     parser.add_argument("-r", "--radius", type=int, default=2,
                         help="Radius for Morgan Fingerprint")
     parser.add_argument("-b", "--nbits", type=int, default=4096,
                         help="Number of Bits for Morgan Fingerprint")
-    parser.add_argument("-d", "--datasettype", type=str, default='train',
+    parser.add_argument("-d", "--datasettype", type=str, choices=["train","valid","test"],
                         help="Choose from ['train', 'valid', 'test']")
-    parser.add_argument("-r", "--rxn_template", type=str, default='hb',
+    parser.add_argument("-rxn", "--rxn_template", type=str, default='hb', choices=["hb","pis"],
                         help="Choose from ['hb', 'pis']")
     args = parser.parse_args()
 
+    # Parse & set inputs
+    reaction_template_id = args.rxn_template
+    building_blocks_id = "enamine_us-2021-smiles"
     dataset_type = args.datasettype
     embedding = args.targetembedding
-    path_st = '/pool001/whgao/data/synth_net/st_hb/st_' + dataset_type + '.json.gz'
-    save_dir = '/pool001/whgao/data/synth_net/hb_' + embedding + '_' + str(args.radius) + '_' + str(args.nbits) + '_' + str(args.outputembedding) + '/'
+    assert dataset_type is not None, "Must specify which dataset to use."
 
+    # Load synthetic trees subset {train,valid,test}
+    file = f'{DATA_PREPARED_DIR}/synthetic-trees-{dataset_type}.json.gz'
     st_set = SyntheticTreeSet()
-    st_set.load(path_st)
+    st_set.load(file)
     print('Original length: ', len(st_set.sts))
-    data = st_set.sts
+    data: list = st_set.sts
     del st_set
     print('Working length: ', len(data))
+    
+    # Set output directory
+    save_dir = Path(DATA_FEATURIZED_DIR) / f'{reaction_template_id}_{embedding}_{args.radius}_{args.nbits}_{args.outputembedding}/'
+    Path(save_dir).mkdir(parents=1,exist_ok=1)
 
+    # Start splitting synthetic trees in states and steps
     states = []
     steps = []
 
@@ -51,7 +58,10 @@ if __name__ == '__main__':
     save_idx = 0
     for st in tqdm(data):
         try:
-            state, step = organize(st, target_embedding=embedding, radius=args.radius, nBits=args.nbits, output_embedding=args.outputembedding)
+            state, step = organize(st, target_embedding=embedding,
+            radius=args.radius,
+            nBits=args.nbits,
+            output_embedding=args.outputembedding)
         except Exception as e:
             print(e)
             continue
@@ -62,8 +72,8 @@ if __name__ == '__main__':
             print('Saving......')
             states = sparse.vstack(states)
             steps = sparse.vstack(steps)
-            sparse.save_npz(save_dir + 'states_' + str(save_idx) + '_' + dataset_type + '.npz', states)
-            sparse.save_npz(save_dir + 'steps_' + str(save_idx) + '_' + dataset_type + '.npz', steps)
+            sparse.save_npz(save_dir / f"states_{save_idx}_{dataset_type}.npz", states)
+            sparse.save_npz(save_dir / f"steps_{save_idx}_{dataset_type}.npz", steps)
             save_idx += 1
             del states
             del steps
@@ -72,15 +82,13 @@ if __name__ == '__main__':
 
     del data
 
+    # Finally, save again. (Potentially overwrite existing files)
     if len(steps) != 0:
+        print('Saving......')
         states = sparse.vstack(states)
         steps = sparse.vstack(steps)
-
-        print('Saving......')
-        if not os.path.exists(save_dir):
-            os.makedirs(save_dir)
-
-        sparse.save_npz(save_dir + 'states_' + str(save_idx) + '_' + dataset_type + '.npz', states)
-        sparse.save_npz(save_dir + 'steps_' + str(save_idx) + '_' + dataset_type + '.npz', steps)
+        sparse.save_npz(save_dir / f"states_{save_idx}_{dataset_type}.npz", states)
+        sparse.save_npz(save_dir / f"steps_{save_idx}_{dataset_type}.npz", steps)
 
     print('Finish!')
+

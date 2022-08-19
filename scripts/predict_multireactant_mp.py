@@ -6,7 +6,27 @@ import numpy as np
 import pandas as pd
 import _mp_predict_multireactant as predict
 from syn_net.utils.data_utils import SyntheticTreeSet
+from pathlib import Path
+from syn_net.config import DATA_PREPARED_DIR, DATA_RESULT_DIR
 
+Path(DATA_RESULT_DIR).mkdir(exist_ok=True)
+
+def _fetch_data_chembl(name: str) -> list[str]:
+    raise NotImplementedError
+    df = pd.read_csv(f'{DATA_DIR}/chembl_20k.csv')
+    smis_query = df.smiles.to_list()
+    return smis_query
+
+def _fetch_data(name: str) -> list[str]:
+    if args.data in ["train", "valid", "test"]:
+        file = Path(DATA_PREPARED_DIR) / f"synthetic-trees-{args.data}.json.gz"
+        print(f'Reading data from {file}')
+        sts = SyntheticTreeSet()
+        sts.load(file)
+        smis_query = [st.root.smiles for st in sts.sts]
+    else:
+        smis_query = _fetch_data_chembl(name)
+    return smis_query
 
 if __name__ == '__main__':
 
@@ -25,23 +45,15 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     # load the query molecules (i.e. molecules to decode)
-    if args.data != 'chembl':
-        path_to_data = f'/pool001/whgao/data/synth_net/st_{args.rxn_template}/st_{args.data}.json.gz'
-        print('Reading data from ', path_to_data)
-        sts = SyntheticTreeSet()
-        sts.load(path_to_data)
-        smis_query = [st.root.smiles for st in sts.sts]
-        if args.num == -1:
-            pass
-        else:
-            smis_query = smis_query[:args.num]
-    else:
-        df = pd.read_csv('/home/whgao/synth_net/chembl_20k.csv')
-        smis_query = df.smiles.to_list()
+    smiles_queries = _fetch_data(args.data)
 
-    print('Start to decode!')
+    # Select only n queries
+    if args.num > 0:
+        smiles_queries = smiles_queries[:args.num]
+
+    print(f'Start to decode {len(smiles_queries)} target molecules.')
     with mp.Pool(processes=args.ncpu) as pool:
-        results = pool.map(predict.func, smis_query)
+        results = pool.map(predict.func, smiles_queries)
 
     smis_decoded = [r[0] for r in results]
     similarities  = [r[1] for r in results]
@@ -52,15 +64,15 @@ if __name__ == '__main__':
     print(f'Average similarity {args.data}: {np.mean(np.array(similarities))}')
 
     print('Saving ......')
-    save_path = '../results/'
-    df = pd.DataFrame({'query SMILES' : smis_query, 
+    save_path = DATA_RESULT_DIR
+    df = pd.DataFrame({'query SMILES' : smiles_queries, 
                        'decode SMILES': smis_decoded, 
                        'similarity'   : similarities})
-    df.to_csv(f'{save_path}decode_result_{args.data}.csv.gz', 
+    df.to_csv(f'{save_path}/decode_result_{args.data}.csv.gz', 
               compression='gzip', 
               index=False)
     
     synthetic_tree_set = SyntheticTreeSet(sts=trees)
-    synthetic_tree_set.save(f'{save_path}decoded_st_{args.data}.json.gz')
+    synthetic_tree_set.save(f'{save_path}/decoded_st_{args.data}.json.gz')
 
     print('Finish!')

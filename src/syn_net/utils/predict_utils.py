@@ -24,13 +24,12 @@ np.random.seed(6)
 
 
 @functools.lru_cache(1)
-def _fetch_gin_pretrained_model(name: str):
+def _fetch_gin_pretrained_model(model_name: str):
     """Get a GIN pretrained model to use for creating molecular embeddings"""
-    # name = 'gin_supervised_contextpred'
 device = 'cpu'
-    gin_pretrained_model = load_pretrained(name).to(device) # used to learn embedding
-gin_pretrained_model.eval()
-    return gin_pretrained_model
+    model = load_pretrained(model_name).to(device) # used to learn embedding
+    model.eval()
+    return model
 
 
 # general functions

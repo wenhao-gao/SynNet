@@ -29,6 +29,15 @@ def rdkit2d_embedding(smi):
         rdkit2d = MolConvert(src = 'SMILES', dst = 'RDKit2D')
         return rdkit2d(smi).reshape(-1, )
 
+import functools
+@functools.lru_cache(maxsize=1)
+def _fetch_gin_pretrained_model(model_name: str):
+    """Get a GIN pretrained model to use for creating molecular embeddings"""
+    device     = 'cpu'
+    model      = load_pretrained(model_name).to(device)
+    model.eval()
+    return model
+
 
 def organize(st, d_mol=300, target_embedding='fp', radius=2, nBits=4096, 
              output_embedding='gin'):
@@ -56,10 +65,7 @@ def organize(st, d_mol=300, target_embedding='fp', radius=2, nBits=4096,
         sparse.csc_matrix: Actions pulled from the tree.
     """
     # define model to use for molecular embedding
-    model_type = 'gin_supervised_contextpred'
-    device     = 'cpu'
-    model      = load_pretrained(model_type).to(device)
-    model.eval()
+    model = _fetch_gin_pretrained_model("gin_supervised_contextpred")
 
     states = []
     steps = []

@@ -130,16 +130,7 @@ def nn_search(_e, _tree, _k=1):
     return ind[0][0]
 
 def nn_search_list(y, out_feat, kdtree):
-    if out_feat == 'gin':
         return np.array([nn_search(emb.reshape(1, -1), _tree=kdtree) for emb in y])
-    elif out_feat == 'fp_4096':
-        return np.array([nn_search(emb.reshape(1, -1), _tree=kdtree) for emb in y])
-    elif out_feat == 'fp_256':
-        return np.array([nn_search(emb.reshape(1, -1), _tree=kdtree) for emb in y])
-    elif out_feat == 'rdkit2d':
-        return np.array([nn_search(emb.reshape(1, -1), _tree=kdtree) for emb in y])
-    else:
-        raise ValueError
 
 
 if __name__ == '__main__':

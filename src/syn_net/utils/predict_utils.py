@@ -839,61 +839,59 @@ def synthetic_tree_decoder_rt1(z_target,
     # Initialization
     tree = SyntheticTree()
     mol_recent = None
-    kdtree = BallTree(bb_emb, metric=cosine_distance)
-
+    kdtree = BallTree(bb_emb, metric=cosine_distance) # TODO: cache this or use class
+    z_target =  np.atleast_2d(z_target)
     # Start iteration
     for i in range(max_step):
         # Encode current state
-        state = tree.get_state() # a set
-        try:
-            z_state = set_embedding(z_target, state, nbits=n_bits, _mol_embedding=mol_fp)
-        except:
-            z_target = np.expand_dims(z_target, axis=0)
+        state = tree.get_state() # a list
             z_state = set_embedding(z_target, state, nbits=n_bits, _mol_embedding=mol_fp)
 
         # Predict action type, masked selection
         # Action: (Add: 0, Expand: 1, Merge: 2, End: 3)
-        action_proba = action_net(torch.Tensor(z_state))
+        action_proba = action_net(torch.Tensor(z_state)) # (1,4)
         action_proba = action_proba.squeeze().detach().numpy() + 1e-10
         action_mask  = get_action_mask(tree.get_state(), reaction_templates)
         act          = np.argmax(action_proba * action_mask)
 
+        # Continue growing tree? 
+        if act == 3: # End
+            break
+
         z_mol1 = reactant1_net(torch.Tensor(z_state))
-        z_mol1 = z_mol1.detach().numpy()
+        z_mol1 = z_mol1.detach().numpy() # (1,dimension_output_embedding), default: (1,256)
+
 
         # Select first molecule
-        if act == 3:
-            # End
-            break
-        elif act == 0:
-            # Add
+        if act == 0: # Add
             if mol_recent is not None:
                 dist, ind = nn_search(z_mol1)
                 mol1 = building_blocks[ind]
-            else:
-                dist, ind = nn_search_rt1(z_mol1, _tree=kdtree, _k=rt1_index+1)
+            else: # no recent mol
+                dist, ind = nn_search_rt1(z_mol1, _tree=kdtree, _k=rt1_index+1) # TODO: why is there an option to select the k-th? rt1_index (???)
                 mol1 = building_blocks[ind[rt1_index]]
-        else:
+        elif act==1 or act==2:
             # Expand or Merge
             mol1 = mol_recent
+        else:  
+            raise ValueError(f"Unexpected action {act}.")
 
-        # z_mol1 = get_mol_embedding(mol1, mol_embedder)
-        z_mol1 = mol_fp(mol1)
+        z_mol1 = mol_fp(mol1) # (dimension_input_embedding=d), default (4096,)
+        z_mol1 = np.atleast_2d(z_mol1) # (1,4096)
 
         # Select reaction
-        try:
-            reaction_proba = rxn_net(torch.Tensor(np.concatenate([z_state, z_mol1], axis=1)))
-        except:
-            z_mol1 = np.expand_dims(z_mol1, axis=0)
-            reaction_proba = rxn_net(torch.Tensor(np.concatenate([z_state, z_mol1], axis=1)))
-        reaction_proba = reaction_proba.squeeze().detach().numpy() + 1e-10
+        z = np.concatenate([z_state, z_mol1], axis=1) # (1,4d)
+        reaction_proba = rxn_net(torch.Tensor(z))
+        reaction_proba = reaction_proba.squeeze().detach().numpy() + 1e-10 # (nReactionTemplate)
 
-        if act != 2:
+        if act != 2: # add or expand
             reaction_mask, available_list = get_reaction_mask(mol1, reaction_templates)
-        else:
+        else: # merge
             _, reaction_mask = can_react(tree.get_state(), reaction_templates)
-            available_list = [[] for rxn in reaction_templates]
+            available_list = [[] for rxn in reaction_templates] # TODO: if act=merge, this is not used at all
 
+        # If we ended up in a state where no reaction is possible, 
+        # end this iteration.
         if reaction_mask is None:
             if len(state) == 1:
                 act = 3
@@ -901,28 +899,30 @@ def synthetic_tree_decoder_rt1(z_target,
             else:
                 break
 
+        # Select reaction template
         rxn_id = np.argmax(reaction_proba * reaction_mask)
         rxn    = reaction_templates[rxn_id]
 
+        NUMBER_OF_REACTION_TEMPLATES = {
+            "hb": 91,
+            "pis": 4700,
+            "unittest": 3,
+        } # TODO: Refactor / use class
+
+        # Select 2nd reactant
         if rxn.num_reactant == 2:
-            # Select second molecule
-            if act == 2:
-                # Merge
+            if act == 2: # Merge
                 temp = set(state) - set([mol1])
                 mol2 = temp.pop()
-            else:
-                # Add or Expand
-                if rxn_template == 'hb':
-                    z_mol2 = reactant2_net(torch.Tensor(np.concatenate([z_state, z_mol1, one_hot_encoder(rxn_id, 91)], axis=1)))
-                elif rxn_template == 'pis':
-                    z_mol2 = reactant2_net(torch.Tensor(np.concatenate([z_state, z_mol1, one_hot_encoder(rxn_id, 4700)], axis=1)))
-                elif rxn_template == 'unittest':
-                    z_mol2 = reactant2_net(torch.Tensor(np.concatenate([z_state, z_mol1, one_hot_encoder(rxn_id, 3)], axis=1)))
+            else: # Add or Expand
+                x_rxn = one_hot_encoder(rxn_id,NUMBER_OF_REACTION_TEMPLATES[rxn_template])
+                x_rct2 = np.concatenate([z_state,z_mol1, x_rxn],axis=1)
+                z_mol2 = reactant2_net(torch.Tensor(x_rct2))
                 z_mol2         = z_mol2.detach().numpy()
                 available      = available_list[rxn_id]
                 available      = [bb_dict[available[i]] for i in range(len(available))]
                 temp_emb       = bb_emb[available]
-                available_tree = BallTree(temp_emb, metric=cosine_distance)
+                available_tree = BallTree(temp_emb, metric=cosine_distance) # TODO: evaluate if distance matrix is faster/feasible as this BallTree is discarded immediately.
                 dist, ind      = nn_search(z_mol2, _tree=available_tree)
                 mol2           = building_blocks[available[ind]]
         else:

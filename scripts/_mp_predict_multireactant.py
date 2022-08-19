@@ -5,37 +5,38 @@ import pandas as pd
 import numpy as np
 from syn_net.utils.data_utils import ReactionSet
 from syn_net.utils.predict_utils import synthetic_tree_decoder_multireactant, load_modules_from_checkpoint, mol_fp
-
+from pathlib import Path
+from syn_net.config import DATA_PREPROCESS_DIR, DATA_EMBEDDINGS_DIR, CHECKPOINTS_DIR
 
 # define some constants (here, for the Hartenfeller-Button test set)
 nbits        = 4096
-out_dim      = 256
+out_dim      = 256 # <=> morgan fingerprint with 256 bits
 rxn_template = 'hb'
+building_blocks_id = "enamine_us-2021-smiles"
 featurize    = 'fp'
 param_dir    = 'hb_fp_2_4096_256'
 ncpu         = 1
 
 # load the purchasable building block embeddings
-bb_emb = np.load('/pool001/whgao/data/synth_net/st_hb/enamine_us_emb_fp_256.npy')
+file = Path(DATA_EMBEDDINGS_DIR) / f"{rxn_template}-{building_blocks_id}-embeddings.npy"
+bb_emb = np.load(file)
 
-# define path to the reaction templates and purchasable building blocks
-path_to_reaction_file   = f'/pool001/whgao/data/synth_net/st_{rxn_template}/reactions_{rxn_template}.json.gz'
-path_to_building_blocks = f'/pool001/whgao/data/synth_net/st_{rxn_template}/enamine_us_matched.csv.gz'
 
 # define paths to pretrained modules
-param_path  = f'/home/whgao/synth_net/synth_net/params/{param_dir}/'
-path_to_act = f'{param_path}act.ckpt'
-path_to_rt1 = f'{param_path}rt1.ckpt'
-path_to_rxn = f'{param_path}rxn.ckpt'
-path_to_rt2 = f'{param_path}rt2.ckpt'
+path_to_act = Path(CHECKPOINTS_DIR) / f"{param_dir}/act.ckpt"
+path_to_rt1 = Path(CHECKPOINTS_DIR) / f"{param_dir}/rt1.ckpt"
+path_to_rxn = Path(CHECKPOINTS_DIR) / f"{param_dir}/rxn.ckpt"
+path_to_rt2 = Path(CHECKPOINTS_DIR) / f"{param_dir}/rt2.ckpt"
 
-# load the purchasable building block SMILES to a dictionary
-building_blocks = pd.read_csv(path_to_building_blocks, compression='gzip')['SMILES'].tolist()
-bb_dict         = {building_blocks[i]: i for i in range(len(building_blocks))}
+# Load building blocks
+building_blocks_file = Path(DATA_PREPROCESS_DIR) / f"{rxn_template}-{building_blocks_id}-matched.csv.gz"
+building_blocks = pd.read_csv(building_blocks_file, compression='gzip')['SMILES'].tolist()
+bb_dict         = {block: i for i,block in enumerate(building_blocks)} # dict is useful as lookup table for 2nd reactant during inference
 
-# load the reaction templates as a ReactionSet object
+# Load reaction templates
+reaction_file = Path(DATA_PREPROCESS_DIR) / f"reaction-sets_{rxn_template}_{building_blocks_id}.json.gz"
 rxn_set = ReactionSet()
-rxn_set.load(path_to_reaction_file)
+rxn_set.load(reaction_file)
 rxns    = rxn_set.rxns
 
 # load the pre-trained modules

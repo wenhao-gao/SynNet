@@ -17,16 +17,20 @@ from dgllife.utils import mol_to_bigraph, PretrainAtomFeaturizer, PretrainBondFe
 from tdc.chem_utils import MolConvert
 from syn_net.models.mlp import MLP
 from syn_net.utils.data_utils import SyntheticTree
-
+import functools
 
 # create a random seed for NumPy
 np.random.seed(6)
 
-# get a GIN pretrained model to use for creating molecular embeddings
-model_type = 'gin_supervised_contextpred'
+
+@functools.lru_cache(1)
+def _fetch_gin_pretrained_model(name: str):
+    """Get a GIN pretrained model to use for creating molecular embeddings"""
+    # name = 'gin_supervised_contextpred'
 device = 'cpu'
-gin_pretrained_model = load_pretrained(model_type).to(device) # used to learn embedding
+    gin_pretrained_model = load_pretrained(name).to(device) # used to learn embedding
 gin_pretrained_model.eval()
+    return gin_pretrained_model
 
 
 # general functions
@@ -184,6 +188,8 @@ def mol_embedding(smi, device='cpu', readout=AvgPooling()):
     Returns:
         np.ndarray: Either a zeros array or the graph embedding.
     """
+    name = 'gin_supervised_contextpred'
+    gin_pretrained_model = _fetch_gin_pretrained_model(name)
 
     # get the embedding
     if smi is None:

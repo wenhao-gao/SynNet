@@ -23,8 +23,7 @@ if __name__ == '__main__':
     # Load genearted reactions (matched reactions <=> building blocks)
     reactions_dir = Path(DATA_PREPROCESS_DIR)
     reactions_file =  f"reaction-sets_{reaction_template_id}_{building_blocks_id}.json.gz"
-    r_set = ReactionSet()
-    r_set.load(reactions_dir / reactions_file)
+    r_set = ReactionSet().load(reactions_dir / reactions_file)
 
     # Identify all used building blocks (via union of sets)
     matched_bblocks = set()

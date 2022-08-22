@@ -41,8 +41,7 @@ building_blocks = pd.read_csv(path_to_building_blocks, compression='gzip')['SMIL
 bb_dict         = {building_blocks[i]: i for i in range(len(building_blocks))}
 
 # load the reaction templates as a ReactionSet object
-rxn_set = ReactionSet()
-rxn_set.load(path_to_reaction_file)
+rxn_set = ReactionSet().load(path_to_reaction_file)
 rxns    = rxn_set.rxns
 
 # load the pre-trained modules

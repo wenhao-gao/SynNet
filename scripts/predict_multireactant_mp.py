@@ -35,8 +35,7 @@ def _fetch_data(name: str) -> list[str]:
 
 def _fetch_reaction_templates(file: str):
     # Load reaction templates
-    rxn_set = ReactionSet()
-    rxn_set.load(file)
+    rxn_set = ReactionSet().load(file)
     return rxn_set.rxns
 
 def _fetch_building_blocks_embeddings(file: str):

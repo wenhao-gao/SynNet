@@ -396,6 +396,7 @@ class ReactionSet:
             r = Reaction()
             r.load(**r_dict)
             self.rxns.append(r)
+        return self
 
     def save(self, json_file):
         """

@@ -53,8 +53,7 @@ class TestDataPrep(unittest.TestCase):
 
         # load the reference reaction templates
         path_to_ref_rxn_templates = f"{TEST_DIR}/data/ref/rxns_hb.json.gz"
-        r_ref = ReactionSet()
-        r_ref.load(path_to_ref_rxn_templates)
+        r_ref = ReactionSet().load(path_to_ref_rxn_templates)
 
         # check here that the templates were correctly saved as a ReactionSet by
         # comparing to a provided reference file in 'SynNet/tests/data/ref/'

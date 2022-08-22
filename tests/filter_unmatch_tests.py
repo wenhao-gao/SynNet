@@ -10,8 +10,7 @@ from syn_net.utils.data_utils import *
 if __name__ == '__main__':
     r_path = './data/ref/rxns_hb.json.gz'
     bb_path = '/home/whgao/scGen/synth_net/data/enamine_us.csv.gz'
-    r_set = ReactionSet()
-    r_set.load(r_path)
+    r_set = ReactionSet().load(r_path)
     matched_mols = set()
     for r in tqdm(r_set.rxns):
         for a_list in r.available_reactants:

@@ -133,7 +133,6 @@ class TestDataPrep(unittest.TestCase):
         states = []
         steps = []
 
-        save_idx = 0
         for st in tqdm(data):
             try:
                 state, step = organize(
@@ -155,15 +154,15 @@ class TestDataPrep(unittest.TestCase):
             if not os.path.exists(save_dir):
                 os.makedirs(save_dir)
 
-            sparse.save_npz(f"{save_dir}states_{save_idx}_{dataset_type}.npz", states)
-            sparse.save_npz(f"{save_dir}steps_{save_idx}_{dataset_type}.npz", steps)
+            sparse.save_npz(f"{save_dir}states_{dataset_type}.npz", states)
+            sparse.save_npz(f"{save_dir}steps_{dataset_type}.npz", steps)
 
         # load the reference data, which we will compare against
         states_ref = sparse.load_npz(
-            f"{reference_data_dir}states_{save_idx}_{dataset_type}.npz"
+            f"{reference_data_dir}states_{dataset_type}.npz"
         )
         steps_ref = sparse.load_npz(
-            f"{reference_data_dir}steps_{save_idx}_{dataset_type}.npz"
+            f"{reference_data_dir}steps_{dataset_type}.npz"
         )
 
         # check here that states and steps were correctly saved (need to convert the

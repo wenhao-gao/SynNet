@@ -183,8 +183,8 @@ class TestDataPrep(unittest.TestCase):
         main_dir = f"{TEST_DIR}/data/"
         ref_dir = f"{TEST_DIR}/data/ref/"
         # copy data from the reference directory to use for this particular test
-        copyfile(f"{ref_dir}states_0_train.npz", f"{main_dir}states_0_train.npz")
-        copyfile(f"{ref_dir}steps_0_train.npz", f"{main_dir}steps_0_train.npz")
+        copyfile(f"{ref_dir}states_train.npz", f"{main_dir}states_train.npz")
+        copyfile(f"{ref_dir}steps_train.npz", f"{main_dir}steps_train.npz")
 
         # the lines below will save Action-, Reactant 1-, Reaction-, and Reactant 2-
         # specific files directly to the 'SynNet/tests/data/' directory (e.g.
@@ -192,7 +192,7 @@ class TestDataPrep(unittest.TestCase):
         # 'X_rt1_{train/test/valid}.npz' and 'y_rt1_{train/test/valid}.npz'
         # 'X_rxn_{train/test/valid}.npz' and 'y_rxn_{train/test/valid}.npz'
         # 'X_rt2_{train/test/valid}.npz' and 'y_rt2_{train/test/valid}.npz'
-        prep_data(main_dir=main_dir, num_rxn=3, out_dim=300)
+        prep_data(main_dir=main_dir, num_rxn=3, out_dim=300,datasets=["train"])
 
         # check that the saved files match the reference files in
         # 'SynNet/tests/data/ref':

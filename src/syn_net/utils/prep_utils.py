@@ -240,7 +240,7 @@ def synthetic_tree_generator(building_blocks, reaction_templates, max_step=15):
 
     return tree, action
 
-def prep_data(main_dir, num_rxn, out_dim):
+def prep_data(main_dir, num_rxn, out_dim, datasets=None):
     """
     Loads the states and steps from preprocessed *.npz files and saves data
     specific to the Action, Reactant 1, Reaction, and Reactant 2 networks in
@@ -251,8 +251,11 @@ def prep_data(main_dir, num_rxn, out_dim):
         num_rxn (int): Number of reactions in the dataset.
         out_dim (int): Size of the output feature vectors.
     """
+    if datasets is None:
+        datasets = ['train', 'valid', 'test']
     main_dir = Path(main_dir)
-    for dataset in ['train', 'valid', 'test']:
+
+    for dataset in datasets:
 
         print(f'Reading {dataset} data ...')
         states_list = []

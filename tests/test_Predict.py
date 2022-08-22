@@ -76,8 +76,7 @@ class TestPredict(unittest.TestCase):
 
         # load the query molecules (i.e. molecules to decode)
         path_to_data = f"{ref_dir}st_data.json.gz"
-        sts = SyntheticTreeSet()
-        sts.load(path_to_data)
+        sts = SyntheticTreeSet().load(path_to_data)
         smis_query = [st.root.smiles for st in sts.sts]
 
         # start to decode the query molecules (no multiprocessing for the unit tests here)

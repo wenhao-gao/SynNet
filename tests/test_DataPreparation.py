@@ -107,8 +107,7 @@ class TestDataPrep(unittest.TestCase):
 
         # check here that the synthetic trees were correctly saved by
         # comparing to a provided reference file in 'SynNet/tests/data/ref/'
-        sts_ref = SyntheticTreeSet()
-        sts_ref.load(f"{TEST_DIR}/data/ref/st_data.json.gz")
+        sts_ref = SyntheticTreeSet().load(f"{TEST_DIR}/data/ref/st_data.json.gz")
         for st_idx, st in enumerate(sts_ref.sts):
             st = st.__dict__
             ref_st = sts_ref.sts[st_idx].__dict__
@@ -128,8 +127,7 @@ class TestDataPrep(unittest.TestCase):
         save_dir = f"{TEST_DIR}/data/"
         reference_data_dir = f"{TEST_DIR}/data/ref/"
 
-        st_set = SyntheticTreeSet()
-        st_set.load(path_st)
+        st_set = SyntheticTreeSet().load(path_st)
         data = st_set.sts
         del st_set
 

@@ -764,6 +764,9 @@ class SyntheticTreeSet:
         else:
             self.sts = sts
 
+    def __len__(self):
+        return len(self.sts)
+
     def load(self, json_file):
         """
         A function that loads a JSON-formatted synthetic tree file.
@@ -780,6 +783,7 @@ class SyntheticTreeSet:
             else:
                 st = SyntheticTree(st_dict)
                 self.sts.append(st)
+        return self
 
     def save(self, json_file):
         """

@@ -124,8 +124,7 @@ if __name__ == '__main__':
     # load the purchasable building blocks to decode
     path_to_data = f'/pool001/whgao/data/synth_net/st_{args.rxn_template}/st_{args.data}.json.gz'
     print('Reading data from ', path_to_data)
-    sts = SyntheticTreeSet()
-    sts.load(path_to_data)
+    sts = SyntheticTreeSet().load(path_to_data)
     query_smis = [st.root.smiles for st in sts.sts]
     if args.num == -1:
         pass

@@ -72,21 +72,35 @@ class MLP(pl.LightningModule):
         self.log('train_loss', loss, on_step=False, on_epoch=True, prog_bar=True, logger=True)
         return loss
 
+    def _load_building_blocks_kdtree(self, out_feat: str) -> np.ndarray:
+        """Helper function to load the pre-computed building block embeddings 
+        as a BallTree.
+
+        TODO: Remove hard-coded paths.
+        """
+        if out_feat == 'gin':
+            bb_emb_gin = np.load('/pool001/whgao/data/synth_net/st_hb/enamine_us_emb_gin.npy')
+            kdtree = BallTree(bb_emb_gin, metric='euclidean')
+        elif out_feat == 'fp_4096':
+            bb_emb_fp_4096 = np.load('/pool001/whgao/data/synth_net/st_hb/enamine_us_emb_fp_4096.npy')
+            kdtree = BallTree(bb_emb_fp_4096, metric='euclidean')
+        elif out_feat == 'fp_256':
+            bb_emb_fp_256 = np.load('/pool001/whgao/data/synth_net/st_hb/enamine_us_emb_fp_256.npy')
+            kdtree = BallTree(bb_emb_fp_256, metric=cosine_distance)
+        elif out_feat == 'rdkit2d':
+            bb_emb_rdkit2d = np.load('/pool001/whgao/data/synth_net/st_hb/enamine_us_emb_rdkit2d.npy')
+            kdtree = BallTree(bb_emb_rdkit2d, metric='euclidean')
+        elif out_feat == "gin_unittest":
+            # The embeddings are pre-computed based on the building blocks
+            # under 'tests/assets/building_blocks_matched.csv.gz'.
+            emb = np.load("tests/data/building_blocks_emb.npy")
+            kdtree = BallTree(emb,metric="euclidean")
+        else:
+            raise ValueError   
+        return kdtree     
+
     def validation_step(self, batch, batch_idx):
         if self.trainer.current_epoch % self.val_freq == 0:
-            out_feat = self.valid_loss[12:]
-            if out_feat == 'gin':
-                bb_emb_gin = np.load('/pool001/whgao/data/synth_net/st_hb/enamine_us_emb_gin.npy')
-                kdtree = BallTree(bb_emb_gin, metric='euclidean')
-            elif out_feat == 'fp_4096':
-                bb_emb_fp_4096 = np.load('/pool001/whgao/data/synth_net/st_hb/enamine_us_emb_fp_4096.npy')
-                kdtree = BallTree(bb_emb_fp_4096, metric='euclidean')
-            elif out_feat == 'fp_256':
-                bb_emb_fp_256 = np.load('/pool001/whgao/data/synth_net/st_hb/enamine_us_emb_fp_256.npy')
-                kdtree = BallTree(bb_emb_fp_256, metric=cosine_distance)
-            elif out_feat == 'rdkit2d':
-                bb_emb_rdkit2d = np.load('/pool001/whgao/data/synth_net/st_hb/enamine_us_emb_rdkit2d.npy')
-                kdtree = BallTree(bb_emb_rdkit2d, metric='euclidean')
             x, y = batch
             y_hat = self.layers(x)
             if self.valid_loss == 'cross_entropy':
@@ -95,6 +109,8 @@ class MLP(pl.LightningModule):
                 y_hat = torch.argmax(y_hat, axis=1)
                 loss = 1 - (sum(y_hat == y) / len(y))
             elif self.valid_loss[:11] == 'nn_accuracy':
+                out_feat = self.valid_loss[12:]
+                kdtree = self._load_building_blocks_kdtree(out_feat)
                 y = nn_search_list(y.detach().cpu().numpy(), out_feat=out_feat, kdtree=kdtree)
                 y_hat = nn_search_list(y_hat.detach().cpu().numpy(), out_feat=out_feat, kdtree=kdtree)
                 loss = 1 - (sum(y_hat == y) / len(y))
@@ -130,7 +146,7 @@ def nn_search(_e, _tree, _k=1):
     return ind[0][0]
 
 def nn_search_list(y, out_feat, kdtree):
-        return np.array([nn_search(emb.reshape(1, -1), _tree=kdtree) for emb in y])
+    return np.array([nn_search(emb.reshape(1, -1), _tree=kdtree) for emb in y])
 
 
 if __name__ == '__main__':

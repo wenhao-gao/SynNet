@@ -26,7 +26,7 @@ np.random.seed(6)
 @functools.lru_cache(1)
 def _fetch_gin_pretrained_model(model_name: str):
     """Get a GIN pretrained model to use for creating molecular embeddings"""
-device = 'cpu'
+    device = 'cpu'
     model = load_pretrained(model_name).to(device) # used to learn embedding
     model.eval()
     return model
@@ -594,7 +594,7 @@ def load_modules_from_checkpoint(path_to_act, path_to_rt1, path_to_rxn, path_to_
 
         rt1_net = MLP.load_from_checkpoint(path_to_rt1,
                                            input_dim=int(3 * nbits),
-                                           output_dim=out_dim,
+                                           output_dim=int(out_dim),
                                            hidden_dim=1200,
                                            num_layers=5,
                                            dropout=0.5,
@@ -624,7 +624,7 @@ def load_modules_from_checkpoint(path_to_act, path_to_rt1, path_to_rxn, path_to_
 
             rt2_net = MLP.load_from_checkpoint(path_to_rt2,
                                                input_dim=int(4 * nbits + 91),
-                                               output_dim=out_dim,
+                                               output_dim=int(out_dim),
                                                hidden_dim=3000,
                                                num_layers=5,
                                                dropout=0.5,
@@ -835,7 +835,7 @@ def synthetic_tree_decoder_rt1(z_target,
             synthetic tree
         rt1_index (int, optional): Index for molecule in the building blocks
             corresponding to reactant 1.
-
+    
     Returns:
         tree (SyntheticTree): The final synthetic tree
         act (int): The final action (to know if the tree was "properly"
@@ -850,7 +850,7 @@ def synthetic_tree_decoder_rt1(z_target,
     for i in range(max_step):
         # Encode current state
         state = tree.get_state() # a list
-            z_state = set_embedding(z_target, state, nbits=n_bits, _mol_embedding=mol_fp)
+        z_state = set_embedding(z_target, state, nbits=n_bits, _mol_embedding=mol_fp)
 
         # Predict action type, masked selection
         # Action: (Add: 0, Expand: 1, Merge: 2, End: 3)

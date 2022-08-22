@@ -102,7 +102,7 @@ class TestTraining(unittest.TestCase):
         batch_size = 10
         epochs = 2
         ncpu = 2
-        validation_option = "nn_accuracy_gin"
+        validation_option = "nn_accuracy_gin_unittest"
         ref_dir = f"{TEST_DIR}/data/ref/"
 
         # load the reaction data       
@@ -220,7 +220,7 @@ class TestTraining(unittest.TestCase):
         epochs = 2
         ncpu = 2
         n_templates = 3  # num templates in 'data/rxn_set_hb_test.txt'
-        validation_option = "nn_accuracy_gin"
+        validation_option = "nn_accuracy_gin_unittest"
         ref_dir = f"{TEST_DIR}/data/ref/"
 
         X = sparse.load_npz(ref_dir + "X_rt2_train.npz")

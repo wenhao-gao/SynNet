@@ -6,7 +6,9 @@ import numpy as np
 import pandas as pd
 import scripts._mp_predict as predict
 from syn_net.utils.data_utils import SyntheticTreeSet
+from pathlib import Path
 
+from syn_net.config import DATA_RESULT_DIR
 
 if __name__ == '__main__':
 
@@ -47,12 +49,15 @@ if __name__ == '__main__':
     print(f"Average similarity {args.data}: {np.mean(np.array(similaritys))}")
 
     print('Saving ......')
-    save_path = '../results/' + args.rxn_template + '_' + args.featurize + '/'
+    out_dir = Path(DATA_RESULT_DIR) / f"{args.rxn_template}_{args.featurize}"
+    out_dir.mkdir(exist_ok=1,parent=1)
     df = pd.DataFrame({'query SMILES': smis_query, 'decode SMILES': smis_decoded, 'similarity': similaritys})
-    df.to_csv(save_path + 'decode_result_' + args.data + '.csv.gz', compression='gzip', index=False)
+    file = out_dir / f'decode_result_{args.data}.csv.gz'
+    df.to_csv(file, compression='gzip', index=False)
     
     synthetic_tree_set = SyntheticTreeSet(sts=trees)
-    synthetic_tree_set.save(save_path + 'decoded_st_' + args.data + '.json.gz')
+    file = out_dir / f'decoded_st_{args.data}.json.gz'
+    synthetic_tree_set.save(file)
 
     print('Finish!')
 

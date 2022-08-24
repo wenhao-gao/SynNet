@@ -27,6 +27,14 @@ FUNCTIONS = {
     "rdkit2d": rdkit2d_embedding,
 }
 
+def _load_building_blocks(file: Path) -> list[str]:
+    return pd.read_csv(file)["SMILES"].to_list()
+
+def _save_embedding(file: str, embeddings: list[list[float]]):
+    embeddings = np.array(embeddings)
+
+    np.save(file, embeddings)
+    logger.info(f"Successfully saved to {file}.")
 
 if __name__ == "__main__":
 
@@ -35,7 +43,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--feature", type=str, default="fp_256", choices=FUNCTIONS.keys(), help="Objective function to optimize")
     parser.add_argument("--ncpu", type=int, default=64, help="Number of cpus")
-    parser.add_argument("-rxn", "--rxn_template", type=str, default="hb", choices=["hb", "pis"], help="Choose from ['hb', 'pis']")
+    parser.add_argument("-rxn", "--rxn-template", type=str, default="hb", choices=["hb", "pis"], help="Choose from ['hb', 'pis']")
     parser.add_argument("--input", type=str, help="Input file with SMILES strings (One per line).")
     args = parser.parse_args()
 
@@ -44,8 +52,7 @@ if __name__ == "__main__":
 
     # Load building blocks
     file = Path(DATA_PREPROCESS_DIR) / f"{reaction_template_id}-{building_blocks_id}-matched.csv.gz"
-
-    data = pd.read_csv(file)["SMILES"].tolist()
+    data = _load_building_blocks(file)
     logger.info(f"Successfully read {file}.")
     logger.info(f"Total number of building blocks: {len(data)}.")
 
@@ -53,12 +60,7 @@ if __name__ == "__main__":
     with mp.Pool(processes=args.ncpu) as pool:
         embeddings = pool.map(func, data)
 
-    # Save embeddings
-    embeddings = np.array(embeddings)
-
     path = Path(DATA_EMBEDDINGS_DIR)
     path.mkdir(exist_ok=1, parents=1)
     outfile = path / f"{reaction_template_id}-{building_blocks_id}-embeddings.npy"
-
-    np.save(outfile, embeddings)
-    logger.info(f"Successfully saved to {outfile}.")
+    _save_embedding(file,embeddings)

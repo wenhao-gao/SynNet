@@ -195,46 +195,20 @@ class TestDataPrep(unittest.TestCase):
 
         # check that the saved files match the reference files in
         # 'SynNet/tests/data/ref':
+        def _compare_to_reference(network_type: str):
+            X = sparse.load_npz(f"{main_dir}X_{network_type}_train.npz")
+            y = sparse.load_npz(f"{main_dir}y_{network_type}_train.npz")
+            
+            Xref = sparse.load_npz(f"{ref_dir}X_{network_type}_train.npz")
+            yref = sparse.load_npz(f"{ref_dir}y_{network_type}_train.npz")
 
-        # Action network data
-        X_act = sparse.load_npz(f"{main_dir}X_act_train.npz")
-        y_act = sparse.load_npz(f"{main_dir}y_act_train.npz")
+            self.assertEqual(X.toarray().all(), Xref.toarray().all(),msg=f"{network_type=}")
+            self.assertEqual(y.toarray().all(), yref.toarray().all(),msg=f"{network_type=}")       
 
-        X_act_ref = sparse.load_npz(f"{ref_dir}X_act_train.npz")
-        y_act_ref = sparse.load_npz(f"{ref_dir}y_act_train.npz")
+        for network in ["act", "rt1", "rxn", "rt2"]:
+            _compare_to_reference(network)
 
-        self.assertEqual(X_act.toarray().all(), X_act_ref.toarray().all())
-        self.assertEqual(y_act.toarray().all(), y_act_ref.toarray().all())
-
-        # Reactant 1 network data
-        X_rt1 = sparse.load_npz(f"{main_dir}X_rt1_train.npz")
-        y_rt1 = sparse.load_npz(f"{main_dir}y_rt1_train.npz")
-
-        X_rt1_ref = sparse.load_npz(f"{ref_dir}X_rt1_train.npz")
-        y_rt1_ref = sparse.load_npz(f"{ref_dir}y_rt1_train.npz")
-
-        self.assertEqual(X_rt1.toarray().all(), X_rt1_ref.toarray().all())
-        self.assertEqual(y_rt1.toarray().all(), y_rt1_ref.toarray().all())
-
-        # Reaction network data
-        X_rxn = sparse.load_npz(f"{main_dir}X_rxn_train.npz")
-        y_rxn = sparse.load_npz(f"{main_dir}y_rxn_train.npz")
-
-        X_rxn_ref = sparse.load_npz(f"{ref_dir}X_rxn_train.npz")
-        y_rxn_ref = sparse.load_npz(f"{ref_dir}y_rxn_train.npz")
-
-        self.assertEqual(X_rxn.toarray().all(), X_rxn_ref.toarray().all())
-        self.assertEqual(y_rxn.toarray().all(), y_rxn_ref.toarray().all())
-
-        # Reactant 2 network data
-        X_rt2 = sparse.load_npz(f"{main_dir}X_rt2_train.npz")
-        y_rt2 = sparse.load_npz(f"{main_dir}y_rt2_train.npz")
-
-        X_rt2_ref = sparse.load_npz(f"{ref_dir}X_rt2_train.npz")
-        y_rt2_ref = sparse.load_npz(f"{ref_dir}y_rt2_train.npz")
-
-        self.assertEqual(X_rt2.toarray().all(), X_rt2_ref.toarray().all())
-        self.assertEqual(y_rt2.toarray().all(), y_rt2_ref.toarray().all())
+       
 
     def test_bb_emb(self):
         """

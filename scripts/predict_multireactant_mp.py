@@ -22,6 +22,11 @@ def _fetch_data_chembl(name: str) -> list[str]:
     smis_query = df.smiles.to_list()
     return smis_query
 
+def _fetch_data_from_file(name: str) -> list[str]:
+    with open(name,"rt") as f:
+        smis_query = [line.strip() for line in f]
+    return smis_query
+
 def _fetch_data(name: str) -> list[str]:
     if args.data in ["train", "valid", "test"]:
         file = Path(DATA_PREPARED_DIR) / f"synthetic-trees-{args.data}.json.gz"
@@ -29,8 +34,10 @@ def _fetch_data(name: str) -> list[str]:
         sts = SyntheticTreeSet()
         sts.load(file)
         smis_query = [st.root.smiles for st in sts.sts]
-    else:
+    elif args.data in ["chembl"]:
         smis_query = _fetch_data_chembl(name)
+    else: # Hopefully got a filename instead
+        smis_query = _fetch_data_from_file(name)
     return smis_query
 
 def _fetch_reaction_templates(file: str):
@@ -127,9 +134,11 @@ if __name__ == '__main__':
     parser.add_argument("-n", "--num", type=int, default=1,
                         help="Number of molecules to predict.")
     parser.add_argument("-d", "--data", type=str, default='test',
-                        help="Choose from ['train', 'valid', 'test', 'chembl']")
+                        help="Choose from ['train', 'valid', 'test', 'chembl'] or provide a file with one SMILES per line.")
     parser.add_argument("-o", "--outputembedding", type=str, default='fp_256',
                         help="Choose from ['fp_4096', 'fp_256', 'gin', 'rdkit2d']")
+    parser.add_argument("--output-dir", type=str, default=None,
+                        help="Directory to save output.")
     args = parser.parse_args()
 
     nbits        = args.nbits
@@ -184,15 +193,16 @@ if __name__ == '__main__':
     print(f"  {avg_similarity=}")
 
     # Save to local dir
-    print('Saving results to {DATA_RESULT_DIR} ...')
+    output_dir = DATA_RESULT_DIR if args.output_dir is None else args.output_dir
+    print('Saving results to {output_dir} ...')
     df = pd.DataFrame({'query SMILES' : smiles_queries, 
-                       'decode SMILES': smis_decoded, 
-                       'similarity'   : similarities})
-    df.to_csv(f'{DATA_RESULT_DIR}/decode_result_{args.data}.csv.gz', 
-              compression='gzip', 
-              index=False,)
+                    'decode SMILES': smis_decoded, 
+                    'similarity'   : similarities})
+    df.to_csv(f'{output_dir}/decode_result_{args.data}.csv.gz', 
+            compression='gzip', 
+            index=False,)
     
     synthetic_tree_set = SyntheticTreeSet(sts=trees)
-    synthetic_tree_set.save(f'{DATA_RESULT_DIR}/decoded_st_{args.data}.json.gz')
+    synthetic_tree_set.save(f'{output_dir}/decoded_st_{args.data}.json.gz')
 
     print('Finish!')

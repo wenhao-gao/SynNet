@@ -70,14 +70,14 @@ def organize(st, d_mol=300, target_embedding='fp', radius=2, nBits=4096,
     states = []
     steps = []
 
-    if output_embedding == 'gin':
-        d_mol = 300
-    elif output_embedding == 'fp_4096':
-        d_mol = 4096
-    elif output_embedding == 'fp_256':
-        d_mol = 256
-    elif output_embedding == 'rdkit2d':
-        d_mol = 200
+    OUTPUT_EMBEDDINGS_DIMS = {
+        "gin": 300,
+        "fp_4096": 4096,
+        "fp_256": 256,
+        "rdkit2d": 200,
+    }
+
+    d_mol = OUTPUT_EMBEDDINGS_DIMS[output_embedding]
 
     if target_embedding == 'fp':
         target = mol_fp(st.root.smiles, radius, nBits).tolist()

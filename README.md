@@ -52,14 +52,14 @@ To do this, we optimize the molecular embedding of the molecule using a genetic 
 
 Conda is used to create the environment for running SynNet.
 
-```shell
+```bash
 # Install environment from file
 conda env create -f environment.yml
 ```
 
 Before running any SynNet code, activate the environment and install this package in development mode. This ensures the scripts can find the right files. You can do this by typing:
 
-```shell
+```bash
 source activate synthenv
 pip install -e .
 ```
@@ -74,7 +74,7 @@ python -m unittest
 
 ### Data
 
-SyNNet relies on two datasources:
+SynNet relies on two datasources:
 
 1. reaction templates and
 2. building blocks.
@@ -100,10 +100,10 @@ We have made available a set of pre-trained models at the following [link](https
 The pretrained models correspond to the Action, Reactant 1, Reaction, and Reactant 2 networks, trained on the *Hartenfeller-Button* dataset and *Enamine* building blocks using radius 2, length 4096 Morgan fingerprints for the molecular node embeddings, and length 256 fingerprints for the k-NN search.
 For further details, please see the publication.
 
-To download the pre-trained model to `./pre-trained-model`:
+To download the pre-trained model to `./checkpoints`:
 
-```shell
-mkdir pre-trained-model && cd pre-trained-model
+```bash
+mkdir -p checkpoints && cd checkpoints
 # Download
 wget -O hb_fp_2_4096_256.tar.gz https://figshare.com/ndownloader/files/31067692
 # Extract
@@ -113,12 +113,26 @@ tar -vxf hb_fp_2_4096_256.tar.gz
 The following scripts are run from the command line.
 Use `python some_script.py --help` or check the source code to see the instructions of each argument.
 
+### Prerequisites
+
+In addition to the necessary data, see [Data](#data), we pre-compute an embedding of the building blocks. Please double-check the filename of your building blocks.
+
+```bash
+python scripts/compute_embedding_mp.py \
+    --feature "fp_256" \
+    --rxn-template "hb" \
+    --ncpu 10 
+```
+
 #### Synthesis Planning
 
 To perform synthesis planning described in the main text:
 
-```shell
-python scripts/predict_multireactant_mp.py -n -1 --ncpu 10 --data "data/assets/molecules/sample-targets.txt"
+```bash
+python scripts/predict_multireactant_mp.py \
+    -n -1 \
+    --data "data/assets/molecules/sample-targets.txt" \
+    --ncpu 10
 ```
 
 This script will feed a list of ten randomly selected molecules from the validation to SynNet.
@@ -129,21 +143,29 @@ The decoded results, i.e. the predicted synthesis trees, are saved to `DATA_RESU
 
 #### Synthesizable Molecular Design
 
-To perform synthesizable molecular design, under [./scripts/](./scripts/), run:
+To perform synthesizable molecular design, run:
 
-```shell
-python scripts/optimize_ga.py -i path/to/zinc.csv --radius 2 --nbits 4096 --num_population 128 --num_offspring 512 --num_gen 200 --ncpu 32 --objective gsk
+```bash
+python scripts/optimize_ga.py \
+    -i path/to/zinc.csv \
+    --radius 2 --nbits 4096 \
+    --num_population 128 --num_offspring 512 --num_gen 200 --objective gsk \
+    --ncpu 32
 ```
 
 This script uses a genetic algorithm to optimize molecular embeddings and returns the predicted synthetic trees for the optimized molecular embedding.
 
 If user wants to start from a checkpoint of previous run, run:
 
-```shell
-python scripts/optimize_ga.py -i path/to/population.npy --radius 2 --nbits 4096 --num_population 128 --num_offspring 512 --num_gen 200 --ncpu 32 --objective gsk --restart
+```bash
+python scripts/optimize_ga.py \
+    -i path/to/population.npy \
+    --radius 2 --nbits 4096 \
+    --num_population 128 --num_offspring 512 --num_gen 200 --objective gsk --restart \
+    --ncpu 32 
 ```
 
-Note: the input file indicated by -i contains the seed molecules in CSV format for an initial run, and as a pre-saved numpy array of the population for restarting the run.
+Note: the input file indicated by `-i` contains the seed molecules in CSV format for an initial run, and as a pre-saved numpy array of the population for restarting the run.
 
 ### Train the model from scratch
 

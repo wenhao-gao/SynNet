@@ -1,16 +1,18 @@
 """
 This file contains various utils for data preparation and preprocessing.
 """
+from typing import Iterator, Union
 import numpy as np
 from scipy import sparse
 from dgllife.model import load_pretrained
 from tdc.chem_utils import MolConvert
 from sklearn.preprocessing import OneHotEncoder
-from syn_net.utils.data_utils import SyntheticTree
+from syn_net.utils.data_utils import Reaction, SyntheticTree
 from syn_net.utils.predict_utils import (can_react, get_action_mask,
                                          get_reaction_mask, mol_fp, 
                                          get_mol_embedding)
 from pathlib import Path
+from rdkit import Chem
 import logging
 logger = logging.getLogger(__name__)
 
@@ -81,6 +83,7 @@ def organize(st, d_mol=300, target_embedding='fp', radius=2, nBits=4096,
 
     d_mol = OUTPUT_EMBEDDINGS_DIMS[output_embedding]
 
+    # Compute embedding of target molecule, i.e. the root of the synthetic tree
     if target_embedding == 'fp':
         target = mol_fp(st.root.smiles, radius, nBits).tolist()
     elif target_embedding == 'gin':
@@ -94,7 +97,7 @@ def organize(st, d_mol=300, target_embedding='fp', radius=2, nBits=4096,
 
         most_recent_mol_embedding = mol_fp(most_recent_mol, radius, nBits).tolist()
         other_root_mol_embedding  = mol_fp(other_root_mol, radius, nBits).tolist()
-        state = most_recent_mol_embedding + other_root_mol_embedding + target
+        state = most_recent_mol_embedding + other_root_mol_embedding + target # (3d,1)
 
         if action == 3:
             step = [3] + [0]*d_mol + [-1] + [0]*d_mol + [0]*nBits
@@ -148,7 +151,9 @@ def organize(st, d_mol=300, target_embedding='fp', radius=2, nBits=4096,
 
     return sparse.csc_matrix(np.array(states)), sparse.csc_matrix(np.array(steps))
 
-def synthetic_tree_generator(building_blocks, reaction_templates, max_step=15):
+def synthetic_tree_generator(
+    building_blocks: list[str], reaction_templates: list[Reaction], max_step: int = 15
+) -> tuple[SyntheticTree, int]:
     """
     Generates a synthetic tree from the available building blocks and reaction
     templates. Used in preparing the training/validation/testing data.
@@ -186,7 +191,7 @@ def synthetic_tree_generator(building_blocks, reaction_templates, max_step=15):
                 break
             elif action == 0:
                 # Add
-                mol1 = np.random.choice(building_blocks)
+                mol1 = np.random.choice(building_blocks) # TODO: convert to nparray to avoid costly conversion upon each function call
             else:
                 # Expand or Merge
                 mol1 = mol_recent
@@ -194,10 +199,10 @@ def synthetic_tree_generator(building_blocks, reaction_templates, max_step=15):
             # Select reaction
             reaction_proba = np.random.rand(len(reaction_templates))
 
-            if action != 2:
-                rxn_mask, available = get_reaction_mask(smi=mol1, 
+            if action != 2: # = action == 0 or action == 1
+                rxn_mask, available = get_reaction_mask(smi=mol1,
                                                         rxns=reaction_templates)
-            else:
+            else: # merge tree
                 _, rxn_mask = can_react(tree.get_state(), reaction_templates)
                 available = [[] for rxn in reaction_templates]
 
@@ -278,7 +283,7 @@ def prep_data(main_dir, num_rxn, out_dim, datasets=None):
         states = sparse.csc_matrix(states.A[(steps[:, 0].A != 3).reshape(-1, )])
         steps = sparse.csc_matrix(steps.A[(steps[:, 0].A != 3).reshape(-1, )])
         print(f'  saved data for "Action"')
-
+        
         # extract Reaction data
         X = sparse.hstack([states, steps[:, (2 * out_dim + 2):]])
         y = steps[:, out_dim + 1]
@@ -314,7 +319,7 @@ def prep_data(main_dir, num_rxn, out_dim, datasets=None):
         sparse.save_npz(main_dir / f'y_rt1_{dataset}.npz', y)
         print(f'  saved data for "Reactant 1"')
 
-        return None
+    return None
 
 class Sdf2SmilesExtractor:
     """Helper class for data generation."""

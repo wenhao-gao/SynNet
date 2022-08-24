@@ -11,6 +11,8 @@ from syn_net.utils.predict_utils import (can_react, get_action_mask,
                                          get_reaction_mask, mol_fp, 
                                          get_mol_embedding)
 from pathlib import Path
+import logging
+logger = logging.getLogger(__name__)
 
 def rdkit2d_embedding(smi):
     """
@@ -313,3 +315,42 @@ def prep_data(main_dir, num_rxn, out_dim, datasets=None):
         print(f'  saved data for "Reactant 1"')
 
         return None
+
+class Sdf2SmilesExtractor:
+    """Helper class for data generation."""
+
+    def __init__(self) -> None:
+        self.smiles: Iterator[str]
+
+    def from_sdf(self, file: Union[str, Path]):
+        """Extract chemicals as SMILES from `*.sdf` file.
+        
+        See also: 
+            https://www.rdkit.org/docs/GettingStartedInPython.html#reading-sets-of-molecules
+        """
+        file = str(Path(file).resolve()) 
+        suppl = Chem.SDMolSupplier(file)
+        self.smiles = (Chem.MolToSmiles(mol, canonical=True, isomericSmiles=False) for mol in suppl)
+        logger.info(f"Read data from {file}")
+
+        return self
+
+    def _to_csv_gz(self, file: Path) -> None:
+        import gzip
+
+        with gzip.open(file, "wt") as f:
+            f.writelines("SMILES\n")
+            f.writelines((s + "\n" for s in self.smiles))
+
+    def _to_csv_gz(self, file: Path) -> None:
+        with open(file, "wt") as f:
+            f.writelines("SMILES\n")
+            f.writelines((s + "\n" for s in self.smiles))
+
+    def to_file(self, file: Union[str, Path]) -> None:
+
+        if Path(file).suffixes == [".csv", ".gz"]:
+            self._to_csv_gz(file)
+        else:
+            self._to_txt(file)
+        logger.info(f"Saved data to {file}")

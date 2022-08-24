@@ -924,8 +924,8 @@ def synthetic_tree_decoder_rt1(z_target,
                 x_rct2 = np.concatenate([z_state,z_mol1, x_rxn],axis=1)
                 z_mol2 = reactant2_net(torch.Tensor(x_rct2))
                 z_mol2         = z_mol2.detach().numpy()
-                available      = available_list[rxn_id]
-                available      = [bb_dict[available[i]] for i in range(len(available))]
+                available      = available_list[rxn_id] # list[str], list of reactants for this rxn
+                available      = [bb_dict[smiles] for smiles in available] # list[int]
                 temp_emb       = bb_emb[available]
                 available_tree = BallTree(temp_emb, metric=cosine_distance) # TODO: evaluate if distance matrix is faster/feasible as this BallTree is discarded immediately.
                 dist, ind      = nn_search(z_mol2, _tree=available_tree)

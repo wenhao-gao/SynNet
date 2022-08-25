@@ -8,6 +8,8 @@ import pytorch_lightning as pl
 from pytorch_lightning import loggers as pl_loggers
 from syn_net.models.mlp import MLP, load_array
 from scipy import sparse
+from syn_net.config import DATA_FEATURIZED_DIR
+from pathlib import Path
 
 
 if __name__ == '__main__':
@@ -24,7 +26,7 @@ if __name__ == '__main__':
                         help="Number of Bits for Morgan fingerprint.")
     parser.add_argument("--out_dim", type=int, default=256,
                         help="Output dimension.")
-    parser.add_argument("--ncpu", type=int, default=8,
+    parser.add_argument("--ncpu", type=int, default=16,
                         help="Number of cpus")
     parser.add_argument("--batch_size", type=int, default=64,
                         help="Batch size")
@@ -32,63 +34,55 @@ if __name__ == '__main__':
                         help="Maximum number of epoches.")
     args = parser.parse_args()
 
-    if args.out_dim == 300:
-        validation_option = 'nn_accuracy_gin'
-    elif args.out_dim == 4096:
-        validation_option = 'nn_accuracy_fp_4096'
-    elif args.out_dim == 256:
-        validation_option = 'nn_accuracy_fp_256'
-    elif args.out_dim == 200:
-        validation_option = 'nn_accuracy_rdkit2d'
-    else:
-        raise ValueError
+    # Helper to select validation func based on output dim
+    VALIDATION_OPTS = {
+        300: "nn_accuracy_gin",
+        4096: "nn_accuracy_fp_4096",
+        256: "nn_accuracy_fp_256",
+        200: "nn_accuracy_rdkit2d",
+    }
+    validation_option = VALIDATION_OPTS[args.out_dim]
 
-    main_dir   = f'/pool001/whgao/data/synth_net/{args.rxn_template}_{args.featurize}_{args.radius}_{args.nbits}_{validation_option[12:]}/'
+    id = f'{args.rxn_template}_{args.featurize}_{args.radius}_{args.nbits}_{validation_option[12:]}/'
+    main_dir   = Path(DATA_FEATURIZED_DIR) / id
     batch_size = args.batch_size
     ncpu       = args.ncpu
 
-    X = sparse.load_npz(main_dir + 'X_rt1_train.npz')
-    y = sparse.load_npz(main_dir + 'y_rt1_train.npz')
+    X = sparse.load_npz(main_dir / 'X_rt1_train.npz')
+    y = sparse.load_npz(main_dir / 'y_rt1_train.npz')
     X = torch.Tensor(X.A)
     y = torch.Tensor(y.A)
     train_data_iter = load_array((X, y), batch_size, ncpu=ncpu, is_train=True)
 
-    X    = sparse.load_npz(main_dir + 'X_rt1_valid.npz')
-    y    = sparse.load_npz(main_dir + 'y_rt1_valid.npz')
+    X    = sparse.load_npz(main_dir / 'X_rt1_valid.npz')
+    y    = sparse.load_npz(main_dir / 'y_rt1_valid.npz')
     X    = torch.Tensor(X.A)
     y    = torch.Tensor(y.A)
     _idx = np.random.choice(list(range(X.shape[0])), size=int(X.shape[0]/10), replace=False)
     valid_data_iter = load_array((X[_idx], y[_idx]), batch_size, ncpu=ncpu, is_train=False)
 
     pl.seed_everything(0)
-    if args.featurize == 'fp':
-        mlp = MLP(input_dim=int(3 * args.nbits),
-                  output_dim=args.out_dim,
-                  hidden_dim=1200,
-                  num_layers=5,
-                  dropout=0.5,
-                  num_dropout_layers=1,
-                  task='regression',
-                  loss='mse',
-                  valid_loss=validation_option,
-                  optimizer='adam',
-                  learning_rate=1e-4,
-                  val_freq=10,
-                  ncpu=ncpu)
-    elif args.featurize == 'gin':
-        mlp = MLP(input_dim=int(2 * args.nbits + args.out_dim),
-                  output_dim=args.out_dim,
-                  hidden_dim=1200,
-                  num_layers=5,
-                  dropout=0.5,
-                  num_dropout_layers=1,
-                  task='regression',
-                  loss='mse',
-                  valid_loss=validation_option,
-                  optimizer='adam',
-                  learning_rate=1e-4,
-                  val_freq=10,
-                  ncpu=ncpu)
+    INPUT_DIMS = {
+        "fp": int(3 * args.nbits),
+        "gin" : int(2 * args.nbits + args.out_dim)
+    } # somewhat constant...
+
+    input_dims = INPUT_DIMS[args.featurize]
+
+    mlp = MLP(input_dim=input_dims,
+                output_dim=args.out_dim,
+                hidden_dim=1200,
+                num_layers=5,
+                dropout=0.5,
+                num_dropout_layers=1,
+                task='regression',
+                loss='mse',
+                valid_loss=validation_option,
+                optimizer='adam',
+                learning_rate=1e-4,
+                val_freq=10,
+                ncpu=ncpu)
+
     tb_logger = pl_loggers.TensorBoardLogger(
         f'rt1_{args.rxn_template}_{args.featurize}_{args.radius}_{args.nbits}_{validation_option[12:]}_logs/'
     )

@@ -78,19 +78,20 @@ class MLP(pl.LightningModule):
         """Helper function to load the pre-computed building block embeddings
         as a BallTree.
 
-        TODO: Remove hard-coded paths.
         """
+        from syn_net.config import DATA_EMBEDDINGS_DIR
+        from pathlib import Path
         if out_feat == 'gin':
-            bb_emb_gin = np.load('/pool001/whgao/data/synth_net/st_hb/enamine_us_emb_gin.npy')
+            bb_emb_gin = np.load(Path(DATA_EMBEDDINGS_DIR) / f'enamine_us_emb_{out_feat}.npy')
             kdtree = BallTree(bb_emb_gin, metric='euclidean')
         elif out_feat == 'fp_4096':
-            bb_emb_fp_4096 = np.load('/pool001/whgao/data/synth_net/st_hb/enamine_us_emb_fp_4096.npy')
+            bb_emb_fp_4096 = np.load(Path(DATA_EMBEDDINGS_DIR) / f'enamine_us_emb_{out_feat}.npy')
             kdtree = BallTree(bb_emb_fp_4096, metric='euclidean')
         elif out_feat == 'fp_256':
-            bb_emb_fp_256 = np.load('/pool001/whgao/data/synth_net/st_hb/enamine_us_emb_fp_256.npy')
+            bb_emb_fp_256 = np.load(Path(DATA_EMBEDDINGS_DIR) / f'enamine_us_emb_{out_feat}.npy')
             kdtree = BallTree(bb_emb_fp_256, metric=cosine_distance)
         elif out_feat == 'rdkit2d':
-            bb_emb_rdkit2d = np.load('/pool001/whgao/data/synth_net/st_hb/enamine_us_emb_rdkit2d.npy')
+            bb_emb_rdkit2d = np.load(Path(DATA_EMBEDDINGS_DIR) / f'enamine_us_emb_{out_feat}.npy')
             kdtree = BallTree(bb_emb_rdkit2d, metric='euclidean')
         elif out_feat == "gin_unittest":
             # The embeddings are pre-computed based on the building blocks

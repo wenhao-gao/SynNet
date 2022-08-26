@@ -29,7 +29,7 @@ class MLP(pl.LightningModule):
                  val_freq=10,
                  ncpu=16):
         super().__init__()
-
+        self.save_hyperparameters()
         self.loss = loss
         self.valid_loss = valid_loss
         self.optimizer = optimizer

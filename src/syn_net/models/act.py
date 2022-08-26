@@ -10,20 +10,14 @@ from pytorch_lightning import loggers as pl_loggers
 from scipy import sparse
 
 from syn_net.config import DATA_FEATURIZED_DIR
-from syn_net.models.common import get_args
+from syn_net.models.common import VALIDATION_OPTS, get_args
 from syn_net.models.mlp import MLP, load_array
 
 if __name__ == '__main__':
 
     args = get_args()
 
-    # Helper to select validation func based on output dim
-    VALIDATION_OPTS = {
-        300: "nn_accuracy_gin",
-        4096: "nn_accuracy_fp_4096",
-        256: "nn_accuracy_fp_256",
-        200: "nn_accuracy_rdkit2d",
-    }
+
     validation_option = VALIDATION_OPTS[args.out_dim]
 
     id = f'{args.rxn_template}_{args.featurize}_{args.radius}_{args.nbits}_{validation_option[12:]}/'

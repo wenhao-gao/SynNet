@@ -51,7 +51,7 @@ class MLP(pl.LightningModule):
 
         modules.append(nn.Linear(hidden_dim, output_dim))
         if task == 'classification':
-            modules.append(nn.Softmax())
+            modules.append(nn.Softmax(dim=1))
 
         self.layers = nn.Sequential(*modules)
 

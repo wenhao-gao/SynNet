@@ -1,6 +1,14 @@
 """Common methods and params shared by all models.
 """
 
+# Helper to select validation func based on output dim
+VALIDATION_OPTS = {
+    300: "nn_accuracy_gin",
+    4096: "nn_accuracy_fp_4096",
+    256: "nn_accuracy_fp_256",
+    200: "nn_accuracy_rdkit2d",
+}
+
 def get_args():
     import argparse
     parser = argparse.ArgumentParser()
@@ -25,3 +33,5 @@ def get_args():
     parser.add_argument("-v", "--version", type=int, default=1,
                         help="Version")
     return parser.parse_args()
+
+

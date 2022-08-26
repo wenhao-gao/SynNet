@@ -4,7 +4,7 @@ Unit tests for model training.
 from pathlib import Path
 import unittest
 import shutil
-
+from multiprocessing import cpu_count
 import pytorch_lightning as pl
 from pytorch_lightning import loggers as pl_loggers
 from scipy import sparse
@@ -18,7 +18,7 @@ TEST_DIR = Path(__file__).parent
 REACTION_TEMPLATES_FILE =  f"{TEST_DIR}/assets/rxn_set_hb_test.txt"
 
 class TestReactionTemplateFile(unittest.TestCase):
-    
+
     def test_number_of_reaction_templates(self):
         """ Count number of lines in file, i.e. the number of reaction templates."""
         with open(REACTION_TEMPLATES_FILE,"r") as f:
@@ -32,6 +32,11 @@ class TestTraining(unittest.TestCase):
     reaction network, (4) reactant 2 network.
     """
 
+    def setUp(self) -> None:
+        import warnings
+        warnings.filterwarnings("ignore", ".*does not have many workers.*")
+        warnings.filterwarnings("ignore", ".*GPU available but not used.*")
+
     def test_action_network(self):
         """
         Tests the Action Network.
@@ -41,11 +46,11 @@ class TestTraining(unittest.TestCase):
         nbits = 4096
         batch_size = 10
         epochs = 2
-        ncpu = 2
+        ncpu = min(2,cpu_count())
         validation_option = "accuracy"
         ref_dir = f"{TEST_DIR}/data/ref/"
 
-        X = sparse.load_npz(ref_dir + "X_act_train.npz") 
+        X = sparse.load_npz(ref_dir + "X_act_train.npz")
         assert X.shape==(4,3*nbits) # (4,12288)
         y = sparse.load_npz(ref_dir + "y_act_train.npz")
         assert y.shape==(4,1) # (4,1)
@@ -81,7 +86,7 @@ class TestTraining(unittest.TestCase):
             f"act_{embedding}_{radius}_{nbits}_logs/"
         )
         trainer = pl.Trainer(
-            max_epochs=epochs, progress_bar_refresh_rate=20, logger=tb_logger
+            max_epochs=epochs, logger=tb_logger, weights_summary=None,
         )
         trainer.fit(mlp, train_data_iter, valid_data_iter)
 
@@ -101,11 +106,11 @@ class TestTraining(unittest.TestCase):
         out_dim = 300  # Note: out_dim 300 = gin embedding
         batch_size = 10
         epochs = 2
-        ncpu = 2
+        ncpu = min(2,cpu_count())
         validation_option = "nn_accuracy_gin_unittest"
         ref_dir = f"{TEST_DIR}/data/ref/"
 
-        # load the reaction data       
+        # load the reaction data
         X = sparse.load_npz(ref_dir + "X_rt1_train.npz")
         assert X.shape==(2,3*nbits) # (4,12288)
         X = torch.Tensor(X.A)
@@ -138,7 +143,7 @@ class TestTraining(unittest.TestCase):
             f"rt1_{embedding}_{radius}_{nbits}_logs/"
         )
         trainer = pl.Trainer(
-            max_epochs=epochs, progress_bar_refresh_rate=20, logger=tb_logger
+            max_epochs=epochs, logger=tb_logger, weights_summary=None,
         )
         trainer.fit(mlp, train_data_iter, valid_data_iter)
 
@@ -157,7 +162,7 @@ class TestTraining(unittest.TestCase):
         nbits = 4096
         batch_size = 10
         epochs = 2
-        ncpu = 2
+        ncpu = min(2,cpu_count())
         n_templates = 3  # num templates in `REACTION_TEMPLATES_FILE`
         validation_option = "accuracy"
         ref_dir = f"{TEST_DIR}/data/ref/"
@@ -198,7 +203,7 @@ class TestTraining(unittest.TestCase):
             f"rxn_{embedding}_{radius}_{nbits}_logs/"
         )
         trainer = pl.Trainer(
-            max_epochs=epochs, progress_bar_refresh_rate=20, logger=tb_logger
+            max_epochs=epochs, logger=tb_logger, weights_summary=None,
         )
         trainer.fit(mlp, train_data_iter, valid_data_iter)
 
@@ -218,7 +223,7 @@ class TestTraining(unittest.TestCase):
         out_dim = 300  # Note: out_dim 300 = gin embedding
         batch_size = 10
         epochs = 2
-        ncpu = 2
+        ncpu = min(2,cpu_count())
         n_templates = 3  # num templates in 'data/rxn_set_hb_test.txt'
         validation_option = "nn_accuracy_gin_unittest"
         ref_dir = f"{TEST_DIR}/data/ref/"
@@ -255,7 +260,7 @@ class TestTraining(unittest.TestCase):
             f"rt2_{embedding}_{radius}_{nbits}_logs/"
         )
         trainer = pl.Trainer(
-            max_epochs=epochs, progress_bar_refresh_rate=20, logger=tb_logger
+            max_epochs=epochs, logger=tb_logger, weights_summary=None,
         )
         trainer.fit(mlp, train_data_iter, valid_data_iter)
 

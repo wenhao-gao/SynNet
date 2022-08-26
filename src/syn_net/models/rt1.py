@@ -2,17 +2,17 @@
 Reactant1 network (for predicting 1st reactant).
 """
 import time
-import numpy as np
-import torch
-import pytorch_lightning as pl
-from pytorch_lightning import loggers as pl_loggers
-from syn_net.models.mlp import MLP, load_array
-from scipy import sparse
-from syn_net.config import DATA_FEATURIZED_DIR
-from syn_net.models.common import get_args
-
 from pathlib import Path
 
+import numpy as np
+import pytorch_lightning as pl
+import torch
+from pytorch_lightning import loggers as pl_loggers
+from scipy import sparse
+
+from syn_net.config import DATA_FEATURIZED_DIR
+from syn_net.models.common import get_args
+from syn_net.models.mlp import MLP, load_array
 
 if __name__ == '__main__':
 

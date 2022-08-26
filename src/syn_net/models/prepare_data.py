@@ -3,10 +3,12 @@ Prepares the training, testing, and validation data by reading in the states
 and steps for the reaction data and re-writing it as separate one-hot encoded
 Action, Reactant 1, Reactant 2, and Reaction files.
 """
-from syn_net.utils.prep_utils import prep_data
-from syn_net.config import DATA_FEATURIZED_DIR
-from pathlib import Path
 import logging
+from pathlib import Path
+
+from syn_net.config import DATA_FEATURIZED_DIR
+from syn_net.utils.prep_utils import prep_data
+
 logger = logging.getLogger(__file__)
 
 if __name__ == '__main__':

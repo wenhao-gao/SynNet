@@ -1,16 +1,18 @@
 """
 Multi-layer perceptron (MLP) class.
 """
+import logging
 import time
-import torch
-from torch import nn
-import torch.nn.functional as F
+
+import numpy as np
 import pytorch_lightning as pl
+import torch
+import torch.nn.functional as F
 from pytorch_lightning import loggers as pl_loggers
 from sklearn.neighbors import BallTree
-import numpy as np
+from torch import nn
 
-
+logger = logging.getLogger(__name__)
 class MLP(pl.LightningModule):
 
     def __init__(self, input_dim=3072,
@@ -73,7 +75,7 @@ class MLP(pl.LightningModule):
         return loss
 
     def _load_building_blocks_kdtree(self, out_feat: str) -> np.ndarray:
-        """Helper function to load the pre-computed building block embeddings 
+        """Helper function to load the pre-computed building block embeddings
         as a BallTree.
 
         TODO: Remove hard-coded paths.
@@ -96,8 +98,8 @@ class MLP(pl.LightningModule):
             emb = np.load("tests/data/building_blocks_emb.npy")
             kdtree = BallTree(emb,metric="euclidean")
         else:
-            raise ValueError   
-        return kdtree     
+            raise ValueError
+        return kdtree
 
     def validation_step(self, batch, batch_idx):
         if self.trainer.current_epoch % self.val_freq == 0:

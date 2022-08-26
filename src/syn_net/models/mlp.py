@@ -71,7 +71,7 @@ class MLP(pl.LightningModule):
             loss = F.huber_loss(y_hat, y)
         else:
             raise ValueError('Not specified loss function')
-        self.log('train_loss', loss, on_step=False, on_epoch=True, prog_bar=True, logger=True)
+        self.log(f'train_{self.loss}', loss, on_step=False, on_epoch=True, prog_bar=True, logger=True)
         return loss
 
     def _load_building_blocks_kdtree(self, out_feat: str) -> np.ndarray:

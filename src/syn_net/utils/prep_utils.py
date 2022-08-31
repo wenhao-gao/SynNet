@@ -9,7 +9,7 @@ from tdc.chem_utils import MolConvert
 from sklearn.preprocessing import OneHotEncoder
 from syn_net.utils.data_utils import Reaction, SyntheticTree
 from syn_net.utils.predict_utils import (can_react, get_action_mask,
-                                         get_reaction_mask, mol_fp, 
+                                         get_reaction_mask, mol_fp,
                                          get_mol_embedding)
 from pathlib import Path
 from rdkit import Chem
@@ -43,10 +43,10 @@ def _fetch_gin_pretrained_model(model_name: str):
     return model
 
 
-def organize(st, d_mol=300, target_embedding='fp', radius=2, nBits=4096, 
+def organize(st, d_mol=300, target_embedding='fp', radius=2, nBits=4096,
              output_embedding='gin'):
     """
-    Organizes the states and steps from the input synthetic tree into sparse 
+    Organizes the states and steps from the input synthetic tree into sparse
     matrices.
 
     Args:
@@ -113,26 +113,26 @@ def organize(st, d_mol=300, target_embedding='fp', radius=2, nBits=4096,
             if output_embedding == 'gin':
                 step = ([action]
                         + get_mol_embedding(mol1, model=model).tolist()
-                        + [r.rxn_id] 
-                        + get_mol_embedding(mol2, model=model).tolist() 
+                        + [r.rxn_id]
+                        + get_mol_embedding(mol2, model=model).tolist()
                         + mol_fp(mol1, radius, nBits).tolist())
             elif output_embedding == 'fp_4096':
-                step = ([action] 
-                        + mol_fp(mol1, 2, 4096).tolist() 
-                        + [r.rxn_id] 
-                        + mol_fp(mol2, 2, 4096).tolist() 
+                step = ([action]
+                        + mol_fp(mol1, 2, 4096).tolist()
+                        + [r.rxn_id]
+                        + mol_fp(mol2, 2, 4096).tolist()
                         + mol_fp(mol1, radius, nBits).tolist())
             elif output_embedding == 'fp_256':
-                step = ([action] 
+                step = ([action]
                         + mol_fp(mol1, 2, 256).tolist()
                         + [r.rxn_id]
                         + mol_fp(mol2, 2, 256).tolist()
                         + mol_fp(mol1, radius, nBits).tolist())
             elif output_embedding == 'rdkit2d':
-                step = ([action] 
-                        + rdkit2d_embedding(mol1).tolist() 
-                        + [r.rxn_id] 
-                        + rdkit2d_embedding(mol2).tolist() 
+                step = ([action]
+                        + rdkit2d_embedding(mol1).tolist()
+                        + [r.rxn_id]
+                        + rdkit2d_embedding(mol2).tolist()
                         + mol_fp(mol1, radius, nBits).tolist())
 
         if action == 2:
@@ -177,7 +177,7 @@ def synthetic_tree_generator(
     try:
         for i in range(max_step):
             # Encode current state
-            state = tree.get_state()  # a set
+            state = tree.get_state()
 
             # Predict action type, masked selection
             # Action: (Add: 0, Expand: 1, Merge: 2, End: 3)
@@ -186,14 +186,11 @@ def synthetic_tree_generator(
             action = np.argmax(action_proba * action_mask)
 
             # Select first molecule
-            if action == 3:
-                # End
+            if action == 3: # End
                 break
-            elif action == 0:
-                # Add
+            elif action == 0: # Add
                 mol1 = np.random.choice(building_blocks)
-            else:
-                # Expand or Merge
+            else: # Expand or Merge
                 mol1 = mol_recent
 
             # Select reaction
@@ -216,14 +213,12 @@ def synthetic_tree_generator(
             rxn_id = np.argmax(reaction_proba * rxn_mask)
             rxn = reaction_templates[rxn_id]
 
+            # Select second molecule
             if rxn.num_reactant == 2:
-                # Select second molecule
-                if action == 2:
-                    # Merge
+                if action == 2: # Merge
                     temp = set(state) - set([mol1])
                     mol2 = temp.pop()
-                else:
-                    # Add or Expand
+                else: # Add or Expand
                     mol2 = np.random.choice(available[rxn_id])
             else:
                 mol2 = None
@@ -267,7 +262,7 @@ def prep_data(main_dir, num_rxn, out_dim, datasets=None):
         print(f'Reading {dataset} data ...')
         states_list = []
         steps_list = []
-        
+
         states_list.append(sparse.load_npz(main_dir / f'states_{dataset}.npz'))
         steps_list.append(sparse.load_npz(main_dir / f'steps_{dataset}.npz'))
 
@@ -283,7 +278,7 @@ def prep_data(main_dir, num_rxn, out_dim, datasets=None):
         states = sparse.csc_matrix(states.A[(steps[:, 0].A != 3).reshape(-1, )])
         steps = sparse.csc_matrix(steps.A[(steps[:, 0].A != 3).reshape(-1, )])
         print(f'  saved data for "Action"')
-        
+
         # extract Reaction data
         X = sparse.hstack([states, steps[:, (2 * out_dim + 2):]])
         y = steps[:, out_dim + 1]
@@ -300,8 +295,8 @@ def prep_data(main_dir, num_rxn, out_dim, datasets=None):
 
         # extract Reactant 2 data
         X = sparse.hstack(
-            [states, 
-             steps[:, (2 * out_dim + 2):], 
+            [states,
+             steps[:, (2 * out_dim + 2):],
              sparse.csc_matrix(enc.transform(steps[:, out_dim+1].A.reshape((-1, 1))).toarray())]
         )
         y = steps[:, (out_dim+2): (2 * out_dim + 2)]
@@ -329,11 +324,11 @@ class Sdf2SmilesExtractor:
 
     def from_sdf(self, file: Union[str, Path]):
         """Extract chemicals as SMILES from `*.sdf` file.
-        
-        See also: 
+
+        See also:
             https://www.rdkit.org/docs/GettingStartedInPython.html#reading-sets-of-molecules
         """
-        file = str(Path(file).resolve()) 
+        file = str(Path(file).resolve())
         suppl = Chem.SDMolSupplier(file)
         self.smiles = (Chem.MolToSmiles(mol, canonical=True, isomericSmiles=False) for mol in suppl)
         logger.info(f"Read data from {file}")

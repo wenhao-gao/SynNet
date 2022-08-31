@@ -1,21 +1,27 @@
 """
 Reaction network.
 """
-import time
+import logging
 from pathlib import Path
 
 import pytorch_lightning as pl
 import torch
 from pytorch_lightning import loggers as pl_loggers
+from pytorch_lightning.callbacks.early_stopping import EarlyStopping
+from pytorch_lightning.callbacks.model_checkpoint import ModelCheckpoint
 from scipy import sparse
 
 from syn_net.config import CHECKPOINTS_DIR, DATA_FEATURIZED_DIR
 from syn_net.models.common import VALIDATION_OPTS, get_args
 from syn_net.models.mlp import MLP, load_array
 
+logger = logging.getLogger(__name__)
+MODEL_ID = Path(__file__).stem
+
 if __name__ == '__main__':
 
     args = get_args()
+    logger.info(f"Start.")
 
     validation_option = VALIDATION_OPTS[args.out_dim]
 
@@ -35,6 +41,7 @@ if __name__ == '__main__':
     X = torch.Tensor(X.A)
     y = torch.LongTensor(y.A.reshape(-1, ))
     valid_data_iter = load_array((X, y), batch_size, ncpu=ncpu, is_train=False)
+    logger.info(f"Set up dataloaders.")
 
     pl.seed_everything(0)
     param_path  = Path(CHECKPOINTS_DIR) / f"{args.rxn_template}_{args.featurize}_{args.radius}_{args.nbits}_v{args.version}/"
@@ -103,12 +110,29 @@ if __name__ == '__main__':
                 ncpu=ncpu
             )
 
-    tb_logger = pl_loggers.TensorBoardLogger(f'rxn_{args.rxn_template}_{args.featurize}_{args.radius}_{args.nbits}_logs/')
-    trainer   = pl.Trainer(gpus=[0], max_epochs=args.epoch, progress_bar_refresh_rate=20, logger=tb_logger)
-    t         = time.time()
+    # Set up Trainer
+    # Set up Trainer
+    save_dir = Path("results/logs/" + f"{args.rxn_template}_{args.featurize}_{args.radius}_{args.nbits}" + f"/{MODEL_ID}")
+    save_dir.mkdir(exist_ok=True,parents=True)
 
+    tb_logger = pl_loggers.TensorBoardLogger(save_dir,name="")
+
+    checkpoint_callback = ModelCheckpoint(
+        monitor="val_loss",
+        dirpath= tb_logger.log_dir,
+        filename="ckpts.{epoch}-{val_loss:.2f}",
+        save_weights_only=False,
+    )
+    earlystop_callback = EarlyStopping(monitor="val_loss", patience=10)
+
+    max_epochs = args.epoch if not args.debug else 2
+    # Create trainer
+    trainer   = pl.Trainer(gpus=[0],
+                           max_epochs=max_epochs,
+                           progress_bar_refresh_rate = int(len(train_data_iter)*0.05),
+                           callbacks=[checkpoint_callback,earlystop_callback],
+                           logger=[tb_logger])
+
+    logger.info(f"Start training")
     trainer.fit(mlp, train_data_iter, valid_data_iter)
-
-    print(time.time() - t, 's')
-
-    print('Finish!')
+    logger.info(f"Training completed.")

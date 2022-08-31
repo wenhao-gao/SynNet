@@ -12,7 +12,7 @@ from pytorch_lightning.callbacks.model_checkpoint import ModelCheckpoint
 from scipy import sparse
 
 from syn_net.config import DATA_FEATURIZED_DIR
-from syn_net.models.common import VALIDATION_OPTS, get_args
+from syn_net.models.common import VALIDATION_OPTS, get_args, xy_to_dataloader
 from syn_net.models.mlp import MLP, load_array
 
 logger = logging.getLogger(__name__)
@@ -24,22 +24,30 @@ if __name__ == '__main__':
 
     validation_option = VALIDATION_OPTS[args.out_dim]
 
+    # Get ID for the data to know what we're working with and find right files.
     id = f'{args.rxn_template}_{args.featurize}_{args.radius}_{args.nbits}_{validation_option[12:]}/'
-    main_dir   = Path(DATA_FEATURIZED_DIR) / id
-    batch_size = args.batch_size
-    ncpu       = args.ncpu
 
-    X = sparse.load_npz(main_dir / 'X_act_train.npz')
-    y = sparse.load_npz(main_dir / 'y_act_train.npz')
-    X = torch.Tensor(X.A)
-    y = torch.LongTensor(y.A.reshape(-1, ))
-    train_data_iter = load_array((X, y), batch_size, ncpu=ncpu, is_train=True)
+    dataset = "train"
+    train_dataloader = xy_to_dataloader(
+        X_file = Path(DATA_FEATURIZED_DIR) / f"{id}/X_{MODEL_ID}_{dataset}.npz",
+        y_file = Path(DATA_FEATURIZED_DIR) / f"{id}/y_{MODEL_ID}_{dataset}.npz",
+        n=None if not args.debug else 1000,
+        batch_size = args.batch_size,
+        num_workers=args.ncpu,
+        shuffle = True if dataset == "train" else False,
+    )
 
-    X = sparse.load_npz(main_dir / 'X_act_valid.npz')
-    y = sparse.load_npz(main_dir / 'y_act_valid.npz')
-    X = torch.Tensor(X.A)
-    y = torch.LongTensor(y.A.reshape(-1, ))
-    valid_data_iter = load_array((X, y), batch_size, ncpu=ncpu, is_train=False)
+    dataset = "valid"
+    valid_dataloader = xy_to_dataloader(
+        X_file = Path(DATA_FEATURIZED_DIR) / f"{id}/X_{MODEL_ID}_{dataset}.npz",
+        y_file = Path(DATA_FEATURIZED_DIR) / f"{id}/y_{MODEL_ID}_{dataset}.npz",
+        n=None if not args.debug else 1000,
+        batch_size = args.batch_size,
+        num_workers=args.ncpu,
+        shuffle = True if dataset == "train" else False,
+    )
+    logger.info(f"Set up dataloaders.")
+
 
     pl.seed_everything(0)
     INPUT_DIMS = {
@@ -81,10 +89,10 @@ if __name__ == '__main__':
     # Create trainer
     trainer   = pl.Trainer(gpus=[0],
                            max_epochs=max_epochs,
-                           progress_bar_refresh_rate = int(len(train_data_iter)*0.05),
+                           progress_bar_refresh_rate = int(len(train_dataloader)*0.05),
                            callbacks=[checkpoint_callback],
                            logger=[tb_logger])
 
     logger.info(f"Start training")
-    trainer.fit(mlp, train_data_iter, valid_data_iter)
+    trainer.fit(mlp, train_dataloader, valid_dataloader)
     logger.info(f"Training completed.")

@@ -2,6 +2,10 @@
 """
 
 # Helper to select validation func based on output dim
+from typing import Union
+from scipy import sparse
+import torch
+
 VALIDATION_OPTS = {
     300: "nn_accuracy_gin",
     4096: "nn_accuracy_fp_4096",
@@ -34,6 +38,32 @@ def get_args():
                         help="Version")
     parser.add_argument("--debug", default=False, action="store_true")
     return parser.parse_args()
+
+def xy_to_dataloader(X_file: str = None,y_file: str = None, n: Union[int,float] = 1.0, **kwargs):
+    """Loads featurized X,y `*.npz`-data into a `DataLoader`"""
+    X = sparse.load_npz(X_file)
+    y = sparse.load_npz(y_file)
+    # Filer?
+    if isinstance(n,int):
+        n = min(n,min(X.shape[0],y.shape[0])) # ensure n does not exceed size of dataset
+        X = X[:n]
+        y = y[:n]
+    elif isinstance(n,float) and n < 1.0:
+        xn = X.shape[0]*n
+        yn = X.shape[0]*n
+        X = X[:xn]
+        y = y[:yn]
+    else:
+        pass #
+    dataset =  torch.utils.data.TensorDataset(
+        torch.Tensor(X.A),
+        torch.Tensor(y.A.reshape(-1,)),
+        )
+    return torch.utils.data.DataLoader(dataset,**kwargs)
+
+
+
+
 
 if __name__=="__main__":
     import json

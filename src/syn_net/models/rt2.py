@@ -13,47 +13,54 @@ from pytorch_lightning.callbacks.model_checkpoint import ModelCheckpoint
 from scipy import sparse
 
 from syn_net.config import DATA_EMBEDDINGS_DIR, DATA_FEATURIZED_DIR
-from syn_net.models.common import VALIDATION_OPTS, get_args
-from syn_net.models.mlp import MLP, cosine_distance, load_array
+from syn_net.models.common import VALIDATION_OPTS, get_args, xy_to_dataloader
+from syn_net.models.mlp import MLP, cosine_distance
 from syn_net.MolEmbedder import MolEmbedder
-
 
 logger = logging.getLogger(__name__)
 MODEL_ID = Path(__file__).stem
 
-if __name__ == '__main__':
-
-    args = get_args()
-    args.debug = True
-
-    # Helper to select validation func based on output dim
-    validation_option = VALIDATION_OPTS[args.out_dim]
-
+def _fetch_molembedder():
     knn_embedding_id = validation_option[12:]
     file = Path(DATA_EMBEDDINGS_DIR) / f"enamine_us_emb_{knn_embedding_id}.npy"
     logger.info(f"Try to load precomputed MolEmbedder from {file}.")
     molembedder =  MolEmbedder().load_precomputed(file).init_balltree(metric=cosine_distance)
+    logger.info(f"Loaded MolEmbedder from {file}.")
+    return molembedder
 
+
+if __name__ == '__main__':
+
+    args = get_args()
+
+    validation_option = VALIDATION_OPTS[args.out_dim]
+
+    # Get ID for the data to know what we're working with and find right files.
     id = f'{args.rxn_template}_{args.featurize}_{args.radius}_{args.nbits}_{validation_option[12:]}/'
-    main_dir   = Path(DATA_FEATURIZED_DIR) / id
-    batch_size = args.batch_size
-    ncpu       = args.ncpu
 
+    dataset = "train"
+    train_dataloader = xy_to_dataloader(
+        X_file = Path(DATA_FEATURIZED_DIR) / f"{id}/X_{MODEL_ID}_{dataset}.npz",
+        y_file = Path(DATA_FEATURIZED_DIR) / f"{id}/y_{MODEL_ID}_{dataset}.npz",
+        n=None if not args.debug else 1000,
+        batch_size = args.batch_size,
+        num_workers=args.ncpu,
+        shuffle = True if dataset == "train" else False,
+    )
 
+    dataset = "valid"
+    valid_dataloader = xy_to_dataloader(
+        X_file = Path(DATA_FEATURIZED_DIR) / f"{id}/X_{MODEL_ID}_{dataset}.npz",
+        y_file = Path(DATA_FEATURIZED_DIR) / f"{id}/y_{MODEL_ID}_{dataset}.npz",
+        n=None if not args.debug else 1000,
+        batch_size = args.batch_size,
+        num_workers=args.ncpu,
+        shuffle = True if dataset == "train" else False,
+    )
+    logger.info(f"Set up dataloaders.")
 
-    X = sparse.load_npz(main_dir / 'X_rt2_train.npz')
-    y = sparse.load_npz(main_dir / 'y_rt2_train.npz')
-    X = torch.Tensor(X.A)
-    y = torch.Tensor(y.A)
-    train_data_iter = load_array((X, y), batch_size, ncpu=ncpu, is_train=True)
-
-    X    = sparse.load_npz(main_dir / 'X_rt2_valid.npz')
-    y    = sparse.load_npz(main_dir / 'y_rt2_valid.npz')
-    X    = torch.Tensor(X.A)
-    y    = torch.Tensor(y.A)
-    # Select random 10% of the valid data because "nn_accuracy" is very(!) slow
-    _idx = np.random.choice(list(range(X.shape[0])), size=int(X.shape[0]/10), replace=False)
-    valid_data_iter = load_array((X[_idx], y[_idx]), batch_size, ncpu=ncpu, is_train=False)
+    # Fetch Molembedder and init BallTree
+    molembedder = _fetch_molembedder()
 
     pl.seed_everything(0)
     INPUT_DIMS = {

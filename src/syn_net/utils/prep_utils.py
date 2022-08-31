@@ -172,8 +172,8 @@ def synthetic_tree_generator(
     # Initialization
     tree = SyntheticTree()
     mol_recent = None
+    building_blocks = np.asarray(building_blocks)
 
-    # Start iteration
     try:
         for i in range(max_step):
             # Encode current state
@@ -191,7 +191,7 @@ def synthetic_tree_generator(
                 break
             elif action == 0:
                 # Add
-                mol1 = np.random.choice(building_blocks) # TODO: convert to nparray to avoid costly conversion upon each function call
+                mol1 = np.random.choice(building_blocks)
             else:
                 # Expand or Merge
                 mol1 = mol_recent

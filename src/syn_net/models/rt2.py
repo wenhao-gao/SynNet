@@ -4,13 +4,10 @@ Reactant2 network (for predicting 2nd reactant).
 import logging
 from pathlib import Path
 
-import numpy as np
 import pytorch_lightning as pl
-import torch
 from pytorch_lightning import loggers as pl_loggers
 from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 from pytorch_lightning.callbacks.model_checkpoint import ModelCheckpoint
-from scipy import sparse
 
 from syn_net.config import DATA_EMBEDDINGS_DIR, DATA_FEATURIZED_DIR
 from syn_net.models.common import VALIDATION_OPTS, get_args, xy_to_dataloader

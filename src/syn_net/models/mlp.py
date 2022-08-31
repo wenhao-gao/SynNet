@@ -15,23 +15,26 @@ from torch import nn
 from syn_net.MolEmbedder import MolEmbedder
 
 logger = logging.getLogger(__name__)
-class MLP(pl.LightningModule):
 
-    def __init__(self, input_dim=3072,
-                 output_dim=4,
-                 hidden_dim=1000,
-                 num_layers=5,
-                 dropout=0.5,
-                 num_dropout_layers=1,
-                 task='classification',
-                 loss='cross_entropy',
-                 valid_loss='accuracy',
-                 optimizer='adam',
-                 learning_rate=1e-4,
-                 val_freq=10,
-                 ncpu=16,
-                 molembedder: MolEmbedder = None,
-                 ):
+
+class MLP(pl.LightningModule):
+    def __init__(
+        self,
+        input_dim=3072,
+        output_dim=4,
+        hidden_dim=1000,
+        num_layers=5,
+        dropout=0.5,
+        num_dropout_layers=1,
+        task="classification",
+        loss="cross_entropy",
+        valid_loss="accuracy",
+        optimizer="adam",
+        learning_rate=1e-4,
+        val_freq=10,
+        ncpu=16,
+        molembedder: MolEmbedder = None,
+    ):
         super().__init__()
         self.save_hyperparameters(ignore="molembedder")
         self.loss = loss
@@ -47,7 +50,7 @@ class MLP(pl.LightningModule):
         modules.append(nn.BatchNorm1d(hidden_dim))
         modules.append(nn.ReLU())
 
-        for i in range(num_layers-2):
+        for i in range(num_layers - 2):
             modules.append(nn.Linear(hidden_dim, hidden_dim))
             modules.append(nn.BatchNorm1d(hidden_dim))
             modules.append(nn.ReLU())
@@ -55,7 +58,7 @@ class MLP(pl.LightningModule):
                 modules.append(nn.Dropout(dropout))
 
         modules.append(nn.Linear(hidden_dim, output_dim))
-        if task == 'classification':
+        if task == "classification":
             modules.append(nn.Softmax(dim=1))
 
         self.layers = nn.Sequential(*modules)
@@ -66,17 +69,17 @@ class MLP(pl.LightningModule):
     def training_step(self, batch, batch_idx):
         x, y = batch
         y_hat = self.layers(x)
-        if self.loss == 'cross_entropy':
+        if self.loss == "cross_entropy":
             loss = F.cross_entropy(y_hat, y)
-        elif self.loss == 'mse':
+        elif self.loss == "mse":
             loss = F.mse_loss(y_hat, y)
-        elif self.loss == 'l1':
+        elif self.loss == "l1":
             loss = F.l1_loss(y_hat, y)
-        elif self.loss == 'huber':
+        elif self.loss == "huber":
             loss = F.huber_loss(y_hat, y)
         else:
-            raise ValueError('Not specified loss function: % s' % self.loss)
-        self.log(f'train_loss', loss, on_step=False, on_epoch=True, prog_bar=True, logger=True)
+            raise ValueError("Not specified loss function: % s" % self.loss)
+        self.log(f"train_loss", loss, on_step=False, on_epoch=True, prog_bar=True, logger=True)
         return loss
 
     def _load_building_blocks_kdtree(self, out_feat: str) -> np.ndarray:
@@ -84,25 +87,27 @@ class MLP(pl.LightningModule):
         as a BallTree.
 
         """
-        from syn_net.config import DATA_EMBEDDINGS_DIR
         from pathlib import Path
-        if out_feat == 'gin':
-            bb_emb_gin = np.load(Path(DATA_EMBEDDINGS_DIR) / f'enamine_us_emb_{out_feat}.npy')
-            kdtree = BallTree(bb_emb_gin, metric='euclidean')
-        elif out_feat == 'fp_4096':
-            bb_emb_fp_4096 = np.load(Path(DATA_EMBEDDINGS_DIR) / f'enamine_us_emb_{out_feat}.npy')
-            kdtree = BallTree(bb_emb_fp_4096, metric='euclidean')
-        elif out_feat == 'fp_256':
-            bb_emb_fp_256 = np.load(Path(DATA_EMBEDDINGS_DIR) / f'enamine_us_emb_{out_feat}.npy')
+
+        from syn_net.config import DATA_EMBEDDINGS_DIR
+
+        if out_feat == "gin":
+            bb_emb_gin = np.load(Path(DATA_EMBEDDINGS_DIR) / f"enamine_us_emb_{out_feat}.npy")
+            kdtree = BallTree(bb_emb_gin, metric="euclidean")
+        elif out_feat == "fp_4096":
+            bb_emb_fp_4096 = np.load(Path(DATA_EMBEDDINGS_DIR) / f"enamine_us_emb_{out_feat}.npy")
+            kdtree = BallTree(bb_emb_fp_4096, metric="euclidean")
+        elif out_feat == "fp_256":
+            bb_emb_fp_256 = np.load(Path(DATA_EMBEDDINGS_DIR) / f"enamine_us_emb_{out_feat}.npy")
             kdtree = BallTree(bb_emb_fp_256, metric=cosine_distance)
-        elif out_feat == 'rdkit2d':
-            bb_emb_rdkit2d = np.load(Path(DATA_EMBEDDINGS_DIR) / f'enamine_us_emb_{out_feat}.npy')
-            kdtree = BallTree(bb_emb_rdkit2d, metric='euclidean')
+        elif out_feat == "rdkit2d":
+            bb_emb_rdkit2d = np.load(Path(DATA_EMBEDDINGS_DIR) / f"enamine_us_emb_{out_feat}.npy")
+            kdtree = BallTree(bb_emb_rdkit2d, metric="euclidean")
         elif out_feat == "gin_unittest":
             # The embeddings are pre-computed based on the building blocks
             # under 'tests/assets/building_blocks_matched.csv.gz'.
             emb = np.load("tests/data/building_blocks_emb.npy")
-            kdtree = BallTree(emb,metric="euclidean")
+            kdtree = BallTree(emb, metric="euclidean")
         else:
             raise ValueError
         return kdtree
@@ -111,66 +116,78 @@ class MLP(pl.LightningModule):
         if self.trainer.current_epoch % self.val_freq == 0:
             x, y = batch
             y_hat = self.layers(x)
-            if self.valid_loss == 'cross_entropy':
+            if self.valid_loss == "cross_entropy":
                 loss = F.cross_entropy(y_hat, y)
-            elif self.valid_loss == 'accuracy':
+            elif self.valid_loss == "accuracy":
                 y_hat = torch.argmax(y_hat, axis=1)
-                accuracy = (y_hat==y).sum()/len(y)
+                accuracy = (y_hat == y).sum() / len(y)
                 loss = 1 - accuracy
-            elif self.valid_loss[:11] == 'nn_accuracy':
+            elif self.valid_loss[:11] == "nn_accuracy":
                 # NOTE: Very slow!
                 # Performing the knn-search can easily take a couple of minutes,
                 # even for small datasets.
                 out_feat = self.valid_loss[12:]
-                if self.molembedder is None: # legacy
+                if self.molembedder is None:  # legacy
                     kdtree = self._load_building_blocks_kdtree(out_feat)
                 else:
                     kdtree = self.molembedder.kdtree
-                y     = nn_search_list(y.detach().cpu().numpy(),     None, kdtree)
+                y = nn_search_list(y.detach().cpu().numpy(), None, kdtree)
                 y_hat = nn_search_list(y_hat.detach().cpu().numpy(), None, kdtree)
                 loss = 1 - (sum(y_hat == y) / len(y))
-                accuracy = (y_hat==y).sum()/len(y)
+                accuracy = (y_hat == y).sum() / len(y)
                 loss = 1 - accuracy
-            elif self.valid_loss == 'mse':
+            elif self.valid_loss == "mse":
                 loss = F.mse_loss(y_hat, y)
-            elif self.valid_loss == 'l1':
+            elif self.valid_loss == "l1":
                 loss = F.l1_loss(y_hat, y)
-            elif self.valid_loss == 'huber':
+            elif self.valid_loss == "huber":
                 loss = F.huber_loss(y_hat, y)
             else:
-                raise ValueError('Not specified validation loss function')
-            self.log('val_loss', loss, on_step=False, on_epoch=True, prog_bar=True, logger=True)
+                raise ValueError("Not specified validation loss function")
+            self.log("val_loss", loss, on_step=False, on_epoch=True, prog_bar=True, logger=True)
         else:
             pass
 
     def configure_optimizers(self):
-        if self.optimizer == 'adam':
+        if self.optimizer == "adam":
             optimizer = torch.optim.Adam(self.parameters(), lr=self.learning_rate)
-        elif self.optimizer == 'sgd':
+        elif self.optimizer == "sgd":
             optimizer = torch.optim.SGD(self.parameters(), lr=self.learning_rate)
         return optimizer
+
 
 def load_array(data_arrays, batch_size, is_train=True, ncpu=-1):
     dataset = torch.utils.data.TensorDataset(*data_arrays)
     return torch.utils.data.DataLoader(dataset, batch_size, shuffle=is_train, num_workers=ncpu)
+
 
 def cosine_distance(v1, v2, eps=1e-15):
     return 1 - np.dot(v1, v2) / (np.linalg.norm(v1, ord=2) * np.linalg.norm(v2, ord=2) + eps)
 
 
 def nn_search_list(y, out_feat, kdtree):
-    y = np.atleast_2d(y) # (n_samples, n_features)
-    ind = kdtree.query(y,k=1,return_distance=False) # (n_samples, 1)
+    y = np.atleast_2d(y)  # (n_samples, n_features)
+    ind = kdtree.query(y, k=1, return_distance=False)  # (n_samples, 1)
     return ind
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
 
     states_list = []
     steps_list = []
     for i in range(1):
-        states_list.append(np.load('/home/rociomer/data/synth_net/pis_fp/states_' + str(i) + '_valid.npz', allow_pickle=True))
-        steps_list.append(np.load('/home/rociomer/data/synth_net/pis_fp/steps_' + str(i) + '_valid.npz', allow_pickle=True))
+        states_list.append(
+            np.load(
+                "/home/rociomer/data/synth_net/pis_fp/states_" + str(i) + "_valid.npz",
+                allow_pickle=True,
+            )
+        )
+        steps_list.append(
+            np.load(
+                "/home/rociomer/data/synth_net/pis_fp/steps_" + str(i) + "_valid.npz",
+                allow_pickle=True,
+            )
+        )
 
     states = np.concatenate(states_list, axis=0)
     steps = np.concatenate(steps_list, axis=0)
@@ -186,9 +203,9 @@ if __name__ == '__main__':
 
     pl.seed_everything(0)
     mlp = MLP()
-    tb_logger = pl_loggers.TensorBoardLogger('temp_logs/')
+    tb_logger = pl_loggers.TensorBoardLogger("temp_logs/")
 
     trainer = pl.Trainer(gpus=[0], max_epochs=30, progress_bar_refresh_rate=20, logger=tb_logger)
     t = time.time()
     trainer.fit(mlp, train_data_iter, train_data_iter)
-    print(time.time() - t, 's')
+    print(time.time() - t, "s")

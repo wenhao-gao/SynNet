@@ -12,6 +12,8 @@ from pytorch_lightning import loggers as pl_loggers
 from sklearn.neighbors import BallTree
 from torch import nn
 
+from syn_net.MolEmbedder import MolEmbedder
+
 logger = logging.getLogger(__name__)
 class MLP(pl.LightningModule):
 
@@ -27,15 +29,18 @@ class MLP(pl.LightningModule):
                  optimizer='adam',
                  learning_rate=1e-4,
                  val_freq=10,
-                 ncpu=16):
+                 ncpu=16,
+                 molembedder: MolEmbedder = None,
+                 ):
         super().__init__()
-        self.save_hyperparameters()
+        self.save_hyperparameters(ignore="molembedder")
         self.loss = loss
         self.valid_loss = valid_loss
         self.optimizer = optimizer
         self.learning_rate = learning_rate
         self.ncpu = ncpu
         self.val_freq = val_freq
+        self.molembedder = molembedder
 
         modules = []
         modules.append(nn.Linear(input_dim, hidden_dim))
@@ -112,12 +117,17 @@ class MLP(pl.LightningModule):
                 y_hat = torch.argmax(y_hat, axis=1)
                 loss = 1 - (sum(y_hat == y) / len(y))
             elif self.valid_loss[:11] == 'nn_accuracy':
+                # NOTE: Very slow!
+                # Performing the knn-search can easily take a couple of minutes,
+                # even for small datasets.
                 out_feat = self.valid_loss[12:]
+                if self.molembedder is None: # legacy
                 kdtree = self._load_building_blocks_kdtree(out_feat)
-                y = nn_search_list(y.detach().cpu().numpy(), out_feat=out_feat, kdtree=kdtree)
-                y_hat = nn_search_list(y_hat.detach().cpu().numpy(), out_feat=out_feat, kdtree=kdtree)
+                else:
+                    kdtree = self.molembedder.kdtree
+                y     = nn_search_list(y.detach().cpu().numpy(),     None, kdtree)
+                y_hat = nn_search_list(y_hat.detach().cpu().numpy(), None, kdtree)
                 loss = 1 - (sum(y_hat == y) / len(y))
-                # import ipdb; ipdb.set_trace(context=11)
             elif self.valid_loss == 'mse':
                 loss = F.mse_loss(y_hat, y)
             elif self.valid_loss == 'l1':

@@ -71,7 +71,7 @@ if __name__ == "__main__":
         optimizer="adam",
         learning_rate=1e-4,
         val_freq=10,
-        ncpu=ncpu,
+        ncpu=args.ncpu,
     )
 
     # Set up Trainer

@@ -92,7 +92,7 @@ if __name__ == "__main__":
         learning_rate=1e-4,
         val_freq=10,
         molembedder=molembedder,
-        ncpu=ncpu,
+        ncpu=args.ncpu,
     )
 
     # Set up Trainer
@@ -118,12 +118,11 @@ if __name__ == "__main__":
     trainer = pl.Trainer(
         gpus=[0],
         max_epochs=max_epochs,
-        progress_bar_refresh_rate=int(len(train_data_iter) * 0.05),
+        progress_bar_refresh_rate=int(len(train_dataloader) * 0.05),
         callbacks=[checkpoint_callback],
         logger=[tb_logger],
-        fast_dev_run=True,
     )
 
     logger.info(f"Start training")
-    trainer.fit(mlp, train_data_iter, valid_data_iter)
+    trainer.fit(mlp, train_dataloader, valid_dataloader)
     logger.info(f"Training completed.")

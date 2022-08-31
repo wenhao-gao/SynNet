@@ -157,9 +157,6 @@ def load_array(data_arrays, batch_size, is_train=True, ncpu=-1):
 def cosine_distance(v1, v2, eps=1e-15):
     return 1 - np.dot(v1, v2) / (np.linalg.norm(v1, ord=2) * np.linalg.norm(v2, ord=2) + eps)
 
-def nn_search(_e, _tree, _k=1):
-    dist, ind = _tree.query(_e, k=_k)
-    return ind[0][0]
 
 def nn_search_list(y, out_feat, kdtree):
     y = np.atleast_2d(y) # (n_samples, n_features)

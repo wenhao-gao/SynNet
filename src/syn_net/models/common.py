@@ -32,6 +32,12 @@ def get_args():
                         help="Indicates whether to restart training.")
     parser.add_argument("-v", "--version", type=int, default=1,
                         help="Version")
+    parser.add_argument("--debug", default=False, action="store_true")
     return parser.parse_args()
 
+if __name__=="__main__":
+    import json
+    args = get_args()
+    print("Default Arguments are:")
+    print(json.dumps(args.__dict__,indent=2))
 

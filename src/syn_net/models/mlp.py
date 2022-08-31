@@ -75,8 +75,8 @@ class MLP(pl.LightningModule):
         elif self.loss == 'huber':
             loss = F.huber_loss(y_hat, y)
         else:
-            raise ValueError('Not specified loss function')
-        self.log(f'train_{self.loss}', loss, on_step=False, on_epoch=True, prog_bar=True, logger=True)
+            raise ValueError('Not specified loss function: % s' % self.loss)
+        self.log(f'train_loss', loss, on_step=False, on_epoch=True, prog_bar=True, logger=True)
         return loss
 
     def _load_building_blocks_kdtree(self, out_feat: str) -> np.ndarray:
@@ -115,19 +115,22 @@ class MLP(pl.LightningModule):
                 loss = F.cross_entropy(y_hat, y)
             elif self.valid_loss == 'accuracy':
                 y_hat = torch.argmax(y_hat, axis=1)
-                loss = 1 - (sum(y_hat == y) / len(y))
+                accuracy = (y_hat==y).sum()/len(y)
+                loss = 1 - accuracy
             elif self.valid_loss[:11] == 'nn_accuracy':
                 # NOTE: Very slow!
                 # Performing the knn-search can easily take a couple of minutes,
                 # even for small datasets.
                 out_feat = self.valid_loss[12:]
                 if self.molembedder is None: # legacy
-                kdtree = self._load_building_blocks_kdtree(out_feat)
+                    kdtree = self._load_building_blocks_kdtree(out_feat)
                 else:
                     kdtree = self.molembedder.kdtree
                 y     = nn_search_list(y.detach().cpu().numpy(),     None, kdtree)
                 y_hat = nn_search_list(y_hat.detach().cpu().numpy(), None, kdtree)
                 loss = 1 - (sum(y_hat == y) / len(y))
+                accuracy = (y_hat==y).sum()/len(y)
+                loss = 1 - accuracy
             elif self.valid_loss == 'mse':
                 loss = F.mse_loss(y_hat, y)
             elif self.valid_loss == 'l1':
@@ -154,6 +157,9 @@ def load_array(data_arrays, batch_size, is_train=True, ncpu=-1):
 def cosine_distance(v1, v2, eps=1e-15):
     return 1 - np.dot(v1, v2) / (np.linalg.norm(v1, ord=2) * np.linalg.norm(v2, ord=2) + eps)
 
+def nn_search(_e, _tree, _k=1):
+    dist, ind = _tree.query(_e, k=_k)
+    return ind[0][0]
 
 def nn_search_list(y, out_feat, kdtree):
     y = np.atleast_2d(y) # (n_samples, n_features)

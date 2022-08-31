@@ -768,6 +768,10 @@ class SyntheticTreeSet:
     def __len__(self):
         return len(self.sts)
 
+    def __getitem__(self,index):
+        if self.sts is None: raise IndexError("No Synthetic Trees.")
+        return self.sts[index]
+
     def load(self, json_file):
         """
         A function that loads a JSON-formatted synthetic tree file.
@@ -798,9 +802,6 @@ class SyntheticTreeSet:
         }
         with gzip.open(json_file, 'w') as f:
             f.write(json.dumps(st_list).encode('utf-8'))
-
-    def __len__(self):
-        return len(self.sts)
 
     def _print(self, x=3):
         # For debugging

@@ -20,7 +20,7 @@ MODEL_ID = Path(__file__).stem
 
 def _fetch_molembedder():
     knn_embedding_id = validation_option[12:]
-    file = Path(DATA_EMBEDDINGS_DIR) / f"enamine_us_emb_{knn_embedding_id}.npy"
+    file = Path(DATA_EMBEDDINGS_DIR) / f"hb-enamine_us-2021-smiles-{knn_embedding_id}.npy"
     logger.info(f"Try to load precomputed MolEmbedder from {file}.")
     molembedder = MolEmbedder().load_precomputed(file).init_balltree(metric=cosine_distance)
     logger.info(f"Loaded MolEmbedder from {file}.")

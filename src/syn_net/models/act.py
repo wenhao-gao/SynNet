@@ -32,6 +32,7 @@ if __name__ == "__main__":
         X_file=Path(DATA_FEATURIZED_DIR) / f"{id}/X_{MODEL_ID}_{dataset}.npz",
         y_file=Path(DATA_FEATURIZED_DIR) / f"{id}/y_{MODEL_ID}_{dataset}.npz",
         n=None if not args.debug else 1000,
+        task = "classification",
         batch_size=args.batch_size,
         num_workers=args.ncpu,
         shuffle=True if dataset == "train" else False,
@@ -42,6 +43,7 @@ if __name__ == "__main__":
         X_file=Path(DATA_FEATURIZED_DIR) / f"{id}/X_{MODEL_ID}_{dataset}.npz",
         y_file=Path(DATA_FEATURIZED_DIR) / f"{id}/y_{MODEL_ID}_{dataset}.npz",
         n=None if not args.debug else 1000,
+        task = "classification",
         batch_size=args.batch_size,
         num_workers=args.ncpu,
         shuffle=True if dataset == "train" else False,
@@ -90,7 +92,7 @@ if __name__ == "__main__":
     )
     earlystop_callback = EarlyStopping(monitor="val_loss", patience=10)
 
-    max_epochs = args.epoch if not args.debug else 2
+    max_epochs = args.epoch if not args.debug else 20
     # Create trainer
     trainer = pl.Trainer(
         gpus=[0],

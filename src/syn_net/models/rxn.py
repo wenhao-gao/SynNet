@@ -32,6 +32,7 @@ if __name__ == "__main__":
         X_file=Path(DATA_FEATURIZED_DIR) / f"{id}/X_{MODEL_ID}_{dataset}.npz",
         y_file=Path(DATA_FEATURIZED_DIR) / f"{id}/y_{MODEL_ID}_{dataset}.npz",
         n=None if not args.debug else 1000,
+        task="classification",
         batch_size=args.batch_size,
         num_workers=args.ncpu,
         shuffle=True if dataset == "train" else False,
@@ -42,6 +43,7 @@ if __name__ == "__main__":
         X_file=Path(DATA_FEATURIZED_DIR) / f"{id}/X_{MODEL_ID}_{dataset}.npz",
         y_file=Path(DATA_FEATURIZED_DIR) / f"{id}/y_{MODEL_ID}_{dataset}.npz",
         n=None if not args.debug else 1000,
+        task="classification",
         batch_size=args.batch_size,
         num_workers=args.ncpu,
         shuffle=True if dataset == "train" else False,
@@ -102,6 +104,7 @@ if __name__ == "__main__":
             ncpu=args.ncpu,
         )
     else:  # load from checkpt -> only for fp, not gin
+    # TODO: Use `ckpt_path`, c.f. https://pytorch-lightning.readthedocs.io/en/stable/api/pytorch_lightning.trainer.trainer.Trainer.html#pytorch_lightning.trainer.trainer.Trainer.fit
         mlp = MLP.load_from_checkpoint(
             path_to_rxn,
             input_dim=input_dim,
@@ -115,7 +118,7 @@ if __name__ == "__main__":
             valid_loss="accuracy",
             optimizer="adam",
             learning_rate=1e-4,
-            ncpu=ncpu,
+            ncpu=args.ncpu,
         )
 
     # Set up Trainer

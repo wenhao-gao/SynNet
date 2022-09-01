@@ -70,7 +70,7 @@ class MLP(pl.LightningModule):
         x, y = batch
         y_hat = self.layers(x)
         if self.loss == "cross_entropy":
-            loss = F.cross_entropy(y_hat, y)
+            loss = F.cross_entropy(y_hat, y.long())
         elif self.loss == "mse":
             loss = F.mse_loss(y_hat, y)
         elif self.loss == "l1":
@@ -117,7 +117,7 @@ class MLP(pl.LightningModule):
             x, y = batch
             y_hat = self.layers(x)
             if self.valid_loss == "cross_entropy":
-                loss = F.cross_entropy(y_hat, y)
+                loss = F.cross_entropy(y_hat, y.long())
             elif self.valid_loss == "accuracy":
                 y_hat = torch.argmax(y_hat, axis=1)
                 accuracy = (y_hat == y).sum() / len(y)

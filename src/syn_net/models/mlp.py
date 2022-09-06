@@ -8,8 +8,6 @@ import numpy as np
 import pytorch_lightning as pl
 import torch
 import torch.nn.functional as F
-from pytorch_lightning import loggers as pl_loggers
-from sklearn.neighbors import BallTree
 from torch import nn
 
 from syn_net.MolEmbedder import MolEmbedder
@@ -64,9 +62,11 @@ class MLP(pl.LightningModule):
         self.layers = nn.Sequential(*modules)
 
     def forward(self, x):
+        """Forward step for inference only."""
         return self.layers(x)
 
     def training_step(self, batch, batch_idx):
+        """The complete training loop."""
         x, y = batch
         y_hat = self.layers(x)
         if self.loss == "cross_entropy":
@@ -83,6 +83,7 @@ class MLP(pl.LightningModule):
         return loss
 
     def validation_step(self, batch, batch_idx):
+        """The complete validation loop."""
         if self.trainer.current_epoch % self.val_freq == 0:
             x, y = batch
             y_hat = self.layers(x)
@@ -115,6 +116,7 @@ class MLP(pl.LightningModule):
             pass
 
     def configure_optimizers(self):
+        """Define Optimerzers and LR schedulers."""
         if self.optimizer == "adam":
             optimizer = torch.optim.Adam(self.parameters(), lr=self.learning_rate)
         elif self.optimizer == "sgd":

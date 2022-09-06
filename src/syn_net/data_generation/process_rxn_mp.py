@@ -3,7 +3,7 @@ This file processes a set of reaction templates and finds applicable
 reactants from a list of purchasable building blocks.
 
 Usage:
-    python process__rxnmp.py
+    python process_rxn.py
 """
 import multiprocessing as mp
 from functools import partial
@@ -33,7 +33,15 @@ def _match_building_blocks_to_rxn(building_blocks: list[str], _rxn: Reaction):
 from syn_net.config import (BUILDING_BLOCKS_RAW_DIR, DATA_PREPROCESS_DIR,
                             REACTION_TEMPLATE_DIR)
 
+def get_args():
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--building-blocks-file", type=str, help="Input file with SMILES strings (First row `SMILES`, then one per line).")
+    return parser.parse_args()
+
 if __name__ == "__main__":
+
+    args = get_args()
     reaction_template_id = "hb"  # "pis" or "hb"
     building_blocks_id = "enamine_us-2021-smiles"
 

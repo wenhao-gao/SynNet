@@ -12,7 +12,7 @@ import pandas as pd
 from scipy import sparse
 from tqdm import tqdm
 
-from syn_net.utils.predict_utils import get_mol_embedding
+from syn_net.encoders.gins import get_mol_embedding
 from syn_net.utils.prep_utils import organize, synthetic_tree_generator, prep_data
 from syn_net.utils.data_utils import SyntheticTreeSet, Reaction, ReactionSet
 
@@ -198,17 +198,17 @@ class TestDataPrep(unittest.TestCase):
         def _compare_to_reference(network_type: str):
             X = sparse.load_npz(f"{main_dir}X_{network_type}_train.npz")
             y = sparse.load_npz(f"{main_dir}y_{network_type}_train.npz")
-            
+
             Xref = sparse.load_npz(f"{ref_dir}X_{network_type}_train.npz")
             yref = sparse.load_npz(f"{ref_dir}y_{network_type}_train.npz")
 
             self.assertEqual(X.toarray().all(), Xref.toarray().all(),msg=f"{network_type=}")
-            self.assertEqual(y.toarray().all(), yref.toarray().all(),msg=f"{network_type=}")       
+            self.assertEqual(y.toarray().all(), yref.toarray().all(),msg=f"{network_type=}")
 
         for network in ["act", "rt1", "rxn", "rt2"]:
             _compare_to_reference(network)
 
-       
+
 
     def test_bb_emb(self):
         """
@@ -242,3 +242,7 @@ class TestDataPrep(unittest.TestCase):
         embeddings_ref = np.load(f"{ref_dir}building_blocks_emb.npy")
 
         self.assertEqual(embeddings.all(), embeddings_ref.all())
+
+
+if __name__=="__main__":
+    TestDataPrep()

@@ -4,13 +4,14 @@ This file contains various utils for data preparation and preprocessing.
 from typing import Iterator, Union
 import numpy as np
 from scipy import sparse
-from dgllife.model import load_pretrained
 from tdc.chem_utils import MolConvert
 from sklearn.preprocessing import OneHotEncoder
 from syn_net.utils.data_utils import Reaction, SyntheticTree
 from syn_net.utils.predict_utils import (can_react, get_action_mask,
                                          get_reaction_mask, mol_fp,
-                                         get_mol_embedding)
+                                         )
+from syn_net.encoders.gins import get_mol_embedding
+
 from pathlib import Path
 from rdkit import Chem
 import logging
@@ -36,6 +37,7 @@ def rdkit2d_embedding(smi):
 import functools
 @functools.lru_cache(maxsize=1)
 def _fetch_gin_pretrained_model(model_name: str):
+    from dgllife.model import load_pretrained
     """Get a GIN pretrained model to use for creating molecular embeddings"""
     device     = 'cpu'
     model      = load_pretrained(model_name).to(device)
@@ -68,8 +70,7 @@ def organize(st, d_mol=300, target_embedding='fp', radius=2, nBits=4096,
         sparse.csc_matrix: Node states pulled from the tree.
         sparse.csc_matrix: Actions pulled from the tree.
     """
-    # define model to use for molecular embedding
-    model = _fetch_gin_pretrained_model("gin_supervised_contextpred")
+
 
     states = []
     steps = []
@@ -83,10 +84,15 @@ def organize(st, d_mol=300, target_embedding='fp', radius=2, nBits=4096,
 
     d_mol = OUTPUT_EMBEDDINGS_DIMS[output_embedding]
 
+    # Do we need a gin embedder?
+    if output_embedding == "gin" or target_embedding == "gin":
+        model = _fetch_gin_pretrained_model("gin_supervised_contextpred")
+
     # Compute embedding of target molecule, i.e. the root of the synthetic tree
     if target_embedding == 'fp':
         target = mol_fp(st.root.smiles, radius, nBits).tolist()
     elif target_embedding == 'gin':
+        # define model to use for molecular embedding
         target = get_mol_embedding(st.root.smiles, model=model).tolist()
     else:
         raise ValueError('Target embedding only supports fp and gin.')

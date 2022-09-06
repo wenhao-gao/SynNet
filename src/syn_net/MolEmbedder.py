@@ -80,7 +80,7 @@ class MolEmbedder:
         if self.embeddings is None:
             raise ValueError("Neeed emebddings to compute kdtree.")
         X = self.embeddings
-        self.kdtree_metric = metric.__name__
+        self.kdtree_metric = metric.__name__ if not isinstance(metric,str) else metric
         self.kdtree = BallTree(X, metric=metric)
 
         return self

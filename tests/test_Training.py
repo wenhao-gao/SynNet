@@ -11,11 +11,17 @@ from scipy import sparse
 import torch
 
 from syn_net.models.mlp import MLP, load_array
+from syn_net.MolEmbedder import MolEmbedder
 
 
 TEST_DIR = Path(__file__).parent
 
 REACTION_TEMPLATES_FILE =  f"{TEST_DIR}/assets/rxn_set_hb_test.txt"
+
+def _fetch_molembedder():
+    file = "tests/data/building_blocks_emb.npy"
+    molembedder = MolEmbedder().load_precomputed(file).init_balltree(metric="euclidean")
+    return molembedder
 
 class TestReactionTemplateFile(unittest.TestCase):
 
@@ -136,6 +142,7 @@ class TestTraining(unittest.TestCase):
             optimizer="adam",
             learning_rate=1e-4,
             val_freq=10,
+            molembedder=_fetch_molembedder(),
             ncpu=ncpu,
         )
 
@@ -253,6 +260,7 @@ class TestTraining(unittest.TestCase):
             optimizer="adam",
             learning_rate=1e-4,
             val_freq=10,
+            molembedder=_fetch_molembedder(),
             ncpu=ncpu,
         )
 

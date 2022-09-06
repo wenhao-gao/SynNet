@@ -82,36 +82,6 @@ class MLP(pl.LightningModule):
         self.log(f"train_loss", loss, on_step=False, on_epoch=True, prog_bar=True, logger=True)
         return loss
 
-    def _load_building_blocks_kdtree(self, out_feat: str) -> np.ndarray:
-        """Helper function to load the pre-computed building block embeddings
-        as a BallTree.
-
-        """
-        from pathlib import Path
-
-        from syn_net.config import DATA_EMBEDDINGS_DIR
-
-        if out_feat == "gin":
-            bb_emb_gin = np.load(Path(DATA_EMBEDDINGS_DIR) / f"enamine_us_emb_{out_feat}.npy")
-            kdtree = BallTree(bb_emb_gin, metric="euclidean")
-        elif out_feat == "fp_4096":
-            bb_emb_fp_4096 = np.load(Path(DATA_EMBEDDINGS_DIR) / f"enamine_us_emb_{out_feat}.npy")
-            kdtree = BallTree(bb_emb_fp_4096, metric="euclidean")
-        elif out_feat == "fp_256":
-            bb_emb_fp_256 = np.load(Path(DATA_EMBEDDINGS_DIR) / f"enamine_us_emb_{out_feat}.npy")
-            kdtree = BallTree(bb_emb_fp_256, metric=cosine_distance)
-        elif out_feat == "rdkit2d":
-            bb_emb_rdkit2d = np.load(Path(DATA_EMBEDDINGS_DIR) / f"enamine_us_emb_{out_feat}.npy")
-            kdtree = BallTree(bb_emb_rdkit2d, metric="euclidean")
-        elif out_feat == "gin_unittest":
-            # The embeddings are pre-computed based on the building blocks
-            # under 'tests/assets/building_blocks_matched.csv.gz'.
-            emb = np.load("tests/data/building_blocks_emb.npy")
-            kdtree = BallTree(emb, metric="euclidean")
-        else:
-            raise ValueError
-        return kdtree
-
     def validation_step(self, batch, batch_idx):
         if self.trainer.current_epoch % self.val_freq == 0:
             x, y = batch
@@ -126,14 +96,10 @@ class MLP(pl.LightningModule):
                 # NOTE: Very slow!
                 # Performing the knn-search can easily take a couple of minutes,
                 # even for small datasets.
-                out_feat = self.valid_loss[12:]
-                if self.molembedder is None:  # legacy
-                    kdtree = self._load_building_blocks_kdtree(out_feat)
-                else:
-                    kdtree = self.molembedder.kdtree
+                kdtree = self.molembedder.kdtree
                 y = nn_search_list(y.detach().cpu().numpy(), None, kdtree)
                 y_hat = nn_search_list(y_hat.detach().cpu().numpy(), None, kdtree)
-                loss = 1 - (sum(y_hat == y) / len(y))
+
                 accuracy = (y_hat == y).sum() / len(y)
                 loss = 1 - accuracy
             elif self.valid_loss == "mse":
@@ -143,7 +109,7 @@ class MLP(pl.LightningModule):
             elif self.valid_loss == "huber":
                 loss = F.huber_loss(y_hat, y)
             else:
-                raise ValueError("Not specified validation loss function")
+                raise ValueError("Not specified validation loss function for '%s'" % self.valid_loss)
             self.log("val_loss", loss, on_step=False, on_epoch=True, prog_bar=True, logger=True)
         else:
             pass
@@ -172,40 +138,4 @@ def nn_search_list(y, out_feat, kdtree):
 
 
 if __name__ == "__main__":
-
-    states_list = []
-    steps_list = []
-    for i in range(1):
-        states_list.append(
-            np.load(
-                "/home/rociomer/data/synth_net/pis_fp/states_" + str(i) + "_valid.npz",
-                allow_pickle=True,
-            )
-        )
-        steps_list.append(
-            np.load(
-                "/home/rociomer/data/synth_net/pis_fp/steps_" + str(i) + "_valid.npz",
-                allow_pickle=True,
-            )
-        )
-
-    states = np.concatenate(states_list, axis=0)
-    steps = np.concatenate(steps_list, axis=0)
-
-    X = states
-    y = steps[:, 0]
-
-    X_train = torch.Tensor(X)
-    y_train = torch.LongTensor(y)
-
-    batch_size = 64
-    train_data_iter = load_array((X_train, y_train), batch_size, is_train=True)
-
-    pl.seed_everything(0)
-    mlp = MLP()
-    tb_logger = pl_loggers.TensorBoardLogger("temp_logs/")
-
-    trainer = pl.Trainer(gpus=[0], max_epochs=30, progress_bar_refresh_rate=20, logger=tb_logger)
-    t = time.time()
-    trainer.fit(mlp, train_data_iter, train_data_iter)
-    print(time.time() - t, "s")
+    pass

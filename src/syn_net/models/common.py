@@ -39,6 +39,7 @@ def get_args():
     )
     parser.add_argument("-v", "--version", type=int, default=1, help="Version")
     parser.add_argument("--debug", default=False, action="store_true")
+    parser.add_argument("--fast-dev-run", default=False, action="store_true")
     return parser.parse_args()
 
 
@@ -48,7 +49,7 @@ def xy_to_dataloader(X_file: str, y_file: str, task: str = "regression", n: Unio
     y = sparse.load_npz(y_file)
     # Filer?
     if isinstance(n, int):
-        n = min(n, min(X.shape[0], y.shape[0]))  # ensure n does not exceed size of dataset
+        n = min(n, X.shape[0])  # ensure n does not exceed size of dataset
         X = X[:n]
         y = y[:n]
     elif isinstance(n, float) and n < 1.0:

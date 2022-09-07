@@ -12,7 +12,7 @@ import pandas as pd
 from scipy import sparse
 from tqdm import tqdm
 
-from syn_net.encoders.gins import get_mol_embedding
+from syn_net.encoding.gins import get_mol_embedding
 from syn_net.utils.prep_utils import organize, synthetic_tree_generator, prep_data
 from syn_net.utils.data_utils import SyntheticTreeSet, Reaction, ReactionSet
 

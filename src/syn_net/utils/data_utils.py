@@ -9,12 +9,13 @@ Here we define the following classes for working with synthetic tree data:
 """
 import gzip
 import json
+from typing import Any, Tuple, Union
+
 import pandas as pd
+from rdkit import Chem
+from rdkit.Chem import AllChem, Draw, rdChemReactions
 from tqdm import tqdm
-import rdkit.Chem as Chem
-from rdkit.Chem import Draw
-from rdkit.Chem import AllChem
-from rdkit.Chem import rdChemReactions
+
 
 # the definition of reaction classes below
 class Reaction:
@@ -27,6 +28,19 @@ class Reaction:
         smiles: (str): A reaction SMILES string that macthes the SMARTS pattern.
         reference (str): Reference information for the reaction.
     """
+    smirks: str # SMARTS pattern
+    rxn: Chem.rdChemReactions.ChemicalReaction
+    num_reactant: int
+    num_agent: int
+    num_product: int
+    reactant_template: Tuple[str,str]
+    product_template: str
+    agent_templat: str
+    available_reactants: list[Union[str,Chem.Mol]]
+    rxnname: str
+    smiles: Any
+    reference: Any
+
     def __init__(self, template=None, rxnname=None, smiles=None, reference=None):
 
         if template is not None:

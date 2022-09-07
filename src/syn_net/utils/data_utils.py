@@ -59,14 +59,16 @@ class Reaction:
                 raise ValueError('Reaction is neither uni- nor bi-molecular.')
             self.num_agent = self.rxn.GetNumAgentTemplates()
             self.num_product = self.rxn.GetNumProductTemplates()
-            if self.num_reactant == 1:
-                self.reactant_template = list((self.smirks.split('>')[0], ))
-            else:
-                self.reactant_template = list((self.smirks.split('>')[0].split('.')[0], self.smirks.split('>')[0].split('.')[1]))
-            self.product_template = self.smirks.split('>')[2]
-            self.agent_template = self.smirks.split('>')[1]
 
-            del rxn
+            # Extract reactants, agents, products
+            reactants, agents, products = self.smirks.split(">")
+
+            if self.num_reactant == 1:
+                self.reactant_template = list((reactants, ))
+            else:
+                self.reactant_template = list(reactants.split("."))
+            self.product_template = products
+            self.agent_template = agents
         else:
             self.smirks = None
 
@@ -109,8 +111,7 @@ class Reaction:
         elif isinstance(smi, Chem.Mol):
             return smi
         else:
-            raise TypeError('The input should be either a SMILES string or an '
-                            'RDKit.Chem.Mol object.')
+            raise TypeError(f"f{type(smi)} not supported, only `str` or `RDKit.Chem.Mol`")
 
     def visualize(self, name='./reaction1_highlight.o.png'):
         """
@@ -147,7 +148,7 @@ class Reaction:
         smi    = self.get_mol(smi)
         return self.rxn.IsMoleculeProduct(smi)
 
-    def is_reactant_first(self, smi):
+    def is_reactant_first(self, smi: Union[str, Chem.Mol]) -> bool:
         """
         A function that checks if a molecule is the first reactant in the reaction
         defined by the `Reaction` object, where the order of the reactants is
@@ -167,7 +168,7 @@ class Reaction:
         else:
             return False
 
-    def is_reactant_second(self, smi):
+    def is_reactant_second(self, smi: Union[str,Chem.Mol]) -> bool:
         """
         A function that checks if a molecule is the second reactant in the reaction
         defined by the `Reaction` object, where the order of the reactants is
@@ -187,13 +188,8 @@ class Reaction:
         else:
             return False
 
-    def get_smirks(self):
-        """
-        A function that returns the SMARTS pattern which represents the reaction.
-
-        Returns:
-            self.smirks (str): SMARTS pattern representing the reaction.
-        """
+    def get_smirks(self) -> str:
+        """Returns the SMARTS pattern which represents the reaction."""
         return self.smirks
 
     def get_reactant_template(self, ind=0):
@@ -290,24 +286,23 @@ class Reaction:
         else:
             return uniqps
 
-    def _filter_reactants(self, smi_list):
+    def _filter_reactants(self, smiles: list[str]) -> Tuple[list[str],list[str]]:
         """
         Filters reactants which do not match the reaction.
 
         Args:
-            smi_list (list): Contains SMILES to search through for matches.
-
-        Raises:
-            ValueError: Raised if the `Reaction` object does not describe a uni-
-                or bi-molecular reaction.
+            smiles: Possible reactants for this reaction.
 
         Returns:
-            tuple: Contains list(s) of SMILES which match either the first
+            :lists of SMILES which match either the first
                 reactant, or, if applicable, the second reactant.
+
+        Raises:
+            ValueError: If `self` is not a uni- or bi-molecular reaction.
         """
         if self.num_reactant == 1:  # uni-molecular reaction
             smi_w_patt = []
-            for smi in tqdm(smi_list):
+            for smi in tqdm(smiles):
                 if self.is_reactant_first(smi):
                     smi_w_patt.append(smi)
             return (smi_w_patt, )
@@ -315,7 +310,7 @@ class Reaction:
         elif self.num_reactant == 2:  # bi-molecular reaction
             smi_w_patt1 = []
             smi_w_patt2 = []
-            for smi in tqdm(smi_list):
+            for smi in tqdm(smiles):
                 if self.is_reactant_first(smi):
                     smi_w_patt1.append(smi)
                 if self.is_reactant_second(smi):
@@ -324,17 +319,16 @@ class Reaction:
         else:
             raise ValueError('This reaction is neither uni- nor bi-molecular.')
 
-    def set_available_reactants(self, building_block_list):
+    def set_available_reactants(self, building_blocks: list[str]):
         """
-        A function that finds the applicable building blocks from a list of
-        purchasable building blocks.
+        Finds applicable reactants from a list of building blocks.
+        Sets `self.available_reactants`.
 
         Args:
-            building_block_list (list): The list of purchasable building blocks,
-                where building blocks are represented as SMILES strings.
+            building_blocks: Building blocks as SMILES strings.
         """
-        self.available_reactants = list(self._filter_reactants(building_block_list))
-        return None
+        self.available_reactants = list(self._filter_reactants(building_blocks))
+        return self
 
 
 class ReactionSet:

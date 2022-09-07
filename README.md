@@ -60,7 +60,7 @@ conda env create -f environment.yml
 Before running any SynNet code, activate the environment and install this package in development mode. This ensures the scripts can find the right files. You can do this by typing:
 
 ```bash
-source activate synthenv
+source activate synnet
 pip install -e .
 ```
 
@@ -121,7 +121,7 @@ In addition to the necessary data, see [Data](#data), we pre-compute an embeddin
 python scripts/compute_embedding_mp.py \
     --feature "fp_256" \
     --rxn-template "hb" \
-    --ncpu 10 
+    --ncpu 10
 ```
 
 #### Synthesis Planning
@@ -162,7 +162,7 @@ python scripts/optimize_ga.py \
     -i path/to/population.npy \
     --radius 2 --nbits 4096 \
     --num_population 128 --num_offspring 512 --num_gen 200 --objective gsk --restart \
-    --ncpu 32 
+    --ncpu 32
 ```
 
 Note: the input file indicated by `-i` contains the seed molecules in CSV format for an initial run, and as a pre-saved numpy array of the population for restarting the run.

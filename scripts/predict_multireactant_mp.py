@@ -6,12 +6,12 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
-
 from syn_net.config import (CHECKPOINTS_DIR, DATA_EMBEDDINGS_DIR,
                             DATA_PREPARED_DIR, DATA_PREPROCESS_DIR,
                             DATA_RESULT_DIR)
+from syn_net.models.chkpt_loader import load_modules_from_checkpoint
 from syn_net.utils.data_utils import ReactionSet, SyntheticTreeSet
-from syn_net.utils.predict_utils import (load_modules_from_checkpoint, mol_fp,
+from syn_net.utils.predict_utils import (mol_fp,
                                          synthetic_tree_decoder_multireactant)
 
 Path(DATA_RESULT_DIR).mkdir(exist_ok=True)
@@ -113,7 +113,7 @@ def func(smiles: str):
         smi = None
         similarity =  0
         tree = None
-    
+
     return smi, similarity, tree
 
 
@@ -148,7 +148,7 @@ if __name__ == '__main__':
     featurize    = args.featurize
     radius       = args.radius
     ncpu         = args.ncpu
-    param_dir    = f"{rxn_template}_{featurize}_{radius}_{nbits}_{out_dim}" 
+    param_dir    = f"{rxn_template}_{featurize}_{radius}_{nbits}_{out_dim}"
 
     # Load data ...
     # ... query molecules (i.e. molecules to decode)
@@ -195,13 +195,13 @@ if __name__ == '__main__':
     # Save to local dir
     output_dir = DATA_RESULT_DIR if args.output_dir is None else args.output_dir
     print('Saving results to {output_dir} ...')
-    df = pd.DataFrame({'query SMILES' : smiles_queries, 
-                    'decode SMILES': smis_decoded, 
+    df = pd.DataFrame({'query SMILES' : smiles_queries,
+                    'decode SMILES': smis_decoded,
                     'similarity'   : similarities})
-    df.to_csv(f'{output_dir}/decode_result_{args.data}.csv.gz', 
-            compression='gzip', 
+    df.to_csv(f'{output_dir}/decode_result_{args.data}.csv.gz',
+            compression='gzip',
             index=False,)
-    
+
     synthetic_tree_set = SyntheticTreeSet(sts=trees)
     synthetic_tree_set.save(f'{output_dir}/decoded_st_{args.data}.json.gz')
 

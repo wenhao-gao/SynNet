@@ -4,13 +4,12 @@ This file contains various utils for data preparation and preprocessing.
 from typing import Iterator, Union
 import numpy as np
 from scipy import sparse
-from tdc.chem_utils import MolConvert
 from sklearn.preprocessing import OneHotEncoder
 from syn_net.utils.data_utils import Reaction, SyntheticTree
 from syn_net.utils.predict_utils import (can_react, get_action_mask,
                                          get_reaction_mask, mol_fp,
                                          )
-from syn_net.encoders.gins import get_mol_embedding
+from syn_net.encoding.gins import get_mol_embedding
 
 from pathlib import Path
 from rdkit import Chem
@@ -27,6 +26,7 @@ def rdkit2d_embedding(smi):
     Returns:
         np.ndarray: A molecular embedding corresponding to the input molecule.
     """
+    from tdc.chem_utils import MolConvert
     if smi is None:
         return np.zeros(200).reshape((-1, ))
     else:

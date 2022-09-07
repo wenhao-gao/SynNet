@@ -10,11 +10,10 @@ import rdkit
 import torch
 from rdkit import Chem
 from sklearn.neighbors import BallTree
-from syn_net.encoders.distances import cosine_distance, tanimoto_similarity
-from syn_net.encoders.fingerprints import mol_fp
-from syn_net.encoders.utils import one_hot_encoder
+from syn_net.encoding.distances import cosine_distance, tanimoto_similarity
+from syn_net.encoding.fingerprints import mol_fp
+from syn_net.encoding.utils import one_hot_encoder
 from syn_net.utils.data_utils import Reaction, SyntheticTree
-from tdc.chem_utils import MolConvert
 
 # create a random seed for NumPy
 np.random.seed(6)
@@ -567,10 +566,11 @@ def synthetic_tree_decoder_multireactant(
 
 
 def rdkit2d_embedding(smi):
-    # define the RDKit 2D descriptors conversion function
-    rdkit2d = MolConvert(src="SMILES", dst="RDKit2D")
+    from tdc.chem_utils import MolConvert
 
     if smi is None:
         return np.zeros(200).reshape((-1,)).tolist()
     else:
+        # define the RDKit 2D descriptor
+        rdkit2d = MolConvert(src="SMILES", dst="RDKit2D")
         return rdkit2d(smi).tolist()

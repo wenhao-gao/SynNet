@@ -1,5 +1,5 @@
 import numpy as np
-from syn_net.encoders.fingerprints import mol_fp
+from syn_net.encoding.fingerprints import mol_fp
 
 def cosine_distance(v1, v2, eps=1e-15):
     """Computes the cosine similarity between two vectors.

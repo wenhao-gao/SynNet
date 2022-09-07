@@ -28,17 +28,18 @@ Let's start.
     In other words, filter out all building blocks that do not match any reaction template.
     There is no need to keep them, as they cannot act as reactant.
     In a first step, we match all building blocks with each reaction template.
-    In a second step, we save a set of all matched building blocks.
+    In a second step, we save all matched building blocks.
 
     ```bash
     # Match
-    python scripts/01-process_rxn.py
-    # Filter
-    python scripts/02-filter-unmatched.py
+    python scripts/01-filter-buildingblocks.py \
+        --building-blocks-file "data/assets/building-blocks/enamine-us-smiles.csv.gz"  \
+        --rxn-template-file "data/assets/reaction-templates/hb.txt"  \
+        --output-file "data/pre-process/building-blocks/enamine-us-smiles.csv.gz"
     ```
 
     > :bulb: All following steps use this matched building blocks <-> reaction template data. As of now, you still have to specify these parameters again for every script to that it can load the right data.
-  
+
 2. Generate *synthetic trees*
 
     Herein we generate the data used for training the networks.
@@ -49,7 +50,7 @@ Let's start.
     ```bash
     # Generate synthetic trees
     python scripts/03-make_dataset_mp.py
-    # Filter 
+    # Filter
     python scripts/04-sample_from_original.py
     ```
 

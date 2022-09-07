@@ -9,7 +9,7 @@ Here we define the following classes for working with synthetic tree data:
 """
 import gzip
 import json
-from typing import Any, Tuple, Union
+from typing import Any, Optional, Tuple, Union, Set
 
 import pandas as pd
 from rdkit import Chem
@@ -36,7 +36,7 @@ class Reaction:
     reactant_template: Tuple[str,str]
     product_template: str
     agent_templat: str
-    available_reactants: list[Union[str,Chem.Mol]]
+    available_reactants: Tuple[list[str],Optional[list[str]]]
     rxnname: str
     smiles: Any
     reference: Any
@@ -90,12 +90,12 @@ class Reaction:
         self.reactant_template   = list(reactant_template)
         self.product_template    = product_template
         self.agent_template      = agent_template
-        self.available_reactants = list(available_reactants)
+        self.available_reactants = list(available_reactants) # TODO: use Tuple[list,list] here
         self.rxnname             = rxnname
         self.smiles              = smiles
         self.reference           = reference
 
-    def get_mol(self, smi):
+    def get_mol(self, smi: Union[str,Chem.Mol]) -> Chem.Mol:
         """
         A internal function that returns an `RDKit.Chem.Mol` object.
 
@@ -111,7 +111,8 @@ class Reaction:
         elif isinstance(smi, Chem.Mol):
             return smi
         else:
-            raise TypeError(f"f{type(smi)} not supported, only `str` or `RDKit.Chem.Mol`")
+            raise TypeError(f"{type(smi)} not supported, only `str` or `rdkit.Chem.Mol`")
+
 
     def visualize(self, name='./reaction1_highlight.o.png'):
         """
@@ -286,7 +287,7 @@ class Reaction:
         else:
             return uniqps
 
-    def _filter_reactants(self, smiles: list[str]) -> Tuple[list[str],list[str]]:
+    def _filter_reactants(self, smiles: list[str],verbose: bool=False) -> Tuple[list[str],list[str]]:
         """
         Filters reactants which do not match the reaction.
 
@@ -300,26 +301,28 @@ class Reaction:
         Raises:
             ValueError: If `self` is not a uni- or bi-molecular reaction.
         """
+        smiles = tqdm(smiles) if verbose else smiles
+
         if self.num_reactant == 1:  # uni-molecular reaction
-            smi_w_patt = []
-            for smi in tqdm(smiles):
+            reactants_1 = []
+            for smi in smiles:
                 if self.is_reactant_first(smi):
-                    smi_w_patt.append(smi)
-            return (smi_w_patt, )
+                    reactants_1.append(smi)
+            return (reactants_1, )
 
         elif self.num_reactant == 2:  # bi-molecular reaction
-            smi_w_patt1 = []
-            smi_w_patt2 = []
-            for smi in tqdm(smiles):
+            reactants_1 = []
+            reactants_2 = []
+            for smi in smiles:
                 if self.is_reactant_first(smi):
-                    smi_w_patt1.append(smi)
+                    reactants_1.append(smi)
                 if self.is_reactant_second(smi):
-                    smi_w_patt2.append(smi)
-            return (smi_w_patt1, smi_w_patt2)
+                    reactants_2.append(smi)
+            return (reactants_1, reactants_2)
         else:
             raise ValueError('This reaction is neither uni- nor bi-molecular.')
 
-    def set_available_reactants(self, building_blocks: list[str]):
+    def set_available_reactants(self, building_blocks: list[str],verbose: bool=False):
         """
         Finds applicable reactants from a list of building blocks.
         Sets `self.available_reactants`.
@@ -327,8 +330,13 @@ class Reaction:
         Args:
             building_blocks: Building blocks as SMILES strings.
         """
-        self.available_reactants = list(self._filter_reactants(building_blocks))
+        self.available_reactants = self._filter_reactants(building_blocks,verbose=verbose)
         return self
+
+    @property
+    def get_available_reactants(self) -> Set[str]:
+        return {x for reactants in self.available_reactants for x in reactants}
+
 
 
 class ReactionSet:

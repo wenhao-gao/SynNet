@@ -10,10 +10,9 @@ import pandas as pd
 from syn_net.utils.predict_utils import (
     synthetic_tree_decoder_multireactant,
     mol_fp,
-    load_modules_from_checkpoint,
 )
 from syn_net.utils.data_utils import SyntheticTreeSet, ReactionSet
-
+from syn_net.models.chkpt_loader import load_modules_from_checkpoint
 
 TEST_DIR = Path(__file__).parent
 

@@ -15,6 +15,6 @@ setuptools.setup(
         "Operating System :: OS Independent",
     ],
     package_dir={"": "src"},
-    packages=setuptools.find_packages(where="src"),
+    packages=setuptools.find_packages(where="src",exclude=["src/syn_net/encoding/gins.py"]),
         python_requires=">=3.9",
 )

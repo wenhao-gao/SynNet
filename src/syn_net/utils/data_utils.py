@@ -51,13 +51,14 @@ class Reaction:
             self.reference = reference
 
             # compute a few additional attributes
-            rxn = AllChem.ReactionFromSmarts(self.smirks)
-            rdChemReactions.ChemicalReaction.Initialize(rxn)
-            self.num_reactant = rxn.GetNumReactantTemplates()
-            if self.num_reactant == 0 or self.num_reactant > 2:
-                raise ValueError('This reaction is neither uni- nor bi-molecular.')
-            self.num_agent = rxn.GetNumAgentTemplates()
-            self.num_product = rxn.GetNumProductTemplates()
+            self.rxn = self.__init_reaction(self.smirks)
+
+            # Extract number of ...
+            self.num_reactant = self.rxn.GetNumReactantTemplates()
+            if self.num_reactant not in (1,2):
+                raise ValueError('Reaction is neither uni- nor bi-molecular.')
+            self.num_agent = self.rxn.GetNumAgentTemplates()
+            self.num_product = self.rxn.GetNumProductTemplates()
             if self.num_reactant == 1:
                 self.reactant_template = list((self.smirks.split('>')[0], ))
             else:
@@ -68,6 +69,12 @@ class Reaction:
             del rxn
         else:
             self.smirks = None
+
+    def __init_reaction(self,smirks: str) -> Chem.rdChemReactions.ChemicalReaction:
+        """Initializes a reaction by converting the SMARTS-pattern to an `rdkit` object."""
+        rxn = AllChem.ReactionFromSmarts(smirks)
+        rdChemReactions.ChemicalReaction.Initialize(rxn)
+        return rxn
 
     def load(self, smirks, num_reactant, num_agent, num_product, reactant_template,
              product_template, agent_template, available_reactants, rxnname, smiles, reference):
@@ -125,59 +132,20 @@ class Reaction:
         del rxn
         return name
 
-    def is_reactant(self, smi):
-        """
-        A function that checks if a molecule is a reactant of the reaction
-        defined by the `Reaction` object.
-
-        Args:
-            smi (str or RDKit.Chem.Mol): The query molecule, as either a SMILES
-                string or an `RDKit.Chem.Mol` object.
-
-        Returns:
-            result (bool): Indicates if the molecule is a reactant of the reaction.
-        """
-        rxn    = self.get_rxnobj()
+    def is_reactant(self, smi: Union[str,Chem.Molecule]) -> bool:
+        """Checks if `smi` is a reactant of this reaction."""
         smi    = self.get_mol(smi)
-        result = rxn.IsMoleculeReactant(smi)
-        del rxn
-        return result
+        return self.rxn.IsMoleculeReactant(smi)
 
-    def is_agent(self, smi):
-        """
-        A function that checks if a molecule is an agent in the reaction defined
-        by the `Reaction` object.
-
-        Args:
-            smi (str or RDKit.Chem.Mol): The query molecule, as either a SMILES
-                string or an `RDKit.Chem.Mol` object.
-
-        Returns:
-            result (bool): Indicates if the molecule is an agent in the reaction.
-        """
-        rxn    = self.get_rxnobj()
+    def is_agent(self, smi: Union[str,Chem.Molecule]) -> bool:
+        """Checks if `smi` is an agent of this reaction."""
         smi    = self.get_mol(smi)
-        result = rxn.IsMoleculeAgent(smi)
-        del rxn
-        return result
+        return self.rxn.IsMoleculeAgent(smi)
 
     def is_product(self, smi):
-        """
-        A function that checks if a molecule is the product in the reaction defined
-        by the `Reaction` object.
-
-        Args:
-            smi (str or RDKit.Chem.Mol): The query molecule, as either a SMILES
-                string or an `RDKit.Chem.Mol` object.
-
-        Returns:
-            result (bool): Indicates if the molecule is the product in the reaction.
-        """
-        rxn    = self.get_rxnobj()
+        """Checks if `smi` is a product of this reaction."""
         smi    = self.get_mol(smi)
-        result = rxn.IsMoleculeProduct(smi)
-        del rxn
-        return result
+        return self.rxn.IsMoleculeProduct(smi)
 
     def is_reactant_first(self, smi):
         """
@@ -228,17 +196,6 @@ class Reaction:
         """
         return self.smirks
 
-    def get_rxnobj(self):
-        """
-        A function that returns the RDKit Reaction object.
-
-        Returns:
-            rxn (rdChem.Reactions.ChemicalReaction): RDKit reaction object.
-        """
-        rxn = AllChem.ReactionFromSmarts(self.smirks)
-        rdChemReactions.ChemicalReaction.Initialize(rxn)
-        return rxn
-
     def get_reactant_template(self, ind=0):
         """
         A function that returns the SMARTS pattern which represents the specified
@@ -273,7 +230,7 @@ class Reaction:
         Returns:
             uniqps (str): SMILES string representing the product.
         """
-        rxn = self.get_rxnobj()
+        rxn = self.rxn
 
         if self.num_reactant == 1:
 

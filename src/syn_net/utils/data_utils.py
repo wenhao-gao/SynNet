@@ -133,12 +133,12 @@ class Reaction:
         del rxn
         return name
 
-    def is_reactant(self, smi: Union[str,Chem.Molecule]) -> bool:
+    def is_reactant(self, smi: Union[str,Chem.Mol]) -> bool:
         """Checks if `smi` is a reactant of this reaction."""
         smi    = self.get_mol(smi)
         return self.rxn.IsMoleculeReactant(smi)
 
-    def is_agent(self, smi: Union[str,Chem.Molecule]) -> bool:
+    def is_agent(self, smi: Union[str,Chem.Mol]) -> bool:
         """Checks if `smi` is an agent of this reaction."""
         smi    = self.get_mol(smi)
         return self.rxn.IsMoleculeAgent(smi)

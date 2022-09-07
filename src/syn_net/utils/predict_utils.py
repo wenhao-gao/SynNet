@@ -563,14 +563,3 @@ def synthetic_tree_decoder_multireactant(
     act = acts[max_simi_idx]
 
     return smi, similarity, tree, act
-
-
-def rdkit2d_embedding(smi):
-    from tdc.chem_utils import MolConvert
-
-    if smi is None:
-        return np.zeros(200).reshape((-1,)).tolist()
-    else:
-        # define the RDKit 2D descriptor
-        rdkit2d = MolConvert(src="SMILES", dst="RDKit2D")
-        return rdkit2d(smi).tolist()

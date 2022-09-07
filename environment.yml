@@ -10,6 +10,7 @@ dependencies:
   - pytorch-lightning
   - rdkit=2021.03.*
   # - dglteam::dgl-cuda11.1 # only needed for gin
+  - pytdc
   - scikit-learn>=1.1.*
   - ipykernel=6.15.*
   - nb_conda_kernels

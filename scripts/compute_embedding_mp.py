@@ -11,19 +11,22 @@ import pandas as pd
 
 from syn_net.MolEmbedder import MolEmbedder
 from syn_net.config import DATA_EMBEDDINGS_DIR, DATA_PREPROCESS_DIR
-from syn_net.utils.predict_utils import fp_256, fp_512, fp_1024, fp_2048, fp_4096, mol_embedding, rdkit2d_embedding
+from syn_net.encoding.fingerprints import fp_256, fp_512, fp_1024, fp_2048, fp_4096
+# from syn_net.encoding.gins import mol_embedding
+# from syn_net.utils.prep_utils import rdkit2d_embedding
+
 
 logger = logging.getLogger(__file__)
 
 
 FUNCTIONS = {
-    "gin": mol_embedding,
+    # "gin": mol_embedding,
     "fp_4096": fp_4096,
     "fp_2048": fp_2048,
     "fp_1024": fp_1024,
     "fp_512": fp_512,
     "fp_256": fp_256,
-    "rdkit2d": rdkit2d_embedding,
+    # "rdkit2d": rdkit2d_embedding,
 }
 
 def _load_building_blocks(file: Path) -> list[str]:

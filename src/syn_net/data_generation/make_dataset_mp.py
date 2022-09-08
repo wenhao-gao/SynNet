@@ -10,8 +10,8 @@ import numpy as np
 from pathlib import Path
 from syn_net.data_generation.make_dataset import synthetic_tree_generator
 from syn_net.utils.data_utils import ReactionSet, SyntheticTreeSet
-from syn_net.data_generation.process_rxn_mp import _load_building_blocks # TODO: refactor
 from syn_net.config import BUILDING_BLOCKS_RAW_DIR, DATA_PREPROCESS_DIR
+from syn_net.data_generation.preprocessing import BuildingBlockFileHandler
 import logging
 
 logger = logging.getLogger(__name__)
@@ -25,13 +25,13 @@ def func(_x):
 
 if __name__ == '__main__':
 
-    reaction_template_id = "hb"  # "pis" or "hb" 
+    reaction_template_id = "hb"  # "pis" or "hb"
     building_blocks_id = "enamine_us-2021-smiles"
     NUM_TREES = 600_000
 
     # Load building blocks
     building_blocks_file = Path(BUILDING_BLOCKS_RAW_DIR) / f"{building_blocks_id}.csv.gz"
-    building_blocks = _load_building_blocks(building_blocks_file)
+    building_blocks = BuildingBlockFileHandler.load(building_blocks_file)
 
     # Load genearted reactions (matched reactions <=> building blocks)
     reactions_dir = Path(DATA_PREPROCESS_DIR)
@@ -43,7 +43,7 @@ if __name__ == '__main__':
     with mp.Pool(processes=64) as pool:
         results = pool.map(func, np.arange(NUM_TREES).tolist())
 
-    # Filter out trees that were completed with action="end" 
+    # Filter out trees that were completed with action="end"
     trees = [r[0] for r in results if r[1] == 3]
     actions = [r[1] for r in results]
 

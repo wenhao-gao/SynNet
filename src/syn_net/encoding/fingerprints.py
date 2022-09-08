@@ -1,5 +1,6 @@
 import numpy as np
-from rdkit import Chem, DataStructs
+from rdkit import Chem
+from rdkit.Chem import AllChem, DataStructs
 
 ## Morgan fingerprints
 def mol_fp(smi, _radius=2, _nBits=4096):
@@ -38,7 +39,7 @@ def fp_embedding(smi, _radius=2, _nBits=4096):
         return np.zeros(_nBits).reshape((-1, )).tolist()
     else:
         mol = Chem.MolFromSmiles(smi)
-        features_vec = Chem.AllChem.GetMorganFingerprintAsBitVect(mol, _radius, _nBits)
+        features_vec = AllChem.GetMorganFingerprintAsBitVect(mol, _radius, _nBits)
         features = np.zeros((1,))
         DataStructs.ConvertToNumpyArray(features_vec, features)
         return features.reshape((-1, )).tolist()

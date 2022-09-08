@@ -46,7 +46,7 @@ class MolEmbedder:
 
         embeddings = np.asarray(self.embeddings)  # assume at least 2d
         np.save(file, embeddings)
-        logger.info(f"Successfully saved to {file}.")
+        logger.info(f"Successfully saved data (shape={embeddings.shape}) to {file}.")
         return self
 
     def save_precomputed(self, file: str):

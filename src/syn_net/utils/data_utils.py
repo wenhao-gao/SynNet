@@ -7,6 +7,7 @@ Here we define the following classes for working with synthetic tree data:
 * `SyntheticTree`
 * `SyntheticTreeSet`
 """
+import functools
 import gzip
 import json
 from typing import Any, Optional, Tuple, Union, Set
@@ -95,6 +96,7 @@ class Reaction:
         self.smiles              = smiles
         self.reference           = reference
 
+    @functools.lru_cache(maxsize=20)
     def get_mol(self, smi: Union[str,Chem.Mol]) -> Chem.Mol:
         """
         A internal function that returns an `RDKit.Chem.Mol` object.

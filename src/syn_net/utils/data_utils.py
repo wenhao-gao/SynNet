@@ -8,6 +8,7 @@ Here we define the following classes for working with synthetic tree data:
 * `SyntheticTreeSet`
 """
 import functools
+import itertools
 import gzip
 import json
 from typing import Any, Optional, Tuple, Union, Set
@@ -163,78 +164,60 @@ class Reaction:
         pattern = Chem.MolFromSmarts(self.reactant_template[1])
         return mol.HasSubstructMatch(pattern)
 
-    def run_reaction(self, reactants, keep_main=True):
-        """
-        A function that transform the reactants into the corresponding product.
+    def run_reaction(self, reactants: Tuple[Union[str,Chem.Mol,None]], keep_main: bool=True) -> Union[str,None]:
+        """Run this reactions with reactants and return corresponding product.
 
         Args:
-            reactants (list): Contains SMILES strings for the reactants.
-            keep_main (bool): Indicates whether to return only the main product,
-                or all possible products. Defaults to True.
+            reactants (tuple): Contains SMILES strings for the reactants.
+            keep_main (bool): Return main product only or all possibel products. Defaults to True.
 
         Returns:
-            uniqps (str): SMILES string representing the product.
+            uniqps: SMILES string representing the product or `None` if not reaction possible
         """
-        rxn = self.rxn
+        # Input validation.
+        if not isinstance(reactants, tuple):
+            raise TypeError(f"Unsupported type '{type(reactants)}' for `reactants`.")
+        if not len(reactants) in (1,2):
+            raise ValueError(f"Can only run reactions with 1 or 2 reactants, not {len(reactants)}.")
+
+        rxn = self.rxn  # TODO: investigate if this is necessary (if not, delete "delete rxn below")
+
+        # Convert all reactants to `Chem.Mol`
+        r: Tuple = tuple(self.get_mol(smiles) for smiles in reactants if smiles is not None)
+
 
         if self.num_reactant == 1:
-
-            if isinstance(reactants, (tuple, list)):
-                if len(reactants) == 1:
-                    r = self.get_mol(reactants[0])
-                elif len(reactants) == 2 and reactants[1] is None:
-                    r = self.get_mol(reactants[0])
-                else:
-                    return None
-
-            elif isinstance(reactants, (str, Chem.Mol)):
-                r = self.get_mol(reactants)
-            else:
-                raise TypeError('The input of a uni-molecular reaction should '
-                                'be a SMILES, an rdkit.Chem.Mol object, or a '
-                                'tuple/list of length 1 or 2.')
-
-            if not self.is_reactant(r):
+            if not self.is_reactant(r[0]):
                 return None
-
-            ps = rxn.RunReactants((r, ))
-
         elif self.num_reactant == 2:
-            if isinstance(reactants, (tuple, list)) and len(reactants) == 2:
-                r1 = self.get_mol(reactants[0])
-                r2 = self.get_mol(reactants[1])
-            else:
-                raise TypeError('The input of a bi-molecular reaction should '
-                                'be a tuple/list of length 2.')
-
-            if self.is_reactant_first(r1) and self.is_reactant_second(r2):
+            # Match reactant order with reaction template
+            if self.is_reactant_first(r[0]) and self.is_reactant_second(r[1]):
                 pass
-            elif self.is_reactant_first(r2) and self.is_reactant_second(r1):
-                r1, r2 = (r2, r1)
-            else:
+            elif self.is_reactant_first(r[1]) and self.is_reactant_second(r[0]):
+                r = tuple(reversed(r))
+            else: # No reaction possible
                 return None
-
-            ps = rxn.RunReactants((r1, r2))
-
         else:
             raise ValueError('This reaction is neither uni- nor bi-molecular.')
+        # Run reaction with rdkit magic
+        ps = rxn.RunReactants(r)
 
-        uniqps = []
-        for p in ps:
-            smi = Chem.MolToSmiles(p[0])
-            uniqps.append(smi)
+        # Filter for unique products (less magic)
+        # Note: Use chain() to flatten the tuple of tuples
+        uniqps = list({Chem.MolToSmiles(p) for p in itertools.chain(*ps)})
 
-        uniqps = list(set(uniqps))
-
-        assert len(uniqps) >= 1
+        # Sanity check
+        if not len(uniqps) >= 1:
+            raise ValueError("Reaction did not yield any products.")
 
         del rxn
 
         if keep_main:
-            return uniqps[0]
-        else:
-            return uniqps
-
+            uniqps = uniqps[:1]
+        # >>> TODO: Always return list[str] (currently depends on "keep_main")
+        uniqps = uniqps[0]
+        # <<< ^ delete this line if resolved.
+        return uniqps
     def _filter_reactants(self, smiles: list[str],verbose: bool=False) -> Tuple[list[str],list[str]]:
         """
         Filters reactants which do not match the reaction.

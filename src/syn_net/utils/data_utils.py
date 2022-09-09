@@ -152,70 +152,16 @@ class Reaction:
         return self.rxn.IsMoleculeProduct(smi)
 
     def is_reactant_first(self, smi: Union[str, Chem.Mol]) -> bool:
-        """
-        A function that checks if a molecule is the first reactant in the reaction
-        defined by the `Reaction` object, where the order of the reactants is
-        determined by the SMARTS pattern.
-
-        Args:
-            smi (str or RDKit.Chem.Mol): The query molecule, as either a SMILES
-                string or an `RDKit.Chem.Mol` object.
-
-        Returns:
-            result (bool): Indicates if the molecule is the first reactant in
-                the reaction.
-        """
-        smi = self.get_mol(smi)
-        if smi.HasSubstructMatch(Chem.MolFromSmarts(self.get_reactant_template(0))):
-            return True
-        else:
-            return False
+        """Check if `smi` is the first reactant in this reaction """
+        mol = self.get_mol(smi)
+        pattern = Chem.MolFromSmarts(self.reactant_template[0])
+        return mol.HasSubstructMatch(pattern)
 
     def is_reactant_second(self, smi: Union[str,Chem.Mol]) -> bool:
-        """
-        A function that checks if a molecule is the second reactant in the reaction
-        defined by the `Reaction` object, where the order of the reactants is
-        determined by the SMARTS pattern.
-
-        Args:
-            smi (str or RDKit.Chem.Mol): The query molecule, as either a SMILES
-                string or an `RDKit.Chem.Mol` object.
-
-        Returns:
-            result (bool): Indicates if the molecule is the second reactant in
-                the reaction.
-        """
-        smi = self.get_mol(smi)
-        if smi.HasSubstructMatch(Chem.MolFromSmarts(self.get_reactant_template(1))):
-            return True
-        else:
-            return False
-
-    def get_smirks(self) -> str:
-        """Returns the SMARTS pattern which represents the reaction."""
-        return self.smirks
-
-    def get_reactant_template(self, ind=0):
-        """
-        A function that returns the SMARTS pattern which represents the specified
-        reactant.
-
-        Args:
-            ind (int): The index of the reactant. Defaults to 0.
-
-        Returns:
-            reactant_template (str): SMARTS pattern representing the reactant.
-        """
-        return self.reactant_template[ind]
-
-    def get_product_template(self):
-        """
-        A function that returns the SMARTS pattern which represents the product.
-
-        Returns:
-            product_template (str): SMARTS pattern representing the product.
-        """
-        return self.product_template
+        """Check if `smi` the second reactant in this reaction """
+        mol = self.get_mol(smi)
+        pattern = Chem.MolFromSmarts(self.reactant_template[1])
+        return mol.HasSubstructMatch(pattern)
 
     def run_reaction(self, reactants, keep_main=True):
         """

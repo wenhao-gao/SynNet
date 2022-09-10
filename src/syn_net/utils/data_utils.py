@@ -468,10 +468,7 @@ class SyntheticTree:
         Returns:
             state (list): A list contains all root node molecules.
         """
-        state = []
-        for mol in self.chemicals:
-            if mol.is_root:
-                state.append(mol.smiles)
+        state = [mol for mol in self.chemicals if mol.is_root]
         return state[::-1]
 
     def update(self, action, rxn_id, mol1, mol2, mol_product):

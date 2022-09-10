@@ -218,6 +218,7 @@ class Reaction:
         uniqps = uniqps[0]
         # <<< ^ delete this line if resolved.
         return uniqps
+
     def _filter_reactants(self, smiles: list[str],verbose: bool=False) -> Tuple[list[str],list[str]]:
         """
         Filters reactants which do not match the reaction.
@@ -235,20 +236,13 @@ class Reaction:
         smiles = tqdm(smiles) if verbose else smiles
 
         if self.num_reactant == 1:  # uni-molecular reaction
-            reactants_1 = []
-            for smi in smiles:
-                if self.is_reactant_first(smi):
-                    reactants_1.append(smi)
+            reactants_1 = [smi for smi in smiles if self.is_reactant_first(smi)]
             return (reactants_1, )
 
         elif self.num_reactant == 2:  # bi-molecular reaction
-            reactants_1 = []
-            reactants_2 = []
-            for smi in smiles:
-                if self.is_reactant_first(smi):
-                    reactants_1.append(smi)
-                if self.is_reactant_second(smi):
-                    reactants_2.append(smi)
+            reactants_1 = [smi for smi in smiles if self.is_reactant_first(smi)]
+            reactants_2 = [smi for smi in smiles if self.is_reactant_second(smi)]
+
             return (reactants_1, reactants_2)
         else:
             raise ValueError('This reaction is neither uni- nor bi-molecular.')

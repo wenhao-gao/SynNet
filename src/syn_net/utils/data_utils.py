@@ -387,10 +387,10 @@ class SyntheticTree:
             type (uni- or bi-molecular).
     """
     def __init__(self, tree=None):
-        self.chemicals   = []
-        self.reactions   = []
+        self.chemicals: list[NodeChemical]   = []
+        self.reactions:list [Reaction]   = []
         self.root        = None
-        self.depth       = 0
+        self.depth: float= 0
         self.actions     = []
         self.rxn_id2type = None
 

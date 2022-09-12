@@ -208,6 +208,7 @@ class Reaction:
 
         # Sanity check
         if not len(uniqps) >= 1:
+            # TODO: Raise (custom) exception?
             raise ValueError("Reaction did not yield any products.")
 
         del rxn
@@ -454,10 +455,9 @@ class SyntheticTree:
                 return node.index
         return None
 
-    def get_state(self):
-        """
-        Returns the state of the synthetic tree. The most recent root node has 0
-        as its index.
+    def get_state(self) -> list[NodeChemical]:
+        """Get the state of this synthetic tree.
+        The most recent root node has 0 as its index.
 
         Returns:
             state (list): A list contains all root node molecules.
@@ -465,9 +465,8 @@ class SyntheticTree:
         state = [mol for mol in self.chemicals if mol.is_root]
         return state[::-1]
 
-    def update(self, action, rxn_id, mol1, mol2, mol_product):
-        """
-        A function that updates a synthetic tree by adding a reaction step.
+    def update(self, action: int, rxn_id:int, mol1: str, mol2: str, mol_product:str):
+        """Update this synthetic tree by adding a reaction step.
 
         Args:
             action (int): Action index, where the indices (0, 1, 2, 3) represent
@@ -480,13 +479,11 @@ class SyntheticTree:
         """
         self.actions.append(int(action))
 
-        if action == 3:
-            # End
+        if action == 3: # End
             self.root = self.chemicals[-1]
             self.depth = self.root.depth
 
-        elif action == 2:
-            # Merge with bi-mol rxn
+        elif action == 2: # Merge (with bi-mol rxn)
             node_mol1 = self.chemicals[self.get_node_index(mol1)]
             node_mol2 = self.chemicals[self.get_node_index(mol2)]
             node_rxn = NodeRxn(rxn_id=rxn_id,
@@ -512,8 +509,7 @@ class SyntheticTree:
             self.chemicals.append(node_product)
             self.reactions.append(node_rxn)
 
-        elif action == 1 and mol2 is None:
-            # Expand with uni-mol rxn
+        elif action == 1 and mol2 is None: # Expand with uni-mol rxn
             node_mol1 = self.chemicals[self.get_node_index(mol1)]
             node_rxn = NodeRxn(rxn_id=rxn_id,
                                rtype=1,
@@ -536,8 +532,7 @@ class SyntheticTree:
             self.chemicals.append(node_product)
             self.reactions.append(node_rxn)
 
-        elif action == 1 and mol2 is not None:
-            # Expand with bi-mol rxn
+        elif action == 1 and mol2 is not None: # Expand with bi-mol rxn
             node_mol1    = self.chemicals[self.get_node_index(mol1)]
             node_mol2    = NodeChemical(smiles=mol2,
                                         parent=None,
@@ -570,8 +565,7 @@ class SyntheticTree:
             self.chemicals.append(node_product)
             self.reactions.append(node_rxn)
 
-        elif action == 0 and mol2 is None:
-            # Add with uni-mol rxn
+        elif action == 0 and mol2 is None: # Add with uni-mol rxn
             node_mol1    = NodeChemical(smiles=mol1,
                                         parent=None,
                                         child=None,
@@ -600,8 +594,7 @@ class SyntheticTree:
             self.chemicals.append(node_product)
             self.reactions.append(node_rxn)
 
-        elif action == 0 and mol2 is not None:
-            # Add with bi-mol rxn
+        elif action == 0 and mol2 is not None: # Add with bi-mol rxn
             node_mol1    = NodeChemical(smiles=mol1,
                                         parent=None,
                                         child=None,

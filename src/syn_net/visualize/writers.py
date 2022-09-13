@@ -72,6 +72,7 @@ class SynTreeWriter:
 
         with open(file, "wt") as f:
             f.writelines((l.rstrip() + "\n" for l in text))
+        return None
 
     @property
     def text(self) -> list[str]:

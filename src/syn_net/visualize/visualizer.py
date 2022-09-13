@@ -142,5 +142,30 @@ class SynTreeVisualizer:
         return text
 
 
+def main():
+    """Demo syntree visualisation"""
+    # 1. Load syntree
+    import json
+    with open("tests/assets/syntree-small.json","rt") as f:
+        data = json.load(f)
+
+    st = SyntheticTree()
+    st.read(data)
+
+    from syn_net.visualize.drawers import MolDrawer
+    from syn_net.visualize.visualizer import SynTreeVisualizer
+    from syn_net.visualize.writers import SynTreeWriter
+
+    outpath = Path("./0-figures/syntrees/generation/st")
+    outpath.mkdir(parents=True, exist_ok=True)
+
+    # 2. Plot & Write mermaid markup diagram
+    stviz = SynTreeVisualizer(syntree=st, outfolder=outpath).with_drawings(drawer=MolDrawer)
+    mermaid_txt = stviz.write()
+    # 3. Write everything to a markdown doc
+    outfile = stviz.path / "syntree.md"
+    SynTreeWriter().write(mermaid_txt).to_file(outfile)
+    return None
+
 if __name__ == "__main__":
-    pass
+    main()

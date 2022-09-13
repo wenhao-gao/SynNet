@@ -1,0 +1,139 @@
+{
+    "reactions": [
+        {
+            "rxn_id": 12,
+            "rtype": 2,
+            "parent": "CCOc1ccc(CCNC(=O)CN2N=NC=C2CN2CCC(C(=O)O)CC2)cc1OCC",
+            "child": [
+                "CCOc1ccc(CCNC(=O)CCl)cc1OCC",
+                "C#CCN1CCC(C(=O)O)CC1.Cl"
+            ],
+            "depth": 0.5,
+            "index": 0
+        },
+        {
+            "rxn_id": 47,
+            "rtype": 2,
+            "parent": "C=C(C)C(=O)OCCNC(=O)N(c1ccc(C#N)cc1C)C1CC1",
+            "child": [
+                "C=C(C)C(=O)OCCN=C=O",
+                "Cc1cc(C#N)ccc1NC1CC1"
+            ],
+            "depth": 0.5,
+            "index": 1
+        },
+        {
+            "rxn_id": 15,
+            "rtype": 2,
+            "parent": "C=C(C)C(=O)OCCNC(=O)N(c1ccc(C2=NNC(C3CCN(Cc4cnnn4CC(=O)NCCc4ccc(OCC)c(OCC)c4)CC3)=N2)cc1C)C1CC1",
+            "child": [
+                "C=C(C)C(=O)OCCNC(=O)N(c1ccc(C#N)cc1C)C1CC1",
+                "CCOc1ccc(CCNC(=O)CN2N=NC=C2CN2CCC(C(=O)O)CC2)cc1OCC"
+            ],
+            "depth": 1.5,
+            "index": 2
+        },
+        {
+            "rxn_id": 49,
+            "rtype": 1,
+            "parent": "C=C(C)C(=O)OCCNC(=O)N(c1ccc(-c2n[nH]c(C3CCN(Cc4cnnn4CC4=NCCc5cc(OCC)c(OCC)cc54)CC3)n2)cc1C)C1CC1",
+            "child": [
+                "C=C(C)C(=O)OCCNC(=O)N(c1ccc(C2=NNC(C3CCN(Cc4cnnn4CC(=O)NCCc4ccc(OCC)c(OCC)c4)CC3)=N2)cc1C)C1CC1"
+            ],
+            "depth": 2.5,
+            "index": 3
+        }
+    ],
+    "chemicals": [
+        {
+            "smiles": "CCOc1ccc(CCNC(=O)CCl)cc1OCC",
+            "parent": 12,
+            "child": null,
+            "is_leaf": true,
+            "is_root": false,
+            "depth": 0,
+            "index": 0
+        },
+        {
+            "smiles": "C#CCN1CCC(C(=O)O)CC1.Cl",
+            "parent": 12,
+            "child": null,
+            "is_leaf": true,
+            "is_root": false,
+            "depth": 0,
+            "index": 1
+        },
+        {
+            "smiles": "CCOc1ccc(CCNC(=O)CN2N=NC=C2CN2CCC(C(=O)O)CC2)cc1OCC",
+            "parent": 15,
+            "child": 12,
+            "is_leaf": false,
+            "is_root": false,
+            "depth": 1,
+            "index": 2
+        },
+        {
+            "smiles": "C=C(C)C(=O)OCCN=C=O",
+            "parent": 47,
+            "child": null,
+            "is_leaf": true,
+            "is_root": false,
+            "depth": 0,
+            "index": 3
+        },
+        {
+            "smiles": "Cc1cc(C#N)ccc1NC1CC1",
+            "parent": 47,
+            "child": null,
+            "is_leaf": true,
+            "is_root": false,
+            "depth": 0,
+            "index": 4
+        },
+        {
+            "smiles": "C=C(C)C(=O)OCCNC(=O)N(c1ccc(C#N)cc1C)C1CC1",
+            "parent": 15,
+            "child": 47,
+            "is_leaf": false,
+            "is_root": false,
+            "depth": 1,
+            "index": 5
+        },
+        {
+            "smiles": "C=C(C)C(=O)OCCNC(=O)N(c1ccc(C2=NNC(C3CCN(Cc4cnnn4CC(=O)NCCc4ccc(OCC)c(OCC)c4)CC3)=N2)cc1C)C1CC1",
+            "parent": 49,
+            "child": 15,
+            "is_leaf": false,
+            "is_root": false,
+            "depth": 2.0,
+            "index": 6
+        },
+        {
+            "smiles": "C=C(C)C(=O)OCCNC(=O)N(c1ccc(-c2n[nH]c(C3CCN(Cc4cnnn4CC4=NCCc5cc(OCC)c(OCC)cc54)CC3)n2)cc1C)C1CC1",
+            "parent": null,
+            "child": 49,
+            "is_leaf": false,
+            "is_root": true,
+            "depth": 3.0,
+            "index": 7
+        }
+    ],
+    "root": {
+        "smiles": "C=C(C)C(=O)OCCNC(=O)N(c1ccc(-c2n[nH]c(C3CCN(Cc4cnnn4CC4=NCCc5cc(OCC)c(OCC)cc54)CC3)n2)cc1C)C1CC1",
+        "parent": null,
+        "child": 49,
+        "is_leaf": false,
+        "is_root": true,
+        "depth": 3.0,
+        "index": 7
+    },
+    "depth": 3.0,
+    "actions": [
+        0,
+        0,
+        2,
+        1,
+        3
+    ],
+    "rxn_id2type": null
+}

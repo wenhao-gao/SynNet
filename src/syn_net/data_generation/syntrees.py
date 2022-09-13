@@ -7,8 +7,8 @@ from rdkit import Chem
 
 import logging
 
-logging.basicConfig(level=logging.DEBUG)
-logger = logging.getLogger()
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
 from syn_net.utils.data_utils import Reaction, SyntheticTree
 
@@ -36,7 +36,6 @@ class SynTreeGenerator:
     IDX_RXNS: list
     ACTIONS: dict[int, str] = {i: action for i, action in enumerate("add expand merge end".split())}
     verbose: bool
-    logger: logging.Logger
 
     def __init__(
         self,
@@ -53,7 +52,8 @@ class SynTreeGenerator:
         self.IDX_RXNS = np.arange(len(self.rxns))
         self.processes = 32
         self.verbose = verbose
-        self.logger = logging.getLogger(__class__.__name__)
+        if verbose:
+            logger.setLevel(logging.DEBUG)
 
         # Time intensive tasks
         self._init_rxns_with_reactants()
@@ -94,7 +94,7 @@ class SynTreeGenerator:
         """Sample a molecule."""
         idx = self.rng.choice(len(self.building_blocks))
         smiles = self.building_blocks[idx]
-        self.logger.debug(f"    Sampled molecule: {smiles}")
+        logger.debug(f"    Sampled molecule: {smiles}")
         return smiles
 
     def _base_case(self) -> str:
@@ -116,7 +116,7 @@ class SynTreeGenerator:
             mask =  np.asarray(mask)
             irxn_mask = self.IDX_RXNS[mask]
         idx = self.rng.choice(irxn_mask)
-        self.logger.debug(f"    Sampled reaction with index: {idx} (nreactants: {self.rxns[idx].num_reactant})")
+        logger.debug(f"    Sampled reaction with index: {idx} (nreactants: {self.rxns[idx].num_reactant})")
         return self.rxns[idx], idx
 
     def _expand(self, reactant_1: str) -> Tuple[str, str, str, np.int64]:
@@ -181,12 +181,12 @@ class SynTreeGenerator:
         """Generate a syntree by random sampling."""
 
         # Init
-        self.logger.debug(f"Starting synthetic tree generation with {max_depth=} ")
+        logger.debug(f"Starting synthetic tree generation with {max_depth=} ")
         syntree = SyntheticTree()
         recent_mol = self._sample_molecule()  # root of the current tree
 
         for i in range(max_depth):
-            self.logger.debug(f"Iteration {i}")
+            logger.debug(f"Iteration {i}")
 
             # State of syntree
             state = syntree.get_state()
@@ -196,13 +196,13 @@ class SynTreeGenerator:
             action_mask = self._get_action_mask(syntree)  # (1,4)
             act = np.argmax(p_action * action_mask)  # (1,)
             action = self.ACTIONS[act]
-            self.logger.debug(f"  Sampled action: {action}")
+            logger.debug(f"  Sampled action: {action}")
 
             if action == "end":
                 break
             elif action == "expand":
                 for j in range(retries):
-                    self.logger.debug(f"    Try {j}")
+                    logger.debug(f"    Try {j}")
                     r1, r2, p, idx_rxn= self._expand(recent_mol)
                     if p is not None: break
                 if p is None:
@@ -230,7 +230,7 @@ class SynTreeGenerator:
                     raise NoReactionPossible("No reaction possible.")
 
             # Prepare next iteration
-            self.logger.debug(f"    Ran reaction {r1} + {r2} -> {p}")
+            logger.debug(f"    Ran reaction {r1} + {r2} -> {p}")
 
             recent_mol = p
 
@@ -240,4 +240,7 @@ class SynTreeGenerator:
             assert isinstance(r2,(str,type(None))), type(r2)
             assert isinstance(p,(str)), type(p)
             syntree.update(act, rxn_id=idx_rxn, mol1=r1, mol2=r2, mol_product=p)
+            logger.debug(f"SynTree updated.")
+
+        logger.debug(f"🙌 SynTree completed.")
         return syntree

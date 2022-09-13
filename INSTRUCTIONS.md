@@ -32,10 +32,11 @@ Let's start.
 
     ```bash
     # Match
-    python scripts/01-filter-buildingblocks.py \
+    python scripts/01-filter-building-blocks.py \
         --building-blocks-file "data/assets/building-blocks/enamine-us-smiles.csv.gz"  \
-        --rxn-template-file "data/assets/reaction-templates/hb.txt"  \
-        --output-file "data/pre-process/building-blocks/enamine-us-smiles.csv.gz"
+        --rxn-templates-file "data/assets/reaction-templates/hb.txt"  \
+        --output-file "data/pre-process/building-blocks/enamine-us-smiles.csv.gz" \
+        --verbose
     ```
 
     > :bulb: All following steps use this matched building blocks <-> reaction template data. You have to specify the correct files for every script to that it can load the right data. It can save some time to store these as environment variables.
@@ -49,7 +50,7 @@ Let's start.
     python scripts/02-compute-embeddings.py \
         --building-blocks-file "data/pre-process/building-blocks/enamine-us-smiles.csv.gz" \
         --rxn-templates-file "data/assets/reaction-templates/hb.txt"
-        --output-file "data/pre-process/embeddings/hb-enamine-embeddings.npy" \
+        --output-file "data/pre-process/embeddings/hb-enamine-embeddings.npy"
     ```
 
 3. Generate *synthetic trees*

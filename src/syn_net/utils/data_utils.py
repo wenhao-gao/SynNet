@@ -96,6 +96,7 @@ class Reaction:
         self.rxnname             = rxnname
         self.smiles              = smiles
         self.reference           = reference
+        self.rxn = self.__init_reaction(self.smirks)
 
     @functools.lru_cache(maxsize=20)
     def get_mol(self, smi: Union[str,Chem.Mol]) -> Chem.Mol:
@@ -462,7 +463,7 @@ class SyntheticTree:
         Returns:
             state (list): A list contains all root node molecules.
         """
-        state = [mol for mol in self.chemicals if mol.is_root]
+        state = [node.smiles for node in self.chemicals if node.is_root]
         return state[::-1]
 
     def update(self, action: int, rxn_id:int, mol1: str, mol2: str, mol_product:str):

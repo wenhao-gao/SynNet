@@ -144,32 +144,34 @@ def nn_search_rt1(_e: np.ndarray, _tree: BallTree, _k: int = 1) -> Tuple[np.ndar
     return dist[0], ind[0]
 
 
-def set_embedding(z_target: np.ndarray, state: list[str], nbits: int, _mol_embedding: Callable):
+def set_embedding(z_target: np.ndarray, state: list[str], nbits: int, _mol_embedding: Callable) -> np.ndarray:
     """
     Computes embeddings for all molecules in the input space.
     Embedding = [z_mol1, z_mol2, z_target]
 
     Args:
-        z_target (np.ndarray): Embedding for the target molecule.
-        state (list): Contains molecules in the current state, if not the initial state.
+        z_target (np.ndarray): Molecular embedding of the target molecule.
+        state (list): State of the synthetic tree, i.e. list of root molecules.
         nbits (int): Length of fingerprint.
-        _mol_embedding (Callable): Function to use for computing the
-            embeddings of the first and second molecules in the state.
+        _mol_embedding (Callable): Computes the embeddings of molecules in the state.
 
     Returns:
-        np.ndarray: Embedding consisting of the concatenation of the target
-            molecule with the current molecules (if available) in the input state.
+        embedding (np.ndarray): shape (1,d+2*nbits)
     """
+    z_target = np.atleast_2d(z_target) # (1,d)
     if len(state) == 0:
-        embedding =  np.concatenate([np.zeros((1, 2 * nbits)), z_target], axis=1)
+        z_mol1 = np.zeros((1, nbits))
+        z_mol2 = np.zeros((1, nbits))
+    elif len(state) == 1:
+        z_mol1 = np.atleast_2d(_mol_embedding(state[0]))
+        z_mol2 = np.zeros((1, nbits))
+    elif len(state) == 2:
+        z_mol1 = np.atleast_2d(_mol_embedding(state[0]))
+        z_mol2 = np.atleast_2d(_mol_embedding(state[1]))
     else:
-        e1 = np.expand_dims(_mol_embedding(state[0]), axis=0)
-        if len(state) == 1:
-            e2 = np.zeros((1, nbits))
-        else:
-            e2 = _mol_embedding(state[1])
-        embedding = np.concatenate([e1, e2, z_target], axis=1)
-    return embedding
+        raise ValueError
+    embedding = np.concatenate([z_mol1, z_mol2, z_target], axis=1)
+    return embedding # (1,d+2*nbits)
 
 def synthetic_tree_decoder(
     z_target: np.ndarray,
@@ -216,7 +218,6 @@ def synthetic_tree_decoder(
     tree = SyntheticTree()
     mol_recent = None
     kdtree = BallTree(bb_emb, metric=cosine_distance)  # TODO: cache this or use class
-    z_target = np.atleast_2d(z_target)
 
     # Start iteration
     for i in range(max_step):
@@ -373,7 +374,7 @@ def synthetic_tree_decoder_rt1(
     tree = SyntheticTree()
     mol_recent = None
     kdtree = BallTree(bb_emb, metric=cosine_distance)  # TODO: cache this or use class
-    z_target = np.atleast_2d(z_target)
+
     # Start iteration
     for i in range(max_step):
         # Encode current state

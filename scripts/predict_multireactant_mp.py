@@ -3,7 +3,7 @@ Generate synthetic trees for a set of specified query molecules. Multiprocessing
 """
 import multiprocessing as mp
 from pathlib import Path
-
+from typing import Union
 import numpy as np
 import pandas as pd
 from syn_net.config import (CHECKPOINTS_DIR, DATA_EMBEDDINGS_DIR,
@@ -53,13 +53,28 @@ def _fetch_building_blocks(file: str):
     """Load the building blocks"""
     return pd.read_csv(file, compression='gzip')['SMILES'].tolist()
 
-def _load_pretrained_model(path_to_checkpoints: str):
+def find_best_model_ckpt(path: str) -> Union[Path,None]: # TODO: move to utils.py
+    """Find checkpoint with lowest val_loss.
+
+    Poor man's regex:
+    somepath/act/ckpts.epoch=70-val_loss=0.03.ckpt
+                                     ^^^^--extract this as float
+    """
+    ckpts = Path(path).rglob("*.ckpt")
+    best_model_ckpt = None
+    lowest_loss = 10_000
+    for file in (ckpts):
+        stem = file.stem
+        val_loss = float(stem.split("val_loss=")[-1])
+        if val_loss < lowest_loss:
+            best_model_ckpt = file
+            lowest_loss = val_loss
+    return best_model_ckpt
+
+def _load_pretrained_model(path_to_checkpoints: list[Path]):
     """Wrapper to load modules from checkpoint."""
     # Define paths to pretrained models.
-    path_to_act = Path(path_to_checkpoints) / "act.ckpt"
-    path_to_rt1 = Path(path_to_checkpoints) / "rt1.ckpt"
-    path_to_rxn = Path(path_to_checkpoints) / "rxn.ckpt"
-    path_to_rt2 = Path(path_to_checkpoints) / "rt2.ckpt"
+    path_to_act, path_to_rt1, path_to_rxn, path_to_rt2 = path_to_checkpoints
 
     # Load the pre-trained models.
     act_net, rt1_net, rxn_net, rt2_net = load_modules_from_checkpoint(
@@ -165,13 +180,14 @@ if __name__ == '__main__':
     file = Path(DATA_PREPROCESS_DIR) / f"reaction-sets_{rxn_template}_{building_blocks_id}.json.gz"
     rxns = _fetch_reaction_templates(file)
 
-    # ... building blocks
+    # ... building block embedding
     file = Path(DATA_EMBEDDINGS_DIR) / f"{rxn_template}-{building_blocks_id}-embeddings.npy"
     bb_emb = _fetch_building_blocks_embeddings(file)
 
     # ... models
     path = Path(CHECKPOINTS_DIR) / f"{param_dir}"
-    act_net, rt1_net, rxn_net, rt2_net = _load_pretrained_model(path)
+    paths = [find_best_model_ckpt("results/logs/hb_fp_2_4096/" + mdl) for mdl in "act rt1 rxn rt2".split()]
+    act_net, rt1_net, rxn_net, rt2_net = _load_pretrained_model(paths)
 
 
     # Decode queries, i.e. the target molecules.

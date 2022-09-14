@@ -4,56 +4,68 @@ Generate synthetic trees for a set of specified query molecules. Multiprocessing
 import multiprocessing as mp
 from pathlib import Path
 from typing import Union
+
 import numpy as np
 import pandas as pd
-from syn_net.config import (CHECKPOINTS_DIR, DATA_EMBEDDINGS_DIR,
-                            DATA_PREPARED_DIR, DATA_PREPROCESS_DIR,
-                            DATA_RESULT_DIR)
+
+from syn_net.config import (
+    CHECKPOINTS_DIR,
+    DATA_EMBEDDINGS_DIR,
+    DATA_PREPARED_DIR,
+    DATA_PREPROCESS_DIR,
+    DATA_RESULT_DIR,
+)
 from syn_net.models.chkpt_loader import load_modules_from_checkpoint
 from syn_net.utils.data_utils import ReactionSet, SyntheticTreeSet
-from syn_net.utils.predict_utils import (mol_fp,
-                                         synthetic_tree_decoder_multireactant)
+from syn_net.utils.predict_utils import mol_fp, synthetic_tree_decoder_multireactant
 
 Path(DATA_RESULT_DIR).mkdir(exist_ok=True)
 
+
 def _fetch_data_chembl(name: str) -> list[str]:
     raise NotImplementedError
-    df = pd.read_csv(f'{DATA_DIR}/chembl_20k.csv')
+    df = pd.read_csv(f"{DATA_DIR}/chembl_20k.csv")
     smis_query = df.smiles.to_list()
     return smis_query
 
+
 def _fetch_data_from_file(name: str) -> list[str]:
-    with open(name,"rt") as f:
+    with open(name, "rt") as f:
         smis_query = [line.strip() for line in f]
     return smis_query
+
 
 def _fetch_data(name: str) -> list[str]:
     if args.data in ["train", "valid", "test"]:
         file = Path(DATA_PREPARED_DIR) / f"synthetic-trees-{args.data}.json.gz"
-        print(f'Reading data from {file}')
+        print(f"Reading data from {file}")
         sts = SyntheticTreeSet()
         sts.load(file)
         smis_query = [st.root.smiles for st in sts.sts]
     elif args.data in ["chembl"]:
         smis_query = _fetch_data_chembl(name)
-    else: # Hopefully got a filename instead
+    else:  # Hopefully got a filename instead
         smis_query = _fetch_data_from_file(name)
     return smis_query
+
 
 def _fetch_reaction_templates(file: str):
     # Load reaction templates
     rxn_set = ReactionSet().load(file)
     return rxn_set.rxns
 
+
 def _fetch_building_blocks_embeddings(file: str):
     """Load the purchasable building block embeddings."""
     return np.load(file)
 
+
 def _fetch_building_blocks(file: str):
     """Load the building blocks"""
-    return pd.read_csv(file, compression='gzip')['SMILES'].tolist()
+    return pd.read_csv(file, compression="gzip")["SMILES"].tolist()
 
-def find_best_model_ckpt(path: str) -> Union[Path,None]: # TODO: move to utils.py
+
+def find_best_model_ckpt(path: str) -> Union[Path, None]:  # TODO: move to utils.py
     """Find checkpoint with lowest val_loss.
 
     Poor man's regex:
@@ -63,13 +75,14 @@ def find_best_model_ckpt(path: str) -> Union[Path,None]: # TODO: move to utils.p
     ckpts = Path(path).rglob("*.ckpt")
     best_model_ckpt = None
     lowest_loss = 10_000
-    for file in (ckpts):
+    for file in ckpts:
         stem = file.stem
         val_loss = float(stem.split("val_loss=")[-1])
         if val_loss < lowest_loss:
             best_model_ckpt = file
             lowest_loss = val_loss
     return best_model_ckpt
+
 
 def _load_pretrained_model(path_to_checkpoints: list[Path]):
     """Wrapper to load modules from checkpoint."""
@@ -89,6 +102,7 @@ def _load_pretrained_model(path_to_checkpoints: list[Path]):
         ncpu=ncpu,
     )
     return act_net, rt1_net, rxn_net, rt2_net
+
 
 def func(smiles: str):
     """
@@ -119,62 +133,75 @@ def func(smiles: str):
             rxn_template=rxn_template,
             n_bits=nbits,
             beam_width=3,
-            max_step=15)
+            max_step=15,
+        )
     except Exception as e:
         print(e)
         action = -1
 
-    if action != 3: # aka tree has not been properly ended
+    if action != 3:  # aka tree has not been properly ended
         smi = None
-        similarity =  0
+        similarity = 0
         tree = None
 
     return smi, similarity, tree
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
 
     import argparse
+
     parser = argparse.ArgumentParser()
-    parser.add_argument("-f", "--featurize", type=str, default='fp',
-                        help="Choose from ['fp', 'gin']")
-    parser.add_argument("--radius", type=int, default=2,
-                            help="Radius for Morgan Fingerprint")
-    parser.add_argument("-b", "--nbits", type=int, default=4096,
-                            help="Number of Bits for Morgan Fingerprint")
-    parser.add_argument("-r", "--rxn_template", type=str, default='hb',
-                        help="Choose from ['hb', 'pis']")
-    parser.add_argument("--ncpu", type=int, default=1,
-                        help="Number of cpus")
-    parser.add_argument("-n", "--num", type=int, default=1,
-                        help="Number of molecules to predict.")
-    parser.add_argument("-d", "--data", type=str, default='test',
-                        help="Choose from ['train', 'valid', 'test', 'chembl'] or provide a file with one SMILES per line.")
-    parser.add_argument("-o", "--outputembedding", type=str, default='fp_256',
-                        help="Choose from ['fp_4096', 'fp_256', 'gin', 'rdkit2d']")
-    parser.add_argument("--output-dir", type=str, default=None,
-                        help="Directory to save output.")
+    parser.add_argument(
+        "-f", "--featurize", type=str, default="fp", help="Choose from ['fp', 'gin']"
+    )
+    parser.add_argument("--radius", type=int, default=2, help="Radius for Morgan Fingerprint")
+    parser.add_argument(
+        "-b", "--nbits", type=int, default=4096, help="Number of Bits for Morgan Fingerprint"
+    )
+    parser.add_argument(
+        "-r", "--rxn_template", type=str, default="hb", help="Choose from ['hb', 'pis']"
+    )
+    parser.add_argument("--ncpu", type=int, default=1, help="Number of cpus")
+    parser.add_argument("-n", "--num", type=int, default=1, help="Number of molecules to predict.")
+    parser.add_argument(
+        "-d",
+        "--data",
+        type=str,
+        default="test",
+        help="Choose from ['train', 'valid', 'test', 'chembl'] or provide a file with one SMILES per line.",
+    )
+    parser.add_argument(
+        "-o",
+        "--outputembedding",
+        type=str,
+        default="fp_256",
+        help="Choose from ['fp_4096', 'fp_256', 'gin', 'rdkit2d']",
+    )
+    parser.add_argument("--output-dir", type=str, default=None, help="Directory to save output.")
     args = parser.parse_args()
 
-    nbits        = args.nbits
-    out_dim      = args.outputembedding.split("_")[-1] # <=> morgan fingerprint with 256 bits
+    nbits = args.nbits
+    out_dim = args.outputembedding.split("_")[-1]  # <=> morgan fingerprint with 256 bits
     rxn_template = args.rxn_template
     building_blocks_id = "enamine_us-2021-smiles"
-    featurize    = args.featurize
-    radius       = args.radius
-    ncpu         = args.ncpu
-    param_dir    = f"{rxn_template}_{featurize}_{radius}_{nbits}_{out_dim}"
+    featurize = args.featurize
+    radius = args.radius
+    ncpu = args.ncpu
+    param_dir = f"{rxn_template}_{featurize}_{radius}_{nbits}_{out_dim}"
 
     # Load data ...
     # ... query molecules (i.e. molecules to decode)
     smiles_queries = _fetch_data(args.data)
-    if args.num > 0: # Select only n queries
-        smiles_queries = smiles_queries[:args.num]
+    if args.num > 0:  # Select only n queries
+        smiles_queries = smiles_queries[: args.num]
 
     # ... building blocks
     file = Path(DATA_PREPROCESS_DIR) / f"{rxn_template}-{building_blocks_id}-matched.csv.gz"
     building_blocks = _fetch_building_blocks(file)
-    building_blocks_dict = {block: i for i,block in enumerate(building_blocks)} # dict is used as lookup table for 2nd reactant during inference
+    building_blocks_dict = {
+        block: i for i, block in enumerate(building_blocks)
+    }  # dict is used as lookup table for 2nd reactant during inference
 
     # ... reaction templates
     file = Path(DATA_PREPROCESS_DIR) / f"reaction-sets_{rxn_template}_{building_blocks_id}.json.gz"
@@ -186,23 +213,24 @@ if __name__ == '__main__':
 
     # ... models
     path = Path(CHECKPOINTS_DIR) / f"{param_dir}"
-    paths = [find_best_model_ckpt("results/logs/hb_fp_2_4096/" + mdl) for mdl in "act rt1 rxn rt2".split()]
+    paths = [
+        find_best_model_ckpt("results/logs/hb_fp_2_4096/" + model)
+        for model in "act rt1 rxn rt2".split()
+    ]
     act_net, rt1_net, rxn_net, rt2_net = _load_pretrained_model(paths)
 
-
     # Decode queries, i.e. the target molecules.
-    print(f'Start to decode {len(smiles_queries)} target molecules.')
+    print(f"Start to decode {len(smiles_queries)} target molecules.")
     with mp.Pool(processes=args.ncpu) as pool:
         results = pool.map(func, smiles_queries)
-    print('Finished decoding.')
-
+    print("Finished decoding.")
 
     # Print some results from the prediction
     smis_decoded = [r[0] for r in results]
     similarities = [r[1] for r in results]
-    trees        = [r[2] for r in results]
+    trees = [r[2] for r in results]
 
-    recovery_rate = (np.asfarray(similarities)==1.0).sum()/len(similarities)
+    recovery_rate = (np.asfarray(similarities) == 1.0).sum() / len(similarities)
     avg_similarity = np.mean(similarities)
     print(f"For {args.data}:")
     print(f"  {recovery_rate=}")
@@ -210,15 +238,13 @@ if __name__ == '__main__':
 
     # Save to local dir
     output_dir = DATA_RESULT_DIR if args.output_dir is None else args.output_dir
-    print('Saving results to {output_dir} ...')
-    df = pd.DataFrame({'query SMILES' : smiles_queries,
-                    'decode SMILES': smis_decoded,
-                    'similarity'   : similarities})
-    df.to_csv(f'{output_dir}/decode_result_{args.data}.csv.gz',
-            compression='gzip',
-            index=False,)
+    print("Saving results to {output_dir} ...")
+    df = pd.DataFrame(
+        {"query SMILES": smiles_queries, "decode SMILES": smis_decoded, "similarity": similarities}
+    )
+    df.to_csv(f"{output_dir}/decode_result_{args.data}.csv.gz", compression="gzip", index=False)
 
     synthetic_tree_set = SyntheticTreeSet(sts=trees)
-    synthetic_tree_set.save(f'{output_dir}/decoded_st_{args.data}.json.gz')
+    synthetic_tree_set.save(f"{output_dir}/decoded_st_{args.data}.json.gz")
 
-    print('Finish!')
+    print("Finish!")

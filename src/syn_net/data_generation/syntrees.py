@@ -199,7 +199,7 @@ class SynTreeGenerator:
             logger.debug(f"  Sampled action: {action}")
 
             if action == "end":
-                break
+                r1, r2, p, idx_rxn = None, None, None, None
             elif action == "expand":
                 for j in range(retries):
                     logger.debug(f"    Try {j}")
@@ -235,12 +235,14 @@ class SynTreeGenerator:
             recent_mol = p
 
             # Update tree
-            assert isinstance(act,(int,np.int64)), type(act)
-            assert isinstance(r1,str), type(r1)
-            assert isinstance(r2,(str,type(None))), type(r2)
-            assert isinstance(p,(str)), type(p)
+            # assert isinstance(act,(int,np.int64)), type(act)
+            # assert isinstance(r1,str), type(r1)
+            # assert isinstance(r2,(str,type(None))), type(r2)
+            # assert isinstance(p,(str)), type(p)
             syntree.update(act, rxn_id=idx_rxn, mol1=r1, mol2=r2, mol_product=p)
             logger.debug(f"SynTree updated.")
+            if action == "end":
+                break
 
         logger.debug(f"🙌 SynTree completed.")
         return syntree

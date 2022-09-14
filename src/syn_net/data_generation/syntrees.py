@@ -207,7 +207,7 @@ class SynTreeGenerator:
                     if p is not None: break
                 if p is None:
                     # TODO: move to rxn.run_reaction?
-                    raise NoReactionPossible("No reaction possible.")
+                    raise NoReactionPossible(f"Reaction (ID: {idx_rxn}) not possible with: {r1} + {r2}.")
 
             elif action == "add":
                 mol = self._sample_molecule()
@@ -227,7 +227,7 @@ class SynTreeGenerator:
                 p = rxn.run_reaction((r1, r2))
                 if p is None:
                     # TODO: move to rxn.run_reaction?
-                    raise NoReactionPossible("No reaction possible.")
+                    raise NoReactionPossible(f"Reaction (ID: {idx_rxn}) not possible with: {r1} + {r2}.")
 
             # Prepare next iteration
             logger.debug(f"    Ran reaction {r1} + {r2} -> {p}")

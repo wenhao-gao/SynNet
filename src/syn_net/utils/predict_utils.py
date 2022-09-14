@@ -304,7 +304,7 @@ def synthetic_tree_decoder(
             mol2 = None
 
         # Run reaction
-        mol_product = rxn.run_reaction([mol1, mol2])
+        mol_product = rxn.run_reaction((mol1, mol2))
         if mol_product is None or Chem.MolFromSmiles(mol_product) is None:
             if len(tree.get_state()) == 1:
                 act = 3
@@ -467,7 +467,7 @@ def synthetic_tree_decoder_rt1(
             mol2 = None
 
         # Run reaction
-        mol_product = rxn.run_reaction([mol1, mol2])
+        mol_product = rxn.run_reaction((mol1, mol2))
         if mol_product is None or Chem.MolFromSmiles(mol_product) is None:
             act = 3
             break

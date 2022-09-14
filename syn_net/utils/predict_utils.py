@@ -868,7 +868,7 @@ def synthetic_tree_decoder_rt1(z_target,
         elif act == 0:
             # Add
             if mol_recent is not None:
-                dist, ind = nn_search(z_mol1)
+                dist, ind = nn_search(z_mol1, _tree=kdtree)
                 mol1 = building_blocks[ind]
             else:
                 dist, ind = nn_search_rt1(z_mol1, _tree=kdtree, _k=rt1_index+1)

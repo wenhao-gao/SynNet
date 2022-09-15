@@ -1,11 +1,11 @@
 """syntrees
 """
+import logging
 from typing import Tuple
-from tqdm import tqdm
+
 import numpy as np
 from rdkit import Chem
-
-import logging
+from tqdm import tqdm
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -21,6 +21,14 @@ class NoReactionAvailableError(Exception):
     def __init__(self, message):
         # Call the base class constructor with the parameters it needs
         super().__init__(message)
+
+
+class NoBiReactionAvailableError(Exception):
+    """Reactants do not match any reaction template."""
+
+    def __init__(self, message):
+        super().__init__(message)
+
 
 class NoReactionPossible(Exception):
     def __init__(self, message):
@@ -100,11 +108,11 @@ class SynTreeGenerator:
     def _base_case(self) -> str:
         return self._sample_molecule()
 
-    def _find_rxn_candidates(self, smiles: str):
+    def _find_rxn_candidates(self, smiles: str, raise_exc: bool = True) -> list[bool]:
         """Find a reaction with `mol` as reactant."""
         mol = Chem.MolFromSmiles(smiles)
         rxn_mask = [rxn.is_reactant(mol) for rxn in self.rxns]
-        if not any(rxn_mask):
+        if raise_exc and not any(rxn_mask):  # Do not raise exc when checking if two mols can react
             raise NoReactionAvailableError(f"No reaction available for: {smiles}.")
         return rxn_mask
 
@@ -177,6 +185,18 @@ class SynTreeGenerator:
 
         return np.array((canAdd, canExpand, canMerge, canEnd), dtype=bool)
 
+    def _get_rxn_mask(self, reactants: tuple[str, str]) -> list[bool]:
+        """Get a mask of possible reactions for the two reactants."""
+        masks = [self._find_rxn_candidates(r, raise_exc=False) for r in reactants]
+        # TODO: We do not check if the two reactants are 1st and 2nd reactants in a given reaction.
+        #       It is possible that both are only applicable as 1st reactant,
+        #       and then the reaction is not possible, although the mask returns true.
+        #       Alternative: Run the reaction and check if the product is valid.
+        mask = [rxn1 and rxn2 for rxn1, rxn2 in zip(*masks)]
+        if not any(mask):
+            raise NoBiReactionAvailableError(f"No reaction available for {reactants}.")
+        return mask
+
     def generate(self, max_depth: int = 15, retries: int = 3):
         """Generate a syntree by random sampling."""
 
@@ -216,12 +236,11 @@ class SynTreeGenerator:
 
             elif action == "merge":
                 # merge two subtrees: sample reaction, run it.
-                r1, r2 = [node.smiles for node in state]
+
                 # Identify suitable rxn
-                # TODO: naive implementation
-                rxn_mask1 = self._find_rxn_candidates(r1)
-                rxn_mask2 = self._find_rxn_candidates(r2)
-                rxn_mask = rxn_mask1 and rxn_mask2
+                r1, r2 = syntree.get_state()
+                rxn_mask = self._get_rxn_mask(tuple((r1, r2)))
+                # Sample reaction
                 rxn, idx_rxn = self._sample_rxn(mask=rxn_mask)
                 # Run reaction
                 p = rxn.run_reaction((r1, r2))

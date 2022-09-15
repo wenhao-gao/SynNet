@@ -12,14 +12,18 @@ logger.setLevel(logging.INFO)
 
 from syn_net.utils.data_utils import Reaction, SyntheticTree
 
+
 class NoReactantAvailableError(Exception):
+    """No second reactant available for the bimolecular reaction."""
+
     def __init__(self, message):
-        # Call the base class constructor with the parameters it needs
         super().__init__(message)
 
+
 class NoReactionAvailableError(Exception):
+    """Reactant does not match any reaction template."""
+
     def __init__(self, message):
-        # Call the base class constructor with the parameters it needs
         super().__init__(message)
 
 
@@ -31,8 +35,9 @@ class NoBiReactionAvailableError(Exception):
 
 
 class NoReactionPossible(Exception):
+    """`rdkit` can not yield a valid reaction product."""
+
     def __init__(self, message):
-        # Call the base class constructor with the parameters it needs
         super().__init__(message)
 
 
@@ -40,7 +45,7 @@ class SynTreeGenerator:
 
     building_blocks: list[str]
     rxn_templates: list[Reaction]
-    rxns: dict[int, Reaction]
+    rxns: list[Reaction]
     IDX_RXNS: list
     ACTIONS: dict[int, str] = {i: action for i, action in enumerate("add expand merge end".split())}
     verbose: bool
@@ -51,7 +56,7 @@ class SynTreeGenerator:
         building_blocks: list[str],
         rxn_templates: list[str],
         rng=np.random.default_rng(seed=42),
-        verbose:bool = False,
+        verbose: bool = False,
     ) -> None:
         self.building_blocks = building_blocks
         self.rxn_templates = rxn_templates
@@ -109,7 +114,7 @@ class SynTreeGenerator:
         return self._sample_molecule()
 
     def _find_rxn_candidates(self, smiles: str, raise_exc: bool = True) -> list[bool]:
-        """Find a reaction with `mol` as reactant."""
+        """Tests which reactions have `mol` as reactant."""
         mol = Chem.MolFromSmiles(smiles)
         rxn_mask = [rxn.is_reactant(mol) for rxn in self.rxns]
         if raise_exc and not any(rxn_mask):  # Do not raise exc when checking if two mols can react
@@ -119,12 +124,14 @@ class SynTreeGenerator:
     def _sample_rxn(self, mask: np.ndarray = None) -> Tuple[Reaction, int]:
         """Sample a reaction by index."""
         if mask is None:
-            irxn_mask = self.IDX_RXNS  #
+            irxn_mask = self.IDX_RXNS  # All reactions are possible
         else:
-            mask =  np.asarray(mask)
+            mask = np.asarray(mask)
             irxn_mask = self.IDX_RXNS[mask]
         idx = self.rng.choice(irxn_mask)
-        logger.debug(f"    Sampled reaction with index: {idx} (nreactants: {self.rxns[idx].num_reactant})")
+        logger.debug(
+            f"Sampled reaction with index: {idx} (nreactants: {self.rxns[idx].num_reactant})"
+        )
         return self.rxns[idx], idx
 
     def _expand(self, reactant_1: str) -> Tuple[str, str, str, np.int64]:
@@ -147,14 +154,15 @@ class SynTreeGenerator:
             #   - then sample "B" (or "A")
             idx = 1 if rxn.is_reactant_first(reactant_1) else 0
             available_reactants = rxn.available_reactants[idx]
-            nPossible = len(available_reactants)
-            if nPossible==0:
-                raise NoReactantAvailableError("Unable to find two reactants for this bimolecular reaction.")
-                 # TODO: 2 bi-molecular rxn templates have no matching bblock
+            nPossibleReactants = len(available_reactants)
+            if nPossibleReactants == 0:
+                raise NoReactantAvailableError(
+                    f"Unable to find reactant {idx+1} for bimolecular reaction (ID: {idx_rxn}) and reactant {reactant_1}."
+                )
+                # TODO: 2 bi-molecular rxn templates have no matching bblock
             # TODO: use numpy array to avoid type conversion or stick to sampling idx?
-            idx = self.rng.choice(nPossible)
+            idx = self.rng.choice(nPossibleReactants)
             reactant_2 = available_reactants[idx]
-
 
         # Run reaction
         reactants = (reactant_1, reactant_2)
@@ -223,11 +231,14 @@ class SynTreeGenerator:
             elif action == "expand":
                 for j in range(retries):
                     logger.debug(f"    Try {j}")
-                    r1, r2, p, idx_rxn= self._expand(recent_mol)
-                    if p is not None: break
+                    r1, r2, p, idx_rxn = self._expand(recent_mol)
+                    if p is not None:
+                        break
                 if p is None:
                     # TODO: move to rxn.run_reaction?
-                    raise NoReactionPossible(f"Reaction (ID: {idx_rxn}) not possible with: {r1} + {r2}.")
+                    raise NoReactionPossible(
+                        f"Reaction (ID: {idx_rxn}) not possible with: {r1} + {r2}."
+                    )
 
             elif action == "add":
                 mol = self._sample_molecule()
@@ -246,7 +257,9 @@ class SynTreeGenerator:
                 p = rxn.run_reaction((r1, r2))
                 if p is None:
                     # TODO: move to rxn.run_reaction?
-                    raise NoReactionPossible(f"Reaction (ID: {idx_rxn}) not possible with: {r1} + {r2}.")
+                    raise NoReactionPossible(
+                        f"Reaction (ID: {idx_rxn}) not possible with: {r1} + {r2}."
+                    )
 
             # Prepare next iteration
             logger.debug(f"    Ran reaction {r1} + {r2} -> {p}")

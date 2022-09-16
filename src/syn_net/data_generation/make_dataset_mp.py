@@ -8,7 +8,7 @@ import multiprocessing as mp
 
 import numpy as np
 from pathlib import Path
-from syn_net.data_generation.make_dataset import synthetic_tree_generator
+from syn_net.utils.prep_utils import synthetic_tree_generator
 from syn_net.utils.data_utils import ReactionSet, SyntheticTreeSet
 from syn_net.config import BUILDING_BLOCKS_RAW_DIR, DATA_PREPROCESS_DIR, MAX_PROCESSES
 from syn_net.data_generation.preprocessing import BuildingBlockFileHandler

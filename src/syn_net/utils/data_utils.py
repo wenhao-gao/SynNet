@@ -456,7 +456,7 @@ class SyntheticTree:
                 return node.index
         return None
 
-    def get_state(self) -> list[NodeChemical]:
+    def get_state(self) -> list[str]:
         """Get the state of this synthetic tree.
         The most recent root node has 0 as its index.
 

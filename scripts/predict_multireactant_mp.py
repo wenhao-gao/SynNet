@@ -4,7 +4,9 @@ Generate synthetic trees for a set of specified query molecules. Multiprocessing
 import multiprocessing as mp
 from pathlib import Path
 from typing import Union
+import logging
 
+logger = logging.getLogger(__name__)
 import numpy as np
 import pandas as pd
 
@@ -38,7 +40,7 @@ def _fetch_data_from_file(name: str) -> list[str]:
 def _fetch_data(name: str) -> list[str]:
     if args.data in ["train", "valid", "test"]:
         file = Path(DATA_PREPARED_DIR) / f"synthetic-trees-{args.data}.json.gz"
-        print(f"Reading data from {file}")
+        logger.info(f"Reading data from {file}")
         sts = SyntheticTreeSet()
         sts.load(file)
         smis_query = [st.root.smiles for st in sts.sts]
@@ -136,7 +138,7 @@ def func(smiles: str):
             max_step=15,
         )
     except Exception as e:
-        print(e)
+        logger.error(e,exc_info=e)
         action = -1
 
     if action != 3:  # aka tree has not been properly ended
@@ -191,10 +193,11 @@ if __name__ == "__main__":
     param_dir = f"{rxn_template}_{featurize}_{radius}_{nbits}_{out_dim}"
 
     # Load data ...
+    logger.info("Stat loading data...")
     # ... query molecules (i.e. molecules to decode)
     smiles_queries = _fetch_data(args.data)
     if args.num > 0:  # Select only n queries
-        smiles_queries = smiles_queries[: args.num]
+        smiles_queries = smiles_queries[:args.num]
 
     # ... building blocks
     file = Path(DATA_PREPROCESS_DIR) / f"{rxn_template}-{building_blocks_id}-matched.csv.gz"
@@ -210,20 +213,23 @@ if __name__ == "__main__":
     # ... building block embedding
     file = Path(DATA_EMBEDDINGS_DIR) / f"{rxn_template}-{building_blocks_id}-embeddings.npy"
     bb_emb = _fetch_building_blocks_embeddings(file)
+    logger.info("...loading data completed.")
 
     # ... models
+    logger.info("Start loading models from checkpoints...")
     path = Path(CHECKPOINTS_DIR) / f"{param_dir}"
     paths = [
         find_best_model_ckpt("results/logs/hb_fp_2_4096/" + model)
         for model in "act rt1 rxn rt2".split()
     ]
     act_net, rt1_net, rxn_net, rt2_net = _load_pretrained_model(paths)
+    logger.info("...loading models completed.")
 
     # Decode queries, i.e. the target molecules.
-    print(f"Start to decode {len(smiles_queries)} target molecules.")
+    logger.info(f"Start to decode {len(smiles_queries)} target molecules.")
     with mp.Pool(processes=args.ncpu) as pool:
         results = pool.map(func, smiles_queries)
-    print("Finished decoding.")
+    logger.info("Finished decoding.")
 
     # Print some results from the prediction
     smis_decoded = [r[0] for r in results]
@@ -232,13 +238,14 @@ if __name__ == "__main__":
 
     recovery_rate = (np.asfarray(similarities) == 1.0).sum() / len(similarities)
     avg_similarity = np.mean(similarities)
-    print(f"For {args.data}:")
-    print(f"  {recovery_rate=}")
-    print(f"  {avg_similarity=}")
+    logger.info(f"For {args.data}:")
+    logger.info(f"  {len(smiles_queries)=}")
+    logger.info(f"  {recovery_rate=}")
+    logger.info(f"  {avg_similarity=}")
 
     # Save to local dir
     output_dir = DATA_RESULT_DIR if args.output_dir is None else args.output_dir
-    print("Saving results to {output_dir} ...")
+    logger.info("Saving results to {output_dir} ...")
     df = pd.DataFrame(
         {"query SMILES": smiles_queries, "decode SMILES": smis_decoded, "similarity": similarities}
     )
@@ -247,4 +254,4 @@ if __name__ == "__main__":
     synthetic_tree_set = SyntheticTreeSet(sts=trees)
     synthetic_tree_set.save(f"{output_dir}/decoded_st_{args.data}.json.gz")
 
-    print("Finish!")
+    logger.info("Finish!")

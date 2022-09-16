@@ -276,3 +276,15 @@ class SynTreeGenerator:
 
         logger.debug(f"🙌 SynTree completed.")
         return syntree
+
+
+def load_syntreegenerator(file: str) -> SynTreeGenerator:
+    import pickle
+    with open(file,"rb") as f:
+        syntreegenerator = pickle.load(f)
+    return syntreegenerator
+
+def save_syntreegenerator(syntreegenerator: SynTreeGenerator,file: str) -> None:
+    import pickle
+    with open(file,"wb") as f:
+        pickle.dump(syntreegenerator,f)

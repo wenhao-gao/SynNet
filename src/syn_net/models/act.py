@@ -83,6 +83,8 @@ if __name__ == "__main__":
     save_dir.mkdir(exist_ok=True, parents=True)
 
     tb_logger = pl_loggers.TensorBoardLogger(save_dir, name="")
+    csv_logger = pl_loggers.CSVLogger(save_dir,name="")
+    logger.info(f"Log dir set to: {tb_logger.log_dir}")
 
     checkpoint_callback = ModelCheckpoint(
         monitor="val_loss",
@@ -99,7 +101,8 @@ if __name__ == "__main__":
         max_epochs=max_epochs,
         progress_bar_refresh_rate=int(len(train_dataloader) * 0.05),
         callbacks=[checkpoint_callback],
-        logger=[tb_logger],
+        logger=[tb_logger,csv_logger],
+        fast_dev_run=args.fast_dev_run,
     )
 
     logger.info(f"Start training")

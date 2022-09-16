@@ -1,4 +1,5 @@
 from tqdm import tqdm
+from syn_net.config import MAX_PROCESSES
 
 from syn_net.utils.data_utils import Reaction
 
@@ -17,7 +18,7 @@ class BuildingBlockFilter:
         *,
         building_blocks: list[str],
         rxn_templates: list[str],
-        processes: int = 1,
+        processes: int = MAX_PROCESSES,
         verbose: bool = False
     ) -> None:
         self.building_blocks = building_blocks

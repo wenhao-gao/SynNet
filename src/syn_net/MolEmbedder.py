@@ -4,12 +4,12 @@ from typing import Callable, Union
 
 import numpy as np
 from sklearn.neighbors import BallTree
-
+from syn_net.config import MAX_PROCESSES
 logger = logging.getLogger(__name__)
 
 
 class MolEmbedder:
-    def __init__(self, processes: int = 1) -> None:
+    def __init__(self, processes: int = MAX_PROCESSES) -> None:
         self.processes = processes
         self.func: Callable
         self.building_blocks: Union[list[str], np.ndarray]

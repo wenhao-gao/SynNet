@@ -10,7 +10,7 @@ import numpy as np
 from pathlib import Path
 from syn_net.data_generation.make_dataset import synthetic_tree_generator
 from syn_net.utils.data_utils import ReactionSet, SyntheticTreeSet
-from syn_net.config import BUILDING_BLOCKS_RAW_DIR, DATA_PREPROCESS_DIR
+from syn_net.config import BUILDING_BLOCKS_RAW_DIR, DATA_PREPROCESS_DIR, MAX_PROCESSES
 from syn_net.data_generation.preprocessing import BuildingBlockFileHandler
 import logging
 
@@ -40,7 +40,7 @@ if __name__ == '__main__':
     rxns = r_set.rxns
 
     # Generate synthetic trees
-    with mp.Pool(processes=64) as pool:
+    with mp.Pool(processes=MAX_PROCESSES) as pool:
         results = pool.map(func, np.arange(NUM_TREES).tolist())
 
     # Filter out trees that were completed with action="end"

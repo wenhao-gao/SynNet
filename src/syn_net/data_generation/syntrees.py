@@ -6,6 +6,7 @@ from typing import Tuple
 import numpy as np
 from rdkit import Chem
 from tqdm import tqdm
+from syn_net.config import MAX_PROCESSES
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -46,7 +47,7 @@ class SynTreeGenerator:
     building_blocks: list[str]
     rxn_templates: list[Reaction]
     rxns: list[Reaction]
-    IDX_RXNS: list
+    IDX_RXNS: np.ndarray # (nReactions,)
     ACTIONS: dict[int, str] = {i: action for i, action in enumerate("add expand merge end".split())}
     verbose: bool
 
@@ -56,6 +57,7 @@ class SynTreeGenerator:
         building_blocks: list[str],
         rxn_templates: list[str],
         rng=np.random.default_rng(seed=42),
+        processes: int = MAX_PROCESSES,
         verbose: bool = False,
     ) -> None:
         self.building_blocks = building_blocks
@@ -63,7 +65,7 @@ class SynTreeGenerator:
         self.rxns = [Reaction(template=tmplt) for tmplt in rxn_templates]
         self.rng = rng
         self.IDX_RXNS = np.arange(len(self.rxns))
-        self.processes = 32
+        self.processes = processes
         self.verbose = verbose
         if verbose:
             logger.setLevel(logging.DEBUG)

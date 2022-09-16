@@ -4,7 +4,7 @@ import logging
 
 from rdkit import RDLogger
 from syn_net.data_generation.preprocessing import BuildingBlockFileHandler, BuildingBlockFilter
-
+from syn_net.config import MAX_PROCESSES
 RDLogger.DisableLog("rdApp.*")
 logger = logging.getLogger(__name__)
 
@@ -30,7 +30,7 @@ def get_args():
         help="Output file for the filtered building-blocks file.",
     )
     # Processing
-    parser.add_argument("--ncpu", type=int, default=32, help="Number of cpus")
+    parser.add_argument("--ncpu", type=int, default=MAX_PROCESSES, help="Number of cpus")
     parser.add_argument("--verbose", default=False, action="store_true")
     return parser.parse_args()
 

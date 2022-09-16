@@ -35,7 +35,7 @@ def can_react(state, rxns: list[Reaction]) -> Tuple[int, list[bool]]:
     """
     mol1 = state.pop()
     mol2 = state.pop()
-    reaction_mask = [int(rxn.run_reaction([mol1, mol2]) is not None) for rxn in rxns]
+    reaction_mask = [int(rxn.run_reaction((mol1, mol2)) is not None) for rxn in rxns]
     return sum(reaction_mask), reaction_mask
 
 
@@ -423,9 +423,7 @@ def synthetic_tree_decoder_rt1(
             reaction_mask, available_list = get_reaction_mask(mol1, reaction_templates)
         else:  # merge
             _, reaction_mask = can_react(tree.get_state(), reaction_templates)
-            available_list = [
-                [] for rxn in reaction_templates
-            ]  # TODO: if act=merge, this is not used at all
+            available_list = [[] for rxn in reaction_templates]  # TODO: if act=merge, this is not used at all
 
         # If we ended up in a state where no reaction is possible, end this iteration.
         if reaction_mask is None:

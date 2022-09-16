@@ -189,7 +189,7 @@ class SynTreeGenerator:
             canEnd = True
         elif nTrees == 2:
             canExpand = True
-            canMerge = any(self._get_action_mask(state))
+            canMerge = any(self._get_rxn_mask(tuple(state)))
         else:
             raise ValueError
 

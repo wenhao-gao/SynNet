@@ -7,8 +7,8 @@ from rdkit import Chem, RDLogger
 
 from syn_net.data_generation.preprocessing import (BuildingBlockFileHandler,
                                                    ReactionTemplateFileHandler)
-from syn_net.data_generation.syntrees import (NoReactantAvailableError, NoReactionAvailableError,
-                                              NoReactionPossible, SynTreeGenerator)
+from syn_net.data_generation.syntrees import (NoReactantAvailableError, NoReactionAvailableError, NoBiReactionAvailableError,
+                                              NoReactionPossibleError, SynTreeGenerator)
 from syn_net.utils.data_utils import Reaction, SyntheticTree, SyntheticTreeSet
 
 logger = logging.getLogger(__name__)
@@ -50,7 +50,10 @@ def wraps_syntreegenerator_generate() -> Tuple[Union[SyntheticTree, None], Union
     except NoReactionAvailableError as e:
         logger.error(e)
         return None, e
-    except NoReactionPossible as e:
+    except NoBiReactionAvailableError as e:
+        logger.error(e)
+        return None, e
+    except NoReactionPossibleError as e:
         logger.error(e)
         return None, e
     except TypeError as e:

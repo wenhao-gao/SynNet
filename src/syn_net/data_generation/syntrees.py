@@ -229,7 +229,7 @@ class SynTreeGenerator:
             logger.debug(f"  Sampled action: {action}")
 
             if action == "end":
-                r1, r2, p, idx_rxn = None, None, None, None
+                r1, r2, p, idx_rxn = None, None, None, -1
             elif action == "expand":
                 for j in range(retries):
                     logger.debug(f"    Try {j}")
@@ -269,7 +269,7 @@ class SynTreeGenerator:
             recent_mol = p
 
             # Update tree
-            syntree.update(act, rxn_id=idx_rxn, mol1=r1, mol2=r2, mol_product=p)
+            syntree.update(act, rxn_id=int(idx_rxn), mol1=r1, mol2=r2, mol_product=p)
             logger.debug(f"SynTree updated.")
             if action == "end":
                 break

@@ -668,8 +668,8 @@ class SyntheticTreeSet:
         Args:
             json_file (str): The path to the stored synthetic tree file.
         """
-        with gzip.open(json_file, 'r') as f:
-            data = json.loads(f.read().decode('utf-8'))
+        with gzip.open(json_file, 'rt') as f:
+            data = json.loads(f.read())
 
         for st_dict in data['trees']:
             if st_dict is None:
@@ -689,8 +689,8 @@ class SyntheticTreeSet:
         st_list = {
             'trees': [st.output_dict() if st is not None else None for st in self.sts]
         }
-        with gzip.open(json_file, 'w') as f:
-            f.write(json.dumps(st_list).encode('utf-8'))
+        with gzip.open(json_file, 'wt') as f:
+            f.write(json.dumps(st_list))
 
     def _print(self, x=3):
         # For debugging

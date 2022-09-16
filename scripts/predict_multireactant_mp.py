@@ -148,9 +148,7 @@ def func(smiles: str):
 
     return smi, similarity, tree
 
-
-if __name__ == "__main__":
-
+def get_args():
     import argparse
 
     parser = argparse.ArgumentParser()
@@ -164,7 +162,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "-r", "--rxn_template", type=str, default="hb", help="Choose from ['hb', 'pis']"
     )
-    parser.add_argument("--ncpu", type=int, default=1, help="Number of cpus")
+    parser.add_argument("--ncpu", type=int, default=32, help="Number of cpus")
     parser.add_argument("-n", "--num", type=int, default=1, help="Number of molecules to predict.")
     parser.add_argument(
         "-d",
@@ -181,7 +179,12 @@ if __name__ == "__main__":
         help="Choose from ['fp_4096', 'fp_256', 'gin', 'rdkit2d']",
     )
     parser.add_argument("--output-dir", type=str, default=None, help="Directory to save output.")
-    args = parser.parse_args()
+    return parser.parse_args()
+
+
+if __name__ == "__main__":
+    args = get_args()
+    logger.info(f"Args: {vars(args)}")
 
     nbits = args.nbits
     out_dim = args.outputembedding.split("_")[-1]  # <=> morgan fingerprint with 256 bits

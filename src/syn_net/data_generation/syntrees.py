@@ -35,7 +35,7 @@ class NoBiReactionAvailableError(Exception):
         super().__init__(message)
 
 
-class NoReactionPossible(Exception):
+class NoReactionPossibleError(Exception):
     """`rdkit` can not yield a valid reaction product."""
 
     def __init__(self, message):
@@ -238,7 +238,7 @@ class SynTreeGenerator:
                         break
                 if p is None:
                     # TODO: move to rxn.run_reaction?
-                    raise NoReactionPossible(
+                    raise NoReactionPossibleError(
                         f"Reaction (ID: {idx_rxn}) not possible with: {r1} + {r2}."
                     )
 
@@ -259,7 +259,7 @@ class SynTreeGenerator:
                 p = rxn.run_reaction((r1, r2))
                 if p is None:
                     # TODO: move to rxn.run_reaction?
-                    raise NoReactionPossible(
+                    raise NoReactionPossibleError(
                         f"Reaction (ID: {idx_rxn}) not possible with: {r1} + {r2}."
                     )
 

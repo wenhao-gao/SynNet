@@ -10,7 +10,7 @@ import logging
 from syn_net.data_generation.preprocessing import BuildingBlockFileHandler
 from syn_net.encoding.fingerprints import fp_256, fp_512, fp_1024, fp_2048, fp_4096
 from syn_net.MolEmbedder import MolEmbedder
-
+from syn_net.config import MAX_PROCESSES
 # from syn_net.encoding.gins import mol_embedding
 # from syn_net.utils.prep_utils import rdkit2d_embedding
 
@@ -57,7 +57,7 @@ def get_args():
         help="Objective function to optimize",
     )
     # Processing
-    parser.add_argument("--ncpu", type=int, default=32, help="Number of cpus")
+    parser.add_argument("--ncpu", type=int, default=MAX_PROCESSES, help="Number of cpus")
     parser.add_argument("--verbose", default=False, action="store_true")
     return parser.parse_args()
 

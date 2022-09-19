@@ -1,11 +1,15 @@
 """Central place for all configuration, paths, and parameter."""
+import multiprocessing
+# Multiprocessing
+MAX_PROCESSES = min(32,multiprocessing.cpu_count()-1)
 
+# Paths
 DATA_DIR = "data"
 ASSETS_DIR = "data/assets"
 
-# 
-BUILDING_BLOCKS_RAW_DIR = f"{ASSETS_DIR}/building-blocks" 
-REACTION_TEMPLATE_DIR = f"{ASSETS_DIR}/reaction-templates" 
+#
+BUILDING_BLOCKS_RAW_DIR = f"{ASSETS_DIR}/building-blocks"
+REACTION_TEMPLATE_DIR = f"{ASSETS_DIR}/reaction-templates"
 
 # Pre-processed data
 DATA_PREPROCESS_DIR = "data/pre-process"
@@ -21,4 +25,4 @@ DATA_FEATURIZED_DIR = "data/featurized"
 DATA_RESULT_DIR = "results"
 
 # Checkpoints (& pre-trained weights)
-CHECKPOINTS_DIR = "checkpoints" # 
+CHECKPOINTS_DIR = "checkpoints" #

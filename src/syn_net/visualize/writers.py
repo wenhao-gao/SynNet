@@ -56,7 +56,7 @@ class PostfixWriter:
 
 
 class SynTreeWriter:
-    def __init__(self, prefixer=None, postfixer=None):
+    def __init__(self, prefixer=PrefixWriter(), postfixer=PostfixWriter()):
         self.prefixer = prefixer
         self.postfixer = postfixer
         self._text: list[str] = None
@@ -72,6 +72,7 @@ class SynTreeWriter:
 
         with open(file, "wt") as f:
             f.writelines((l.rstrip() + "\n" for l in text))
+        return None
 
     @property
     def text(self) -> list[str]:

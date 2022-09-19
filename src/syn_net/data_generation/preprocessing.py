@@ -1,4 +1,5 @@
 from tqdm import tqdm
+from syn_net.config import MAX_PROCESSES
 
 from syn_net.utils.data_utils import Reaction
 
@@ -17,7 +18,7 @@ class BuildingBlockFilter:
         *,
         building_blocks: list[str],
         rxn_templates: list[str],
-        processes: int = 1,
+        processes: int = MAX_PROCESSES,
         verbose: bool = False
     ) -> None:
         self.building_blocks = building_blocks
@@ -103,3 +104,31 @@ class BuildingBlockFileHandler:
             self._save_csv(file, building_blocks)
         else:
             raise NotImplementedError
+
+class ReactionTemplateFileHandler:
+
+    def load(self, file: str) -> list[str]:
+        """Load reaction templates from file."""
+        with open(file, "rt") as f:
+            rxn_templates = f.readlines()
+
+        if not all([self._validate(t)] for t in rxn_templates):
+            raise ValueError("Not all reaction templates are valid.")
+
+        return rxn_templates
+
+    def _validate(self, rxn_template: str) -> bool:
+        """Validate reaction templates.
+
+        Checks if:
+          - reaction is uni- or bimolecular
+          - has only a single product
+
+        Note:
+          - only uses std-lib functions, very basic validation only
+        """
+        reactants, agents, products = rxn_template.split(">")
+        is_uni_or_bimolecular = len(reactants) == 1 or len(reactants) == 2
+        has_single_product = len(products) == 1
+
+        return is_uni_or_bimolecular and has_single_product

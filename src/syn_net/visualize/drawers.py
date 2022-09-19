@@ -1,15 +1,24 @@
 import uuid
 from pathlib import Path
-from typing import Union
+from typing import Optional, Union
 
 import rdkit.Chem as Chem
 from rdkit.Chem import Draw
 
 
 class MolDrawer:
-    def __init__(self):
-        self.lookup: dict = None
-        self.path: Union[None, str] = None
+    """Draws molecules as images."""
+
+    def __init__(self, path: Optional[str], subfolder: str = "assets"):
+
+        # Init outfolder
+        if not (path is not None and Path(path).exists()):
+            raise NotADirectoryError(path)
+        self.outfolder = Path(path) / subfolder
+        self.outfolder.mkdir(exist_ok=1)
+
+        # Placeholder
+        self.lookup: dict[str, str] = None
 
     def _hash(self, smiles: list[str]) -> dict[str, str]:
         """Hashing for amateurs.
@@ -23,13 +32,12 @@ class MolDrawer:
     def get_molecule_filesnames(self):
         return self.lookup
 
-    def plot(self, smiles: Union[list[str], str], path: str = "./"):
-        """Plot smiles as 2d molecules and save to `path`."""
+    def plot(self, smiles: Union[list[str], str]):
+        """Plot smiles as 2d molecules and save to `self.path/subfolder/*.svg`."""
         self._hash(smiles)
-        self.path = path
 
         for k, v in self.lookup.items():
-            fname = str((Path(path) / f"{v}.svg").resolve())
+            fname = self.outfolder / f"{v}.svg"
             mol = Chem.MolFromSmiles(k)
             # Plot
             drawer = Draw.rdMolDraw2D.MolDraw2DSVG(300, 150)

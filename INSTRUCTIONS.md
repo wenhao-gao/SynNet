@@ -62,7 +62,7 @@ Let's start.
     # Generate synthetic trees
     python scripts/03-generate-syntrees.py \
         --building-blocks-file "data/pre-process/building-blocks/enamine-us-smiles.csv.gz" \
-        --rxn-templates-file "data/assets/reaction-templates/hb.txt" \
+        --rxn-templates-file   "data/assets/reaction-templates/hb.txt" \
         --output-file "data/pre-process/synthetic-trees.json.gz" \
         --number-syntrees 600000
     ```
@@ -72,7 +72,9 @@ Let's start.
 
     ```bash
     # Filter
-    python scripts/04-sample_from_original.py
+    python scripts/04-filter-synthetic-trees.py \
+        --input-file  "data/pre-process/synthetic-trees.json.gz" \
+        --output-file "data/pre-process/synthetic-trees-filtered.json.gz"
     ```
 
     Each *synthetic tree* is serializable and so we save all trees in a compressed `.json` file.

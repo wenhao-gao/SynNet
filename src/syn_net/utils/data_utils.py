@@ -305,32 +305,39 @@ class ReactionSet:
 
 # the definition of classes for defining synthetic trees below
 class NodeChemical:
-    """
-    A class representing a chemical node in a synthetic tree.
+    """Represents a chemical node in a synthetic tree.
 
     Args:
-        smiles (None or str): SMILES string representing molecule.
-        parent (None or int):
-        child (None or int): Indicates reaction which molecule participates in.
-        is_leaf (bool): Indicates if this is a leaf node.
-        is_root (bool): Indicates if this is a root node.
-        depth (float):
-        index (int): Indicates the order of this chemical node in the tree.
+        smiles: Molecule represented as SMILES string.
+        parent: Parent molecule represented as SMILES string (i.e. the result of a reaction)
+        child: Index of the reaction this object participates in.
+        is_leaf: Is this a leaf node in a synthetic tree?
+        is_root: Is this a root node in a synthetic tree?
+        depth: Depth this node is in tree (+1 for an action, +.5 for a reaction)
+        index: Incremental index for all chemical nodes in the tree.
     """
-    def __init__(self, smiles=None, parent=None, child=None, is_leaf=False,
-                 is_root=False, depth=0, index=0):
-        self.smiles  = smiles
-        self.parent  = parent
-        self.child   = child
+    def __init__(
+        self,
+        smiles: Union[str, None] = None,
+        parent: Union[int, None] = None,
+        child: Union[int, None] = None,
+        is_leaf: bool = False,
+        is_root: bool = False,
+        depth: float = 0,
+        index: int = 0,
+    ):
+        self.smiles = smiles
+        self.parent = parent
+        self.child = child
         self.is_leaf = is_leaf
         self.is_root = is_root
-        self.depth   = depth
-        self.index   = index
+        self.depth = depth
+        self.index = index
 
 
 class NodeRxn:
-    """
-    A class representing a reaction node in a synthetic tree.
+    """Represents a chemical reaction in a synthetic tree.
+
 
     Args:
         rxn_id (None or int): Index corresponding to reaction in a one-hot vector
@@ -342,14 +349,22 @@ class NodeRxn:
         depth (float):
         index (int): Indicates the order of this reaction node in the tree.
     """
-    def __init__(self, rxn_id=None, rtype=None, parent=[],
-                 child=None, depth=0, index=0):
+
+    def __init__(
+        self,
+        rxn_id: Union[int, None] = None,
+        rtype: Union[int, None] = None,
+        parent: Union[list, None] = [],
+        child: Union[list, None] = None,
+        depth: float = 0,
+        index: int = 0,
+    ):
         self.rxn_id = rxn_id
-        self.rtype  = rtype
+        self.rtype = rtype
         self.parent = parent
-        self.child  = child
-        self.depth  = depth
-        self.index  = index
+        self.child = child
+        self.depth = depth
+        self.index = index
 
 
 class SyntheticTree:

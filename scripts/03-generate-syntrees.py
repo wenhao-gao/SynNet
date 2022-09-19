@@ -1,6 +1,7 @@
 import logging
 from collections import Counter
 from pathlib import Path
+from tqdm import tqdm
 
 from rdkit import RDLogger
 
@@ -70,7 +71,8 @@ if __name__ == "__main__":
     logger.info(f"Start generation of {args.number_syntrees} SynTrees...")
     outcomes: dict[int, str] = dict()
     syntrees: list[Union[SyntheticTree, None]] = []
-    for i in range(args.number_syntrees):
+    myrange = tqdm(range(args.number_syntrees)) if args.verbose else range(args.number_syntrees)
+    for i in myrange:
         st, e = wraps_syntreegenerator_generate(stgen)
         outcomes[i] = e.__class__.__name__ if e is not None else "success"
         syntrees.append(st)

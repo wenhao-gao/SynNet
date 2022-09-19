@@ -8,12 +8,11 @@ Here we define the following classes for working with synthetic tree data:
 * `SyntheticTreeSet`
 """
 import functools
-import itertools
 import gzip
+import itertools
 import json
-from typing import Any, Optional, Tuple, Union, Set
+from typing import Any, Optional, Set, Tuple, Union
 
-import pandas as pd
 from rdkit import Chem
 from rdkit.Chem import AllChem, Draw, rdChemReactions
 from tqdm import tqdm

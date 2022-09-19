@@ -673,7 +673,7 @@ class SyntheticTreeSet:
         """Save a collection of synthetic trees to a `*.json.gz` file."""
         assert str(file).endswith(".json.gz"), f"Incompatible file extension for file {file}"
 
-        st_list = {"trees": [st.output_dict() if st is not None else None for st in self.sts]}
+        st_list = {"trees": [st.output_dict() for st in self.sts if st is not None]}
         with gzip.open(file, "wt") as f:
             f.write(json.dumps(st_list))
 

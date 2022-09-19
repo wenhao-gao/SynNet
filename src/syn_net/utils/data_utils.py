@@ -645,45 +645,45 @@ class SyntheticTree:
 
 class SyntheticTreeSet:
     """Represents a collection of synthetic trees, for saving and loading purposes."""
-    def __init__(self, sts: Optional[list[SyntheticTree]]=None):
+
+    def __init__(self, sts: Optional[list[SyntheticTree]] = None):
         self.sts = sts if sts is not None else []
 
     def __len__(self):
         return len(self.sts)
 
-    def __getitem__(self,index):
-        if self.sts is None: raise IndexError("No Synthetic Trees.")
+    def __getitem__(self, index):
+        if self.sts is None:
+            raise IndexError("No Synthetic Trees.")
         return self.sts[index]
 
-    def load(self, file:str):
+    def load(self, file: str):
         """Load a collection of synthetic trees from a `*.json.gz` file."""
         assert str(file).endswith(".json.gz"), f"Incompatible file extension for file {file}"
 
-        with gzip.open(file, 'rt') as f:
+        with gzip.open(file, "rt") as f:
             data = json.loads(f.read())
 
-        for st_dict in data['trees']:
+        for st_dict in data["trees"]:
             st = SyntheticTree(st_dict) if st is not None else None
             self.sts.append(st)
 
         return self
 
-    def save(self, file:str) -> None:
+    def save(self, file: str) -> None:
         """Save a collection of synthetic trees to a `*.json.gz` file."""
         assert str(file).endswith(".json.gz"), f"Incompatible file extension for file {file}"
 
-        st_list = {
-            'trees': [st.output_dict() if st is not None else None for st in self.sts]
-        }
-        with gzip.open(file, 'wt') as f:
+        st_list = {"trees": [st.output_dict() if st is not None else None for st in self.sts]}
+        with gzip.open(file, "wt") as f:
             f.write(json.dumps(st_list))
 
     def _print(self, x=3):
         """Helper function for debugging."""
         for i, r in enumerate(self.sts):
-            if i >= x: break
+            if i >= x:
+                break
             print(r.output_dict())
-
 
 if __name__ == '__main__':
     pass

@@ -386,8 +386,8 @@ class SyntheticTree:
             type (uni- or bi-molecular).
     """
     def __init__(self, tree=None):
-        self.chemicals: list[NodeChemical]   = []
-        self.reactions: list[Reaction]   = []
+        self.chemicals: list[NodeChemical] = []
+        self.reactions: list[NodeRxn] = []
         self.root        = None
         self.depth: float= 0
         self.actions     = []
@@ -423,7 +423,7 @@ class SyntheticTree:
         Returns:
             data (dict): A dictionary representing a synthetic tree.
         """
-        return {'reactions': [r.asdict() for r in self.reactions],
+        return {'reactions': [r.__dict__ for r in self.reactions],
                 'chemicals': [m.__dict__ for m in self.chemicals],
                 'root': self.root.__dict__,
                 'depth': self.depth,

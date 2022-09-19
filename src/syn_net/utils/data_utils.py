@@ -37,7 +37,7 @@ class Reaction:
     num_product: int
     reactant_template: Tuple[str,str]
     product_template: str
-    agent_templat: str
+    agent_template: str
     available_reactants: Tuple[list[str],Optional[list[str]]]
     rxnname: str
     smiles: Any
@@ -97,6 +97,7 @@ class Reaction:
         self.smiles              = smiles
         self.reference           = reference
         self.rxn = self.__init_reaction(self.smirks)
+        return self
 
     @functools.lru_cache(maxsize=20)
     def get_mol(self, smi: Union[str,Chem.Mol]) -> Chem.Mol:
@@ -267,46 +268,28 @@ class Reaction:
 
 
 class ReactionSet:
-    """
-    A class representing a set of reactions, for saving and loading purposes.
+    """Represents a collection of reactions, for saving and loading purposes."""
+    def __init__(self, rxns: Optional[list[Reaction]]=None):
+        self.rxns = rxns if rxns is not None else []
 
-    Arritbutes:
-        rxns (list or None): Contains `Reaction` objects. One can initialize the
-            class with a list or None object, the latter of which is used to
-            define an empty list.
-    """
-    def __init__(self, rxns=None):
-        if rxns is None:
-            self.rxns = []
-        else:
-            self.rxns = rxns
-
-    def load(self, json_file):
-        """
-        A function that loads reactions from a JSON-formatted file.
-
-        Args:
-            json_file (str): The path to the stored reaction file.
-        """
-
-        with gzip.open(json_file, 'r') as f:
+    def load(self, file: str):
+        """Load a collection of reactions from a `*.json.gz` file."""
+        assert str(file).endswith(".json.gz"), f"Incompatible file extension for file {file}"
+        with gzip.open(file, 'r') as f:
             data = json.loads(f.read().decode('utf-8'))
 
-        for r_dict in data['reactions']:
-            r = Reaction()
-            r.load(**r_dict)
-            self.rxns.append(r)
+        for r in data['reactions']:
+            rxn = Reaction().load(**r)
+            self.rxns.append(rxn)
         return self
 
-    def save(self, json_file):
-        """
-        A function that saves the reaction set to a JSON-formatted file.
+    def save(self, file: str):
+        """Save a collection of reactions to a `*.json.gz` file."""
 
-        Args:
-            json_file (str): The path to the stored reaction file.
-        """
+        assert str(file).endswith(".json.gz"), f"Incompatible file extension for file {file}"
+
         r_list = {'reactions': [r.__dict__ for r in self.rxns]}
-        with gzip.open(json_file, 'w') as f:
+        with gzip.open(file, 'w') as f:
             f.write(json.dumps(r_list).encode('utf-8'))
 
     def __len__(self):

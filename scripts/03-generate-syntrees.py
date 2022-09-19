@@ -17,11 +17,6 @@ from typing import Union
 
 RDLogger.DisableLog("rdApp.*")
 
-building_blocks_file = "data/pre-process/building-blocks/enamine-us-smiles.csv.gz"
-rxn_templates_file = "data/assets/reaction-templates/hb.txt"
-output_file = Path(DATA_PREPROCESS_DIR) / f"synthetic-trees.json.gz"
-
-
 def get_args():
     import argparse
 
@@ -30,16 +25,19 @@ def get_args():
     parser.add_argument(
         "--building-blocks-file",
         type=str,
+        default="data/pre-process/building-blocks/enamine-us-smiles.csv.gz", # TODO: change
         help="Input file with SMILES strings (First row `SMILES`, then one per line).",
     )
     parser.add_argument(
         "--rxn-templates-file",
         type=str,
+        default="data/assets/reaction-templates/hb.txt", # TODO: change
         help="Input file with reaction templates as SMARTS(No header, one per line).",
     )
     parser.add_argument(
         "--output-file",
         type=str,
+        default=Path(DATA_PREPROCESS_DIR) / f"synthetic-trees.json.gz",
         help="Output file for the generated synthetic trees (*.json.gz)",
     )
     # Parameters
@@ -72,7 +70,7 @@ if __name__ == "__main__":
     outcomes: dict[int, str] = dict()
     syntrees: list[Union[SyntheticTree, None]] = []
     for i in range(args.number_syntrees):
-        st, e = wraps_syntreegenerator_generate()
+        st, e = wraps_syntreegenerator_generate(stgen)
         outcomes[i] = e.__class__.__name__ if e is not None else "success"
         syntrees.append(st)
     logger.info(f"SynTree generation completed. Results: {Counter(outcomes.values())}")

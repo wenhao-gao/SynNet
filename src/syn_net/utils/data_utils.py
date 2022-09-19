@@ -289,7 +289,7 @@ class ReactionSet:
             self.rxns.append(rxn)
         return self
 
-    def save(self, file: str):
+    def save(self, file: str) -> None:
         """Save a collection of reactions to a `*.json.gz` file."""
 
         assert str(file).endswith(".json.gz"), f"Incompatible file extension for file {file}"
@@ -644,19 +644,9 @@ class SyntheticTree:
 
 
 class SyntheticTreeSet:
-    """
-    A class representing a set of synthetic trees, for saving and loading purposes.
-
-    Arritbute:
-        sts (list): Contains `SyntheticTree`s. One can initialize the class with
-            either a list of synthetic trees or None, in which case an empty
-            list is created.
-    """
-    def __init__(self, sts=None):
-        if sts is None:
-            self.sts = []
-        else:
-            self.sts = sts
+    """Represents a collection of synthetic trees, for saving and loading purposes."""
+    def __init__(self, sts: Optional[list[SyntheticTree]]=None):
+        self.sts = sts if sts is not None else []
 
     def __len__(self):
         return len(self.sts)
@@ -665,42 +655,33 @@ class SyntheticTreeSet:
         if self.sts is None: raise IndexError("No Synthetic Trees.")
         return self.sts[index]
 
-    def load(self, json_file):
-        """
-        A function that loads a JSON-formatted synthetic tree file.
+    def load(self, file:str):
+        """Load a collection of synthetic trees from a `*.json.gz` file."""
+        assert str(file).endswith(".json.gz"), f"Incompatible file extension for file {file}"
 
-        Args:
-            json_file (str): The path to the stored synthetic tree file.
-        """
-        with gzip.open(json_file, 'rt') as f:
+        with gzip.open(file, 'rt') as f:
             data = json.loads(f.read())
 
         for st_dict in data['trees']:
-            if st_dict is None:
-                self.sts.append(None)
-            else:
-                st = SyntheticTree(st_dict)
-                self.sts.append(st)
+            st = SyntheticTree(st_dict) if st is not None else None
+            self.sts.append(st)
+
         return self
 
-    def save(self, json_file):
-        """
-        A function that saves the synthetic tree set to a JSON-formatted file.
+    def save(self, file:str) -> None:
+        """Save a collection of synthetic trees to a `*.json.gz` file."""
+        assert str(file).endswith(".json.gz"), f"Incompatible file extension for file {file}"
 
-        Args:
-            json_file (str): The path to the stored synthetic tree file.
-        """
         st_list = {
             'trees': [st.output_dict() if st is not None else None for st in self.sts]
         }
-        with gzip.open(json_file, 'wt') as f:
+        with gzip.open(file, 'wt') as f:
             f.write(json.dumps(st_list))
 
     def _print(self, x=3):
-        # For debugging
+        """Helper function for debugging."""
         for i, r in enumerate(self.sts):
-            if i >= x:
-                break
+            if i >= x: break
             print(r.output_dict())
 
 

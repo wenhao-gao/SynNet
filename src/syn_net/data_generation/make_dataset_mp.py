@@ -4,26 +4,27 @@ This file generates synthetic tree data in a multi-thread fashion.
 Usage:
     python make_dataset_mp.py
 """
+import logging
 import multiprocessing as mp
+from pathlib import Path
 
 import numpy as np
-from pathlib import Path
-from syn_net.utils.prep_utils import synthetic_tree_generator
-from syn_net.utils.data_utils import ReactionSet, SyntheticTreeSet
+
 from syn_net.config import BUILDING_BLOCKS_RAW_DIR, DATA_PREPROCESS_DIR, MAX_PROCESSES
 from syn_net.data_generation.preprocessing import BuildingBlockFileHandler
-import logging
+from syn_net.utils.data_utils import ReactionSet, SyntheticTreeSet
+from syn_net.utils.prep_utils import synthetic_tree_generator
 
 logger = logging.getLogger(__name__)
 
 
 def func(_x):
-    np.random.seed(_x) # dummy input to generate "unique" seed
+    np.random.seed(_x)  # dummy input to generate "unique" seed
     tree, action = synthetic_tree_generator(building_blocks, rxns)
     return tree, action
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
 
     reaction_template_id = "hb"  # "pis" or "hb"
     building_blocks_id = "enamine_us-2021-smiles"
@@ -35,7 +36,7 @@ if __name__ == '__main__':
 
     # Load genearted reactions (matched reactions <=> building blocks)
     reactions_dir = Path(DATA_PREPROCESS_DIR)
-    reactions_file =  f"reaction-sets_{reaction_template_id}_{building_blocks_id}.json.gz"
+    reactions_file = f"reaction-sets_{reaction_template_id}_{building_blocks_id}.json.gz"
     r_set = ReactionSet().load(reactions_dir / reactions_file)
     rxns = r_set.rxns
 

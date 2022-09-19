@@ -1,109 +1,84 @@
 import logging
 from collections import Counter
 from pathlib import Path
-from pathos import multiprocessing as mp
-import numpy as np
-from rdkit import Chem, RDLogger
 
-from syn_net.data_generation.preprocessing import (BuildingBlockFileHandler,
-                                                   ReactionTemplateFileHandler)
-from syn_net.data_generation.syntrees import (NoReactantAvailableError, NoReactionAvailableError, NoBiReactionAvailableError,
-                                              NoReactionPossibleError, SynTreeGenerator)
-from syn_net.utils.data_utils import Reaction, SyntheticTree, SyntheticTreeSet
+from rdkit import RDLogger
+
+from syn_net.config import DATA_PREPROCESS_DIR, MAX_PROCESSES
+from syn_net.data_generation.preprocessing import (
+    BuildingBlockFileHandler,
+    ReactionTemplateFileHandler,
+)
+from syn_net.data_generation.syntrees import SynTreeGenerator, wraps_syntreegenerator_generate
+from syn_net.utils.data_utils import SyntheticTree, SyntheticTreeSet
 
 logger = logging.getLogger(__name__)
-from typing import Tuple, Union
+from typing import Union
 
 RDLogger.DisableLog("rdApp.*")
 
-
-def __sanity_checks():
-    """Sanity check some methods. Poor mans tests"""
-    out = stgen._sample_molecule()
-    assert isinstance(out, str)
-    assert Chem.MolFromSmiles(out)
-
-    rxn_mask = stgen._find_rxn_candidates(out)
-    assert isinstance(rxn_mask, list)
-    assert isinstance(rxn_mask[0], bool)
-
-    rxn, rxn_idx = stgen._sample_rxn()
-    assert isinstance(rxn, Reaction)
-    assert isinstance(rxn_idx, np.int64), print(f"{type(rxn_idx)=}")
-
-    out = stgen._base_case()
-    assert isinstance(out, str)
-    assert Chem.MolFromSmiles(out)
-
-    st = SyntheticTree()
-    mask = stgen._get_action_mask(st)
-    assert isinstance(mask, np.ndarray)
-    np.testing.assert_array_equal(mask, np.array([True, False, False, False]))
+building_blocks_file = "data/pre-process/building-blocks/enamine-us-smiles.csv.gz"
+rxn_templates_file = "data/assets/reaction-templates/hb.txt"
+output_file = Path(DATA_PREPROCESS_DIR) / f"synthetic-trees.json.gz"
 
 
-def wraps_syntreegenerator_generate() -> Tuple[Union[SyntheticTree, None], Union[Exception, None]]:
-    try:
-        st = stgen.generate()
-    except NoReactantAvailableError as e:
-        logger.error(e)
-        return None, e
-    except NoReactionAvailableError as e:
-        logger.error(e)
-        return None, e
-    except NoBiReactionAvailableError as e:
-        logger.error(e)
-        return None, e
-    except NoReactionPossibleError as e:
-        logger.error(e)
-        return None, e
-    except TypeError as e:
-        logger.error(e)
-        return None, e
-    except Exception as e:
-        logger.error(e, exc_info=e, stack_info=False)
-        return None, e
-    else:
-        return st, None
+def get_args():
+    import argparse
 
+    parser = argparse.ArgumentParser()
+    # File I/O
+    parser.add_argument(
+        "--building-blocks-file",
+        type=str,
+        help="Input file with SMILES strings (First row `SMILES`, then one per line).",
+    )
+    parser.add_argument(
+        "--rxn-templates-file",
+        type=str,
+        help="Input file with reaction templates as SMARTS(No header, one per line).",
+    )
+    parser.add_argument(
+        "--output-file",
+        type=str,
+        help="Output file for the generated synthetic trees (*.json.gz)",
+    )
+    # Parameters
+    parser.add_argument("--number-syntrees", type=int, help="Number of SynTrees to generate.")
 
-
+    # Processing
+    parser.add_argument("--ncpu", type=int, default=MAX_PROCESSES, help="Number of cpus")
+    parser.add_argument("--verbose", default=False, action="store_true")
+    return parser.parse_args()
 
 
 if __name__ == "__main__":
     logger.info("Start.")
+
+    # Parse input args
+    args = get_args()
+    logger.info(f"Arguments: {vars(args)}")
+
     # Load assets
-    bblocks = BuildingBlockFileHandler().load(
-        "data/pre-process/building-blocks/enamine-us-smiles.csv.gz"
-    )
-    rxn_templates = ReactionTemplateFileHandler().load("data/assets/reaction-templates/hb.txt")
+    bblocks = BuildingBlockFileHandler().load(args.building_blocks_file)
+    rxn_templates = ReactionTemplateFileHandler().load(args.rxn_templates_file)
 
     # Init SynTree Generator
-    import pickle
-    file = "stgen.pickle"
-    with open(file,"rb") as f:
-        stgen = pickle.load(f)
-    # stgen = SynTreeGenerator(building_blocks=bblocks, rxn_templates=rxn_templates, verbose=True)
+    stgen = SynTreeGenerator(
+        building_blocks=bblocks, rxn_templates=rxn_templates, verbose=args.verbose
+    )
 
-    # Run some sanity tests
-    __sanity_checks()
-
-    outcomes: dict[int, any] = dict()
-    syntrees = []
-    for i in range(1_000):
+    # Generate synthetic trees
+    logger.info(f"Start generation of {args.number_syntrees} SynTrees...")
+    outcomes: dict[int, str] = dict()
+    syntrees: list[Union[SyntheticTree, None]] = []
+    for i in range(args.number_syntrees):
         st, e = wraps_syntreegenerator_generate()
         outcomes[i] = e.__class__.__name__ if e is not None else "success"
         syntrees.append(st)
+    logger.info(f"SynTree generation completed. Results: {Counter(outcomes.values())}")
 
-    logger.info(Counter(outcomes.values()))
-
-    # Store syntrees on disk
-    syntrees = [st for st in syntrees if st is not None]
+    # Save synthetic trees on disk
     syntree_collection = SyntheticTreeSet(syntrees)
-    import datetime
-    now = datetime.datetime.now().strftime("%Y%m%d_%H_%M")
-    file = f"data/{now}-syntrees.json.gz"
+    syntree_collection.save(args.output_file)
 
-    syntree_collection.save(file)
-
-    print("completed at", now)
     logger.info(f"Completed.")

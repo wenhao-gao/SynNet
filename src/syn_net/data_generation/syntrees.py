@@ -1,11 +1,12 @@
 """syntrees
 """
 import logging
-from typing import Tuple
+from typing import Tuple, Union
 
 import numpy as np
 from rdkit import Chem
 from tqdm import tqdm
+
 from syn_net.config import MAX_PROCESSES
 
 logger = logging.getLogger(__name__)
@@ -47,7 +48,7 @@ class SynTreeGenerator:
     building_blocks: list[str]
     rxn_templates: list[Reaction]
     rxns: list[Reaction]
-    IDX_RXNS: np.ndarray # (nReactions,)
+    IDX_RXNS: np.ndarray  # (nReactions,)
     ACTIONS: dict[int, str] = {i: action for i, action in enumerate("add expand merge end".split())}
     verbose: bool
 
@@ -278,13 +279,44 @@ class SynTreeGenerator:
         return syntree
 
 
+def wraps_syntreegenerator_generate(
+    stgen: SynTreeGenerator,
+) -> Tuple[Union[SyntheticTree, None], Union[Exception, None]]:
+    """Wrapper for `SynTreeGenerator().generate` that catches all Exceptions."""
+    try:
+        st = stgen.generate()
+    except NoReactantAvailableError as e:
+        logger.error(e)
+        return None, e
+    except NoReactionAvailableError as e:
+        logger.error(e)
+        return None, e
+    except NoBiReactionAvailableError as e:
+        logger.error(e)
+        return None, e
+    except NoReactionPossibleError as e:
+        logger.error(e)
+        return None, e
+    except TypeError as e:
+        logger.error(e)
+        return None, e
+    except Exception as e:
+        logger.error(e, exc_info=e, stack_info=False)
+        return None, e
+    else:
+        return st, None
+
+
 def load_syntreegenerator(file: str) -> SynTreeGenerator:
     import pickle
-    with open(file,"rb") as f:
+
+    with open(file, "rb") as f:
         syntreegenerator = pickle.load(f)
     return syntreegenerator
 
-def save_syntreegenerator(syntreegenerator: SynTreeGenerator,file: str) -> None:
+
+def save_syntreegenerator(syntreegenerator: SynTreeGenerator, file: str) -> None:
     import pickle
-    with open(file,"wb") as f:
-        pickle.dump(syntreegenerator,f)
+
+    with open(file, "wb") as f:
+        pickle.dump(syntreegenerator, f)

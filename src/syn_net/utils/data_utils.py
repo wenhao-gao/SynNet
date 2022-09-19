@@ -663,8 +663,8 @@ class SyntheticTreeSet:
         with gzip.open(file, "rt") as f:
             data = json.loads(f.read())
 
-        for st_dict in data["trees"]:
-            st = SyntheticTree(st_dict) if st is not None else None
+        for st in data["trees"]:
+            st = SyntheticTree(st) if st is not None else None
             self.sts.append(st)
 
         return self

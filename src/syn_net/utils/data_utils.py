@@ -705,19 +705,4 @@ class SyntheticTreeSet:
 
 
 if __name__ == '__main__':
-    """
-    A test run to find available reactants for a set of reaction templates.
-    """
-    path_to_building_blocks = '/home/whgao/shared/Data/scGen/enamine_5k.csv.gz'
-    # path_to_rxn_templates = '/home/whgao/shared/Data/scGen/rxn_set_hartenfeller.txt'
-    path_to_rxn_templates = '/home/whgao/shared/Data/scGen/rxn_set_pis_test.txt'
-
-    building_blocks = pd.read_csv(path_to_building_blocks, compression='gzip')['SMILES'].tolist()
-    rxns = []
-    for line in open(path_to_rxn_templates, 'rt'):
-        rxn = Reaction(line.split('|')[1].strip())
-        rxn.set_available_reactants(building_blocks)
-        rxns.append(rxn)
-
-    r = ReactionSet(rxns)
-    r.save('reactions_pis_test.json.gz')
+    pass

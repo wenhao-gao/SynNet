@@ -298,6 +298,8 @@ def wraps_syntreegenerator_generate(
         logger.error(e)
         return None, e
     except TypeError as e:
+        # When converting an invalid molecule from SMILES to rdkit Molecule.
+        # This happens if the reaction template/rdkit produces an invalid product.
         logger.error(e)
         return None, e
     except Exception as e:

@@ -10,7 +10,6 @@ from tqdm import tqdm
 from syn_net.config import MAX_PROCESSES
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
 
 from syn_net.utils.data_utils import Reaction, SyntheticTree
 

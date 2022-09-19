@@ -265,7 +265,13 @@ class Reaction:
     def get_available_reactants(self) -> Set[str]:
         return {x for reactants in self.available_reactants for x in reactants}
 
-
+    def asdict(self) -> dict():
+        """Returns serializable fields as new dictionary mapping.
+        *Excludes* Not-easily-serializable `self.rxn: rdkit.Chem.ChemicalReaction`."""
+        import copy
+        out = copy.deepcopy(self.__dict__) # TODO:
+        _ = out.pop("rxn")
+        return out
 
 class ReactionSet:
     """Represents a collection of reactions, for saving and loading purposes."""
@@ -279,7 +285,7 @@ class ReactionSet:
             data = json.loads(f.read().decode('utf-8'))
 
         for r in data['reactions']:
-            rxn = Reaction().load(**r)
+            rxn = Reaction().load(**r) # TODO: `load()` relies on postional args, hence we cannot load a reaction that has no `available_reactants` for extample (or no template)
             self.rxns.append(rxn)
         return self
 
@@ -288,7 +294,7 @@ class ReactionSet:
 
         assert str(file).endswith(".json.gz"), f"Incompatible file extension for file {file}"
 
-        r_list = {'reactions': [r.__dict__ for r in self.rxns]}
+        r_list = {'reactions': [r.asdict() for r in self.rxns]}
         with gzip.open(file, 'w') as f:
             f.write(json.dumps(r_list).encode('utf-8'))
 
@@ -300,7 +306,7 @@ class ReactionSet:
         for i, r in enumerate(self.rxns):
             if i >= x:
                 break
-            print(r.__dict__)
+            print(json.dumps(r.asdict(),indent=2))
 
 
 # the definition of classes for defining synthetic trees below
@@ -382,7 +388,7 @@ class SyntheticTree:
     """
     def __init__(self, tree=None):
         self.chemicals: list[NodeChemical]   = []
-        self.reactions:list [Reaction]   = []
+        self.reactions: list[Reaction]   = []
         self.root        = None
         self.depth: float= 0
         self.actions     = []
@@ -418,7 +424,7 @@ class SyntheticTree:
         Returns:
             data (dict): A dictionary representing a synthetic tree.
         """
-        return {'reactions': [r.__dict__ for r in self.reactions],
+        return {'reactions': [r.asdict() for r in self.reactions],
                 'chemicals': [m.__dict__ for m in self.chemicals],
                 'root': self.root.__dict__,
                 'depth': self.depth,

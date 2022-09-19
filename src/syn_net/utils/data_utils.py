@@ -47,7 +47,7 @@ class Reaction:
 
         if template is not None:
             # define a few attributes based on the input
-            self.smirks    = template
+            self.smirks    = template.strip()
             self.rxnname   = rxnname
             self.smiles    = smiles
             self.reference = reference

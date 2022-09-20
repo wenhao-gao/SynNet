@@ -41,6 +41,12 @@ class NoReactionPossibleError(Exception):
     def __init__(self, message):
         super().__init__(message)
 
+class MaxDepthError(Exception):
+    """Synthetic Tree has exceeded its maximum depth."""
+
+    def __init__(self, message):
+        super().__init__(message)
+
 
 class SynTreeGenerator:
 
@@ -56,7 +62,7 @@ class SynTreeGenerator:
         *,
         building_blocks: list[str],
         rxn_templates: list[str],
-        rng=np.random.default_rng(seed=42),
+        rng=np.random.default_rng(),
         processes: int = MAX_PROCESSES,
         verbose: bool = False,
     ) -> None:
@@ -186,7 +192,7 @@ class SynTreeGenerator:
         elif nTrees == 1:
             canAdd = True
             canExpand = True
-            canEnd = True
+            canEnd = True # TODO: When syntree has reached max depth, only allow to end it.
         elif nTrees == 2:
             canExpand = True
             canMerge = any(self._get_rxn_mask(tuple(state)))
@@ -241,12 +247,10 @@ class SynTreeGenerator:
                     raise NoReactionPossibleError(
                         f"Reaction (ID: {idx_rxn}) not possible with: {r1} + {r2}."
                     )
-
             elif action == "add":
                 mol = self._sample_molecule()
                 r1, r2, p, idx_rxn = self._expand(mol)
                 # Expand this subtree: reactant, reaction, reactant2
-
             elif action == "merge":
                 # merge two subtrees: sample reaction, run it.
 
@@ -262,6 +266,8 @@ class SynTreeGenerator:
                     raise NoReactionPossibleError(
                         f"Reaction (ID: {idx_rxn}) not possible with: {r1} + {r2}."
                     )
+            else:
+                raise ValueError(f"Invalid action {action}")
 
             # Prepare next iteration
             logger.debug(f"    Ran reaction {r1} + {r2} -> {p}")
@@ -274,6 +280,8 @@ class SynTreeGenerator:
             if action == "end":
                 break
 
+        if i==max_depth-1 and not action == "end":
+            raise MaxDepthError("Maximum depth {max_depth} exceeded.")
         logger.debug(f"🙌 SynTree completed.")
         return syntree
 

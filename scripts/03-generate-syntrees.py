@@ -1,11 +1,10 @@
 import logging
 from collections import Counter
-from pathlib import Path
-from tqdm import tqdm
 
 from rdkit import RDLogger
+from tqdm import tqdm
 
-from syn_net.config import DATA_PREPROCESS_DIR, MAX_PROCESSES
+from syn_net.config import MAX_PROCESSES
 from syn_net.data_generation.preprocessing import (
     BuildingBlockFileHandler,
     ReactionTemplateFileHandler,
@@ -14,7 +13,7 @@ from syn_net.data_generation.syntrees import SynTreeGenerator, wraps_syntreegene
 from syn_net.utils.data_utils import SyntheticTree, SyntheticTreeSet
 
 logger = logging.getLogger(__name__)
-from typing import Union
+from typing import Tuple, Union
 
 RDLogger.DisableLog("rdApp.*")
 
@@ -39,11 +38,13 @@ def get_args():
     parser.add_argument(
         "--output-file",
         type=str,
-        default=Path(DATA_PREPROCESS_DIR) / f"synthetic-trees.json.gz",
+        default="data/pre-precess/synthetic-trees.json.gz",
         help="Output file for the generated synthetic trees (*.json.gz)",
     )
     # Parameters
-    parser.add_argument("--number-syntrees", type=int, help="Number of SynTrees to generate.")
+    parser.add_argument(
+        "--number-syntrees", type=int, default=1000, help="Number of SynTrees to generate."
+    )
 
     # Processing
     parser.add_argument("--ncpu", type=int, default=MAX_PROCESSES, help="Number of cpus")
@@ -51,9 +52,40 @@ def get_args():
     return parser.parse_args()
 
 
+def generate_mp() -> Tuple[dict[int, str], list[Union[SyntheticTree, None]]]:
+    from functools import partial
+
+    import numpy as np
+    from pathos import multiprocessing as mp
+
+    def wrapper(stgen, _):
+        stgen.rng = np.random.default_rng()
+        return wraps_syntreegenerator_generate(stgen)
+
+    func = partial(wrapper, stgen)
+    with mp.Pool(processes=4) as pool:
+        results = pool.map(func, range(args.number_syntrees))
+    outcomes = {
+        i: e.__class__.__name__ if e is not None else "success" for i, (_, e) in enumerate(results)
+    }
+    syntrees = [st for (st, e) in results if e is None]
+    return outcomes, syntrees
+
+
+def generate() -> Tuple[dict[int, str], list[Union[SyntheticTree, None]]]:
+    outcomes: dict[int, str] = dict()
+    syntrees: list[Union[SyntheticTree, None]] = []
+    myrange = tqdm(range(args.number_syntrees)) if args.verbose else range(args.number_syntrees)
+    for i in myrange:
+        st, e = wraps_syntreegenerator_generate(stgen)
+        outcomes[i] = e.__class__.__name__ if e is not None else "success"
+        syntrees.append(st)
+
+    return outcomes, syntrees
+
+
 if __name__ == "__main__":
     logger.info("Start.")
-
     # Parse input args
     args = get_args()
     logger.info(f"Arguments: {vars(args)}")
@@ -66,16 +98,12 @@ if __name__ == "__main__":
     stgen = SynTreeGenerator(
         building_blocks=bblocks, rxn_templates=rxn_templates, verbose=args.verbose
     )
-
     # Generate synthetic trees
     logger.info(f"Start generation of {args.number_syntrees} SynTrees...")
-    outcomes: dict[int, str] = dict()
-    syntrees: list[Union[SyntheticTree, None]] = []
-    myrange = tqdm(range(args.number_syntrees)) if args.verbose else range(args.number_syntrees)
-    for i in myrange:
-        st, e = wraps_syntreegenerator_generate(stgen)
-        outcomes[i] = e.__class__.__name__ if e is not None else "success"
-        syntrees.append(st)
+    if args.ncpu > 1:
+        outcomes, syntrees = generate_mp()
+    else:
+        outcomes, syntrees = generate()
     logger.info(f"SynTree generation completed. Results: {Counter(outcomes.values())}")
 
     # Save synthetic trees on disk

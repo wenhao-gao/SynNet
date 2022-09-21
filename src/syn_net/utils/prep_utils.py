@@ -45,7 +45,7 @@ def _fetch_gin_pretrained_model(model_name: str):
 
 
 def organize(st: SyntheticTree, d_mol: int=300, target_embedding: str='fp', radius: int=2, nBits:int=4096,
-             output_embedding: str ='gin') -> Tuple(sparse.csc_matrix,sparse.csc_matrix):
+             output_embedding: str ='gin') -> Tuple[sparse.csc_matrix,sparse.csc_matrix]:
     """
     Organizes synthetic trees into states and node states at each step into sparse matrices.
 
@@ -100,7 +100,7 @@ def organize(st: SyntheticTree, d_mol: int=300, target_embedding: str='fp', radi
         other_root_mol_embedding  = mol_fp(other_root_mol, radius, nBits).tolist()
         state = most_recent_mol_embedding + other_root_mol_embedding + target # (3d,1)
 
-        if action == 3:
+        if action == 3: #end
             step = [3] + [0]*d_mol + [-1] + [0]*d_mol + [0]*nBits
 
         else:

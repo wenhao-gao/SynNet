@@ -1,7 +1,7 @@
 """
 This file contains various utils for data preparation and preprocessing.
 """
-from typing import Iterator, Union
+from typing import Iterator, Union, Tuple
 import numpy as np
 from scipy import sparse
 from sklearn.preprocessing import OneHotEncoder
@@ -45,23 +45,18 @@ def _fetch_gin_pretrained_model(model_name: str):
     return model
 
 
-def organize(st, d_mol=300, target_embedding='fp', radius=2, nBits=4096,
-             output_embedding='gin'):
+def organize(st: SyntheticTree, d_mol: int=300, target_embedding: str='fp', radius: int=2, nBits:int=4096,
+             output_embedding: str ='gin') -> Tuple(sparse.csc_matrix,sparse.csc_matrix):
     """
-    Organizes the states and steps from the input synthetic tree into sparse
-    matrices.
+    Organizes synthetic trees into states and node states at each step into sparse matrices.
 
     Args:
-        st (SyntheticTree): The input synthetic tree to organize.
-        d_mol (int, optional): The molecular embedding size. Defaults to 300.
-        target_embedding (str, optional): Indicates what embedding type to use
-            for the input target (Morgan fingerprint --> 'fp' or GIN --> 'gin').
-            Defaults to 'fp'.
-        radius (int, optional): Morgan fingerprint radius to use. Defaults to 2.
-        nBits (int, optional): Number of bits to use in the Morgan fingerprints.
-            Defaults to 4096.
-        output_embedding (str, optional): Indicates what type of embedding to
-            use for the output node states. Defaults to 'gin'.
+        st: Synthetic tree to organize
+        d_mol: The molecular embedding size. Defaults to 300
+        target_embedding: Embedding for the input node states.
+        radius: (if Morgan fingerprint) radius
+        nBits: (if Morgan fingerprint) bits
+        output_embedding: Embedding for the output node states
 
     Raises:
         ValueError: Raised if target embedding not supported.

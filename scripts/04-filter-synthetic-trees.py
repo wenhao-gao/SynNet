@@ -3,14 +3,13 @@
 
 import json
 import logging
-from collections import Counter
-from pathlib import Path
+
 
 import numpy as np
 from rdkit import Chem, RDLogger
 from tqdm import tqdm
 
-from syn_net.config import DATA_PREPROCESS_DIR, MAX_PROCESSES
+from syn_net.config import MAX_PROCESSES
 from syn_net.utils.data_utils import SyntheticTree, SyntheticTreeSet
 
 logger = logging.getLogger(__name__)

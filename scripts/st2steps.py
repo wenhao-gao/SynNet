@@ -37,8 +37,6 @@ if __name__ == '__main__':
     args = get_args()
     logger.info(f"Arguments: {json.dumps(vars(args),indent=2)}")
 
-
-
     # Parse & set inputs
     reaction_template_id = args.rxn_template
     building_blocks_id = "enamine_us-2021-smiles"
@@ -69,7 +67,7 @@ if __name__ == '__main__':
             nBits=args.nbits,
             output_embedding=args.outputembedding)
         except Exception as e:
-            logger.exception(exc_info=e)
+            logger.exception(e,exc_info=e)
             continue
         states.append(state)
         steps.append(step)

@@ -86,7 +86,7 @@ Let's start.
     The default split ratio is 6:2:2.
 
     ```bash
-    python scripts/st_split.py \
+    python scripts/05-split-syntrees.py \
         --input-file "data/pre-process/synthetic-trees-filtered.json.gz"
         --output-dir "data/pre-process/split"
     ```

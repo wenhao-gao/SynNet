@@ -63,7 +63,7 @@ Let's start.
     python scripts/03-generate-syntrees.py \
         --building-blocks-file "data/pre-process/building-blocks/enamine-us-smiles.csv.gz" \
         --rxn-templates-file   "data/assets/reaction-templates/hb.txt" \
-        --output-file "data/pre-process/synthetic-trees.json.gz" \
+        --output-file          "data/pre-process/synthetic-trees.json.gz" \
         --number-syntrees 600000
     ```
 
@@ -86,17 +86,19 @@ Let's start.
     The default split ratio is 6:2:2.
 
     ```bash
-    python scripts/05-st_split.py
+    python scripts/st_split.py \
+        --input-file "data/pre-process/synthetic-trees-filtered.json.gz"
+        --output-dir "data/pre-process/split"
     ```
 
 4. Featurization and
 
-   > :bulb: All following steps depend on the representations for the data. Hence, you have to specify the parameters for the reprensations as input argument for most of the scripts so that it can operate on the right data.
+   > :bulb: All following steps depend on the representations for the data. Hence, you have to specify the parameters for the representations as input argument for most of the scripts so that it can operate on the right data.
 
    We organize each *synthetic tree* into states and actions.
    That is, we break down each tree to the action at each iteration ("Add", "Expand", "Extend", "End") and a corresponding "super state" vector.
    We call it "super state" here, as it contains all states for all networks.
-   However, recall that the input that the state vector is different for each network.
+   However, recall that the input state vector is different for each network.
 
     ```bash
     python scripts/06-st2steps.py

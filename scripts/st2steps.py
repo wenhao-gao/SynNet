@@ -3,6 +3,7 @@ Splits a synthetic tree into states and steps.
 """
 from pathlib import Path
 from tqdm import tqdm
+import json
 from scipy import sparse
 from syn_net.utils.data_utils import SyntheticTreeSet
 from syn_net.utils.prep_utils import organize
@@ -12,8 +13,7 @@ logger = logging.getLogger(__file__)
 
 from syn_net.config import DATA_PREPARED_DIR, DATA_FEATURIZED_DIR
 
-if __name__ == '__main__':
-
+def get_args():#
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument("-e", "--targetembedding", type=str, default='fp',
@@ -28,8 +28,16 @@ if __name__ == '__main__':
                         help="Choose from ['train', 'valid', 'test']")
     parser.add_argument("-rxn", "--rxn_template", type=str, default='hb', choices=["hb","pis"],
                         help="Choose from ['hb', 'pis']")
-    args = parser.parse_args()
-    logger.info(vars(args))
+    return parser.parse_args()
+
+if __name__ == '__main__':
+    logger.info("Start.")
+
+    # Parse input args
+    args = get_args()
+    logger.info(f"Arguments: {json.dumps(vars(args),indent=2)}")
+
+
 
     # Parse & set inputs
     reaction_template_id = args.rxn_template
@@ -45,7 +53,7 @@ if __name__ == '__main__':
     logger.info("Number of synthetic trees: {len(st_set.sts}")
     data: list = st_set.sts
     del st_set
-    
+
     # Set output directory
     save_dir = Path(DATA_FEATURIZED_DIR) / f'{reaction_template_id}_{embedding}_{args.radius}_{args.nbits}_{args.outputembedding}/'
     Path(save_dir).mkdir(parents=1,exist_ok=1)
@@ -67,7 +75,7 @@ if __name__ == '__main__':
         steps.append(step)
 
 
-    # Finally, save. 
+    # Finally, save.
     logger.info(f"Saving to {save_dir}")
     states = sparse.vstack(states)
     steps = sparse.vstack(steps)

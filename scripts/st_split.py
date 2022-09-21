@@ -3,7 +3,7 @@ Reads synthetic tree data and splits it into training, validation and testing se
 """
 from syn_net.utils.data_utils import SyntheticTreeSet
 from pathlib import Path
-from syn_net.config import DATA_PREPROCESS_DIR, DATA_PREPARED_DIR, MAX_PROCESSES
+from syn_net.config import DATA_PREPROCESS_DIR, MAX_PROCESSES
 import json
 import logging
 logger = logging.getLogger(__name__)
@@ -39,16 +39,13 @@ if __name__ == "__main__":
     args = get_args()
     logger.info(f"Arguments: {json.dumps(vars(args),indent=2)}")
 
-
     # Load filtered synthetic trees
-    st_set = SyntheticTreeSet()
-    file =  args.input_file
-    print(f'Reading data from {file}')
-    st_set.load(file)
-    data = st_set.sts
-    del st_set
-    num_total = len(data)
-    print(f"There are {len(data)} synthetic trees.")
+    logger.info(f'Reading data from {args.input_file}')
+    syntree_collection = SyntheticTreeSet().load(args.input_file)
+    syntrees = syntree_collection.sts
+
+    num_total = len(syntrees)
+    logger.info(f"There are {len(syntrees)} synthetic trees.")
 
     # Split data
     SPLIT_RATIO = [0.6, 0.2, 0.2]
@@ -57,23 +54,22 @@ if __name__ == "__main__":
     num_valid = int(SPLIT_RATIO[1] * num_total)
     num_test = num_total - num_train - num_valid
 
-    data_train = data[:num_train]
-    data_valid = data[num_train: num_train + num_valid]
-    data_test = data[num_train + num_valid: ]
+    data_train = syntrees[:num_train]
+    data_valid = syntrees[num_train: num_train + num_valid]
+    data_test = syntrees[num_train + num_valid: ]
 
     # Save to local disk
     out_dir = Path(args.output_dir)
     out_dir.mkdir(parents=True,exist_ok=True)
-    print("Saving training dataset: ", len(data_train))
-    trees = SyntheticTreeSet(data_train)
-    trees.save(out_dir / "synthetic-trees-train.json.gz")
 
-    print("Saving validation dataset: ", len(data_valid))
-    trees = SyntheticTreeSet(data_valid)
-    trees.save(out_dir / "synthetic-trees-valid.json.gz")
+    logger.info(f"Saving training dataset. Number of syntrees: {len(data_train)}")
+    SyntheticTreeSet(data_train).save(out_dir / "synthetic-trees-train.json.gz")
 
-    print("Saving testing dataset: ", len(data_test))
-    trees = SyntheticTreeSet(data_test)
-    trees.save(out_dir / "synthetic-trees-test.json.gz")
+    logger.info(f"Saving validation dataset. Number of syntrees: {len(data_valid)}")
+    SyntheticTreeSet(data_valid).save(out_dir / "synthetic-trees-valid.json.gz")
 
-    print("Finish!")
+    logger.info(f"Saving testing dataset. Number of syntrees: {len(data_test)}")
+    SyntheticTreeSet(data_test).save(out_dir / "synthetic-trees-test.json.gz")
+
+    logger.info(f"Completed.")
+

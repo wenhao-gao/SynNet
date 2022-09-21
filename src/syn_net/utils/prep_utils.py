@@ -9,7 +9,6 @@ from syn_net.utils.data_utils import Reaction, SyntheticTree
 from syn_net.utils.predict_utils import (can_react, get_action_mask,
                                          get_reaction_mask, mol_fp,
                                          )
-from syn_net.encoding.gins import get_mol_embedding
 
 from pathlib import Path
 from rdkit import Chem
@@ -87,6 +86,7 @@ def organize(st: SyntheticTree, d_mol: int=300, target_embedding: str='fp', radi
     if target_embedding == 'fp':
         target = mol_fp(st.root.smiles, radius, nBits).tolist()
     elif target_embedding == 'gin':
+        from syn_net.encoding.gins import get_mol_embedding
         # define model to use for molecular embedding
         target = get_mol_embedding(st.root.smiles, model=model).tolist()
     else:

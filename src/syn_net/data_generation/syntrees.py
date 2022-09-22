@@ -5,6 +5,7 @@ from typing import Tuple, Union
 
 import numpy as np
 from rdkit import Chem
+from scipy import sparse
 from tqdm import tqdm
 
 from syn_net.config import MAX_PROCESSES
@@ -40,6 +41,7 @@ class NoReactionPossibleError(Exception):
 
     def __init__(self, message):
         super().__init__(message)
+
 
 class MaxDepthError(Exception):
     """Synthetic Tree has exceeded its maximum depth."""
@@ -192,7 +194,7 @@ class SynTreeGenerator:
         elif nTrees == 1:
             canAdd = True
             canExpand = True
-            canEnd = True # TODO: When syntree has reached max depth, only allow to end it.
+            canEnd = True  # TODO: When syntree has reached max depth, only allow to end it.
         elif nTrees == 2:
             canExpand = True
             canMerge = any(self._get_rxn_mask(tuple(state)))
@@ -280,7 +282,7 @@ class SynTreeGenerator:
             if action == "end":
                 break
 
-        if i==max_depth-1 and not action == "end":
+        if i == max_depth - 1 and not action == "end":
             raise MaxDepthError("Maximum depth {max_depth} exceeded.")
         logger.debug(f"🙌 SynTree completed.")
         return syntree
@@ -329,3 +331,134 @@ def save_syntreegenerator(syntreegenerator: SynTreeGenerator, file: str) -> None
 
     with open(file, "wb") as f:
         pickle.dump(syntreegenerator, f)
+
+
+# TODO: Move all these encoders to "from syn_net.encoding/"
+# TODO: Evaluate if One-Hot-Encoder can be replaced with encoder from sklearn
+class OneHotEncoder:
+    def __init__(self, d: int) -> None:
+        self.d = d
+
+    def encode(self, ind: int, datatype: np.dtype = np.float64) -> np.ndarray:
+        """Returns a (1,d)-array with zeros and a 1 at index `ind`."""
+        onehot = np.zeros((1, self.d), dtype=datatype)  # (1,d)
+        onehot[0, ind] = 1.0
+        return onehot  # (1,d)
+
+
+class MorganFingerprintEncoder:
+    def __init__(self, radius: int, nbits: int) -> None:
+        self.radius = radius
+        self.nbits = nbits
+
+    def encode(self, smi: str) -> np.ndarray:
+        if smi is None:
+            fp = np.zeros((1, self.nbits))  # (1,d)
+        else:
+            mol = Chem.MolFromSmiles(smi)  # TODO: sanity check mol here or use datmol?
+            bv = Chem.AllChem.GetMorganFingerprintAsBitVect(mol, self.radius, self.nbits)
+            fp = np.empty(self.nbits)
+            Chem.DataStructs.ConvertToNumpyArray(bv, fp)
+            fp = fp[None, :]
+        return fp
+
+
+class IdentityIntEncoder:
+    def __init__(self) -> None:
+        pass
+
+    def encode(self, number: int):
+        return np.atleast_2d(number)
+
+
+class SynTreeFeaturizer:
+    def __init__(self) -> None:
+        # Embedders
+        self.reactant_embedder = MorganFingerprintEncoder(2, 256)
+        self.mol_embedder = MorganFingerprintEncoder(2, 4096)
+        self.rxn_embedder = IdentityIntEncoder()
+        self.action_embedder = IdentityIntEncoder()
+
+    def featurize(self, syntree: SyntheticTree):
+        """Featurize a synthetic tree at every state.
+
+        Note:
+          - At each iteration of the syntree growth, an action is chosen
+          - Every action (except "end") comes with a reaction.
+          - For every action, we compute:
+            - a "state"
+            - a "step", a vector that encompasses all info we need for training the neural nets.
+              This step is: [action, z_rt1, reaction_id, z_rt2, z_root_mol_1]
+        """
+
+        states, steps = [], []
+
+        target_mol = syntree.root.smiles
+        z_target_mol = self.mol_embedder.encode(target_mol)
+
+        # Recall: We can have at most 2 sub-trees, each with a root node.
+        root_mol_1 = None
+        root_mol_2 = None
+        for i, action in enumerate(syntree.actions):
+
+            # 1. Encode "state"
+            z_root_mol_1 = self.mol_embedder.encode(root_mol_1)
+            z_root_mol_2 = self.mol_embedder.encode(root_mol_2)
+            state = np.concatenate((z_root_mol_1, z_root_mol_2, z_target_mol), axis=1)  # (1,3d)
+
+            # 2. Encode "super"-step
+            if action == 3:  # end
+                step = np.concatenate(
+                    (
+                        self.action_embedder.encode(action),
+                        self.reactant_embedder.encode(mol1),
+                        self.rxn_embedder.encode(rxn_node.rxn_id),
+                        self.reactant_embedder.encode(mol2),
+                        self.mol_embedder.encode(mol1),
+                    ),
+                    axis=1,
+                )
+            else:
+                rxn_node = syntree.reactions[i]
+
+                if len(rxn_node.child) == 1:
+                    mol1 = rxn_node.child[0]
+                    mol2 = None
+                elif len(rxn_node.child) == 2:
+                    mol1 = rxn_node.child[0]
+                    mol2 = rxn_node.child[1]
+                else:  # TODO: Change `child` is stored in reaction node so we can just unpack via *
+                    raise ValueError()
+
+                step = np.concatenate(
+                    (
+                        self.action_embedder.encode(action),
+                        self.reactant_embedder.encode(mol1),
+                        self.rxn_embedder.encode(rxn_node.rxn_id),
+                        self.reactant_embedder.encode(mol2),
+                        self.mol_embedder.encode(mol1),
+                    ),
+                    axis=1,
+                )
+
+            # 3. Prepare next iteration
+            if action == 2:  # merge
+                root_mol_1 = rxn_node.parent
+                root_mol_2 = None
+
+            elif action == 1:  # expand
+                root_mol_1 = rxn_node.parent
+
+            elif action == 0:  # add
+                root_mol_2 = root_mol_1
+                root_mol_1 = rxn_node.parent
+
+            # 4. Keep track of data
+            states.append(state)
+            steps.append(step)
+
+        # Some housekeeping on dimensions
+        states = np.atleast_2d(np.asarray(states).squeeze())
+        steps = np.atleast_2d(np.asarray(steps).squeeze())
+
+        return sparse.csc_matrix(states), sparse.csc_matrix(steps)

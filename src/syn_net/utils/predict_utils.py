@@ -259,7 +259,7 @@ def synthetic_tree_decoder(
         reaction_proba = rxn_net(torch.Tensor(z))
         reaction_proba = reaction_proba.squeeze().detach().numpy() + 1e-10  # (nReactionTemplate,)
 
-        if act != 2:  # add or expand
+        if act==0 or act==1:  # add or expand
             reaction_mask, available_list = get_reaction_mask(mol1, reaction_templates)
         else:  # merge
             _, reaction_mask = can_react(tree.get_state(), reaction_templates)

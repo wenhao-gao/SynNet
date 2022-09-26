@@ -525,7 +525,7 @@ def synthetic_tree_decoder_beam_search(
     acts: list[int] = []
 
     for i in range(beam_width):
-        tree, act = synthetic_tree_decoder_rt1(k_reactant1=i, **kwargs)
+        tree, act = synthetic_tree_decoder(k_reactant1=i, **kwargs)
 
         # Find the chemical in this tree that is most similar to the target.
         # Note: This does not have to be the final root mol, but any, as we can truncate tree to our liking.

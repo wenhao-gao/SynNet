@@ -117,7 +117,7 @@ Let's start.
     This includes picking the right featurized data from the "super step" vector from the previous step.
 
     ```bash
-    python scripts/08-split-data-for-networks.py \
+    python scripts/07-split-data-for-networks.py \
         --input-dir "data/featurized/hb_fp_2_4096_fp_256"
     ```
 

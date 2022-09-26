@@ -3,7 +3,7 @@ Generate synthetic trees for a set of specified query molecules. Multiprocessing
 """
 import multiprocessing as mp
 from pathlib import Path
-from typing import Union
+from typing import Union, Tuple
 import logging
 
 logger = logging.getLogger(__name__)
@@ -18,8 +18,9 @@ from syn_net.config import (
     DATA_RESULT_DIR,
 )
 from syn_net.models.chkpt_loader import load_modules_from_checkpoint
-from syn_net.utils.data_utils import ReactionSet, SyntheticTreeSet
+from syn_net.utils.data_utils import SyntheticTreeSet, SyntheticTree
 from syn_net.utils.predict_utils import mol_fp, synthetic_tree_decoder_multireactant
+from syn_net.data_generation.preprocessing import ReactionTemplateFileHandler, BuildingBlockFileHandler
 
 Path(DATA_RESULT_DIR).mkdir(exist_ok=True)
 
@@ -51,21 +52,9 @@ def _fetch_data(name: str) -> list[str]:
     return smis_query
 
 
-def _fetch_reaction_templates(file: str):
-    # Load reaction templates
-    rxn_set = ReactionSet().load(file)
-    return rxn_set.rxns
-
-
 def _fetch_building_blocks_embeddings(file: str):
     """Load the purchasable building block embeddings."""
     return np.load(file)
-
-
-def _fetch_building_blocks(file: str):
-    """Load the building blocks"""
-    return pd.read_csv(file, compression="gzip")["SMILES"].tolist()
-
 
 def find_best_model_ckpt(path: str) -> Union[Path, None]:  # TODO: move to utils.py
     """Find checkpoint with lowest val_loss.
@@ -97,28 +86,17 @@ def _load_pretrained_model(path_to_checkpoints: list[Path]):
         path_to_rt1=path_to_rt1,
         path_to_rxn=path_to_rxn,
         path_to_rt2=path_to_rt2,
-        featurize=featurize,
-        rxn_template=rxn_template,
+        featurize=args.featurize,
+        rxn_template=args.rxn_template,
         out_dim=out_dim,
         nbits=nbits,
-        ncpu=ncpu,
+        ncpu=args.ncpu,
     )
     return act_net, rt1_net, rxn_net, rt2_net
 
 
-def func(smiles: str):
-    """
-    Generates the synthetic tree for the input molecular embedding.
-
-    Args:
-        smi (str): SMILES string corresponding to the molecule to decode.
-
-    Returns:
-        smi (str): SMILES for the final chemical node in the tree.
-        similarity (float): Similarity measure between the final chemical node
-            and the input molecule.
-        tree (SyntheticTree): The generated synthetic tree.
-    """
+def func(smiles: str) -> Tuple[str,float,SyntheticTree]:
+    """Generate a synthetic tree for the input molecular embedding."""
     emb = mol_fp(smiles)
     try:
         smi, similarity, tree, action = synthetic_tree_decoder_multireactant(
@@ -132,7 +110,7 @@ def func(smiles: str):
             rxn_net=rxn_net,
             reactant2_net=rt2_net,
             bb_emb=bb_emb,
-            rxn_template=rxn_template,
+            rxn_template=args.rxn_template,
             n_bits=nbits,
             beam_width=3,
             max_step=15,
@@ -188,12 +166,8 @@ if __name__ == "__main__":
 
     nbits = args.nbits
     out_dim = args.outputembedding.split("_")[-1]  # <=> morgan fingerprint with 256 bits
-    rxn_template = args.rxn_template
     building_blocks_id = "enamine_us-2021-smiles"
-    featurize = args.featurize
-    radius = args.radius
-    ncpu = args.ncpu
-    param_dir = f"{rxn_template}_{featurize}_{radius}_{nbits}_{out_dim}"
+    param_dir = f"{args.rxn_template}_{args.featurize}_{args.radius}_{nbits}_{out_dim}"
 
     # Load data ...
     logger.info("Stat loading data...")
@@ -203,18 +177,19 @@ if __name__ == "__main__":
         smiles_queries = smiles_queries[:args.num]
 
     # ... building blocks
-    file = Path(DATA_PREPROCESS_DIR) / f"{rxn_template}-{building_blocks_id}-matched.csv.gz"
-    building_blocks = _fetch_building_blocks(file)
+    file = Path(DATA_PREPROCESS_DIR) / f"{args.rxn_template}-{building_blocks_id}-matched.csv.gz"
+
+    building_blocks = BuildingBlockFileHandler().load(file)
     building_blocks_dict = {
         block: i for i, block in enumerate(building_blocks)
     }  # dict is used as lookup table for 2nd reactant during inference
 
     # ... reaction templates
-    file = Path(DATA_PREPROCESS_DIR) / f"reaction-sets_{rxn_template}_{building_blocks_id}.json.gz"
-    rxns = _fetch_reaction_templates(file)
+    file = Path(DATA_PREPROCESS_DIR) / f"reaction-sets_{args.rxn_template}_{building_blocks_id}.json.gz"
+    rxns = ReactionTemplateFileHandler().load(file)
 
     # ... building block embedding
-    file = Path(DATA_EMBEDDINGS_DIR) / f"{rxn_template}-{building_blocks_id}-embeddings.npy"
+    file = Path(DATA_EMBEDDINGS_DIR) / f"{args.rxn_template}-{building_blocks_id}-embeddings.npy"
     bb_emb = _fetch_building_blocks_embeddings(file)
     logger.info("...loading data completed.")
 

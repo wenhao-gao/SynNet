@@ -188,6 +188,7 @@ def synthetic_tree_decoder(
     rxn_template: str,
     n_bits: int,
     max_step: int = 15,
+    k_reactant1: int = 1,
 ) -> Tuple[SyntheticTree, int]:
     """
     Computes a synthetic tree given an input molecule embedding.
@@ -245,9 +246,13 @@ def synthetic_tree_decoder(
 
         # Select first molecule
         if act == 0:
-            # Add
-            dist, ind = nn_search(z_mol1, _tree=kdtree)
-            mol1 = building_blocks[ind]
+            # Select `k` for kNN search of 1st reactant
+            # Use k>1 for the first action, and k==1 for all others.
+            # Idea: Increase the chances of generating a better tree.
+            k = k_reactant1 if mol_recent is None else 1
+
+            _, idxs = kdtree.query(z_mol1,k=k) # idxs.shape = (1,k)
+            mol1 = building_blocks[idxs[0][k]]
         elif act == 1 or act == 2:
             # Expand or Merge
             mol1 = mol_recent

@@ -16,7 +16,7 @@ from syn_net.data_generation.preprocessing import (BuildingBlockFileHandler,
                                                    ReactionTemplateFileHandler)
 from syn_net.models.chkpt_loader import load_modules_from_checkpoint
 from syn_net.utils.data_utils import SyntheticTree, SyntheticTreeSet
-from syn_net.utils.predict_utils import mol_fp, synthetic_tree_decoder_multireactant
+from syn_net.utils.predict_utils import mol_fp, synthetic_tree_decoder_beam_search
 
 Path(DATA_RESULT_DIR).mkdir(exist_ok=True)
 from syn_net.MolEmbedder import MolEmbedder
@@ -91,7 +91,7 @@ def func(smiles: str) -> Tuple[str,float,SyntheticTree]:
     """Generate a synthetic tree for the input molecular embedding."""
     emb = mol_fp(smiles)
     try:
-        smi, similarity, tree, action = synthetic_tree_decoder_multireactant(
+        smi, similarity, tree, action = synthetic_tree_decoder_beam_search(
             z_target=emb,
             building_blocks=building_blocks,
             bb_dict=building_blocks_dict,

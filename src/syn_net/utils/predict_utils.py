@@ -482,66 +482,31 @@ def synthetic_tree_decoder_rt1(
     return tree, act
 
 
-def synthetic_tree_decoder_multireactant(
-    z_target,
-    building_blocks,
-    bb_dict,
-    reaction_templates,
-    mol_embedder,
-    action_net,
-    reactant1_net,
-    rxn_net,
-    reactant2_net,
-    bb_emb,
-    rxn_template,
-    n_bits,
+def synthetic_tree_decoder_beam_search(
     beam_width: int = 3,
-    max_step: int = 15,
-):
+    **kwargs
+) -> Tuple[str, float, SyntheticTree, int]:
     """
-    Computes the synthetic tree given an input molecule embedding, using the
-    Action, Reaction, Reactant1, and Reactant2 networks and a greedy search.
+    Wrapper around `synthetic_tree_decoder_rt1` with a beam search.
+    Selects the k-th first reactant in the k-NN search and expands in a greedy manner.
 
     Args:
-        z_target (np.ndarray): Embedding for the target molecule
-        building_blocks (list of str): Contains available building blocks
-        bb_dict (dict): Building block dictionary
-        reaction_templates (list of Reactions): Contains reaction templates
-        mol_embedder (dgllife.model.gnn.gin.GIN): GNN to use for obtaining molecular embeddings
-        action_net (synth_net.models.mlp.MLP): The action network
-        reactant1_net (synth_net.models.mlp.MLP): The reactant1 network
-        rxn_net (synth_net.models.mlp.MLP): The reaction network
-        reactant2_net (synth_net.models.mlp.MLP): The reactant2 network
-        bb_emb (list): Contains purchasable building block embeddings.
-        rxn_template (str): Specifies the set of reaction templates to use.
-        n_bits (int): Length of fingerprint.
         beam_width (int): The beam width to use for Reactant 1 search. Defaults to 3.
-        max_step (int, optional): Maximum number of steps to include in the synthetic tree
+        kwargs: Identical to wrapped function.
 
     Returns:
         tree (SyntheticTree): The final synthetic tree
         act (int): The final action (to know if the tree was "properly" terminated)
     """
-    trees = []
-    smiles = []
-    similarities = []
-    acts = []
+    z_target = kwargs["z_target"]
+    trees: list[SyntheticTree] = []
+    smiles: list[str] = []
+    similarities: list[float] = []
+    acts: list[int] = []
 
     for i in range(beam_width):
         tree, act = synthetic_tree_decoder_rt1(
-            z_target=z_target,
-            building_blocks=building_blocks,
-            bb_dict=bb_dict,
-            reaction_templates=reaction_templates,
-            mol_embedder=mol_embedder,
-            action_net=action_net,
-            reactant1_net=reactant1_net,
-            rxn_net=rxn_net,
-            reactant2_net=reactant2_net,
-            bb_emb=bb_emb,
-            rxn_template=rxn_template,
-            n_bits=n_bits,
-            max_step=max_step,
+            **kwargs,
             rt1_index=i,
         )
 
@@ -553,8 +518,10 @@ def synthetic_tree_decoder_multireactant(
         max_similar_idx = np.argmax(similarities_in_tree)
         max_similarity = similarities_in_tree[max_similar_idx]
 
+        # Keep track of max similarities (across syntrees)
         similarities.append(max_similarity)
-        # Keep track of generated trees
+
+        # Keep track of generated syntrees
         smiles.append(tree.chemicals[max_similar_idx].smiles)
         trees.append(tree)
         acts.append(act)

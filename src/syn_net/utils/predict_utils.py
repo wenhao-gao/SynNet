@@ -228,7 +228,7 @@ def synthetic_tree_decoder(
 
         # Predict action type, masked selection
         # Action: (Add: 0, Expand: 1, Merge: 2, End: 3)
-        action_proba = action_net(torch.Tensor(z_state))
+        action_proba = action_net(torch.Tensor(z_state))  # (1,4)
         action_proba = action_proba.squeeze().detach().numpy() + 1e-10
         action_mask = get_action_mask(tree.get_state(), reaction_templates)
         act = np.argmax(action_proba * action_mask)
@@ -238,7 +238,7 @@ def synthetic_tree_decoder(
             break
 
         z_mol1 = reactant1_net(torch.Tensor(z_state))
-        z_mol1 = z_mol1.detach().numpy()
+        z_mol1 = z_mol1.detach().numpy() # (1,dimension_output_embedding), default: (1,256)
 
         # Select first molecule
         if act == 0:
@@ -257,21 +257,21 @@ def synthetic_tree_decoder(
         # Select reaction
         z = np.concatenate([z_state, z_mol1], axis=1)
         reaction_proba = rxn_net(torch.Tensor(z))
-        reaction_proba = reaction_proba.squeeze().detach().numpy() + 1e-10  # (nReactionTemplate)
+        reaction_proba = reaction_proba.squeeze().detach().numpy() + 1e-10  # (nReactionTemplate,)
 
         if act != 2:  # add or expand
             reaction_mask, available_list = get_reaction_mask(mol1, reaction_templates)
         else:  # merge
             _, reaction_mask = can_react(tree.get_state(), reaction_templates)
-            available_list = [[] for rxn in reaction_templates]
+            available_list = [[] for rxn in reaction_templates] # TODO: if act=merge, this is not used at all
 
         # If we ended up in a state where no reaction is possible, end this iteration.
         if reaction_mask is None:
-            if len(state) == 1:
+            if len(state) == 1: # only a single root mol, so this syntree is valid
                 act = 3
                 break
             else:
-                break
+                break # action != 3, so in our analysis we will see this tree as "invalid"
 
         # Select reaction template
         rxn_id = np.argmax(reaction_proba * reaction_mask)
@@ -307,11 +307,11 @@ def synthetic_tree_decoder(
         # Run reaction
         mol_product = rxn.run_reaction((mol1, mol2))
         if mol_product is None or Chem.MolFromSmiles(mol_product) is None:
-            if len(tree.get_state()) == 1:
+            if len(state) == 1: # only a single root mol, so this syntree is valid
                 act = 3
                 break
             else:
-                break
+                break # action != 3, so in our analysis we will see this tree as "invalid"
 
         # Update
         tree.update(act, int(rxn_id), mol1, mol2, mol_product)

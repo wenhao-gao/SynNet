@@ -5,6 +5,7 @@ import logging
 import multiprocessing as mp
 from pathlib import Path
 from typing import Tuple, Union
+import json
 
 logger = logging.getLogger(__name__)
 import numpy as np
@@ -15,7 +16,7 @@ from syn_net.config import (CHECKPOINTS_DIR, DATA_EMBEDDINGS_DIR, DATA_PREPARED_
 from syn_net.data_generation.preprocessing import (BuildingBlockFileHandler,
                                                    ReactionTemplateFileHandler)
 from syn_net.models.chkpt_loader import load_modules_from_checkpoint
-from syn_net.utils.data_utils import SyntheticTree, SyntheticTreeSet
+from syn_net.utils.data_utils import SyntheticTree, SyntheticTreeSet, ReactionSet
 from syn_net.utils.predict_utils import mol_fp, synthetic_tree_decoder_beam_search
 
 Path(DATA_RESULT_DIR).mkdir(exist_ok=True)
@@ -53,7 +54,7 @@ def find_best_model_ckpt(path: str) -> Union[Path, None]:  # TODO: move to utils
 
     Poor man's regex:
     somepath/act/ckpts.epoch=70-val_loss=0.03.ckpt
-                                     ^^^^--extract this as float
+                                         ^^^^--extract this as float
     """
     ckpts = Path(path).rglob("*.ckpt")
     best_model_ckpt = None
@@ -132,7 +133,7 @@ def get_args():
     parser.add_argument(
         "-r", "--rxn_template", type=str, default="hb", help="Choose from ['hb', 'pis']"
     )
-    parser.add_argument("--ncpu", type=int, default=32, help="Number of cpus")
+    parser.add_argument("--ncpu", type=int, default=1, help="Number of cpus")
     parser.add_argument("-n", "--num", type=int, default=1, help="Number of molecules to predict.")
     parser.add_argument(
         "-d",
@@ -154,7 +155,7 @@ def get_args():
 
 if __name__ == "__main__":
     args = get_args()
-    logger.info(f"Args: {vars(args)}")
+    logger.info(f"Arguments: {json.dumps(vars(args),indent=2)}")
 
     nbits = args.nbits
     out_dim = args.outputembedding.split("_")[-1]  # <=> morgan fingerprint with 256 bits
@@ -170,7 +171,6 @@ if __name__ == "__main__":
 
     # ... building blocks
     file = Path(DATA_PREPROCESS_DIR) / f"{args.rxn_template}-{building_blocks_id}-matched.csv.gz"
-
     building_blocks = BuildingBlockFileHandler().load(file)
     building_blocks_dict = {
         block: i for i, block in enumerate(building_blocks)
@@ -178,11 +178,11 @@ if __name__ == "__main__":
 
     # ... reaction templates
     file = Path(DATA_PREPROCESS_DIR) / f"reaction-sets_{args.rxn_template}_{building_blocks_id}.json.gz"
-    rxns = ReactionTemplateFileHandler().load(file)
+    rxns = ReactionSet().load(file).rxns
 
     # ... building block embedding
     file = Path(DATA_EMBEDDINGS_DIR) / f"{args.rxn_template}-{building_blocks_id}-embeddings.npy"
-    bb_emb = MolEmbedder.load(file)
+    bb_emb = MolEmbedder().load_precomputed(file).embeddings
     logger.info("...loading data completed.")
 
     # ... models

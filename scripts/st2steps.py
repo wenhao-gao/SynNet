@@ -6,14 +6,12 @@ from tqdm import tqdm
 import json
 from scipy import sparse
 from syn_net.utils.data_utils import SyntheticTreeSet
-from syn_net.utils.prep_utils import organize
-
+from syn_net.data_generation.syntrees import SynTreeFeaturizer
 import logging
 logger = logging.getLogger(__file__)
 
-from syn_net.config import DATA_PREPARED_DIR, DATA_FEATURIZED_DIR
-
-def get_args():#
+from syn_net.config import DATA_FEATURIZED_DIR
+def get_args():
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument("-e", "--targetembedding", type=str, default='fp',
@@ -28,7 +26,24 @@ def get_args():#
                         help="Choose from ['train', 'valid', 'test']")
     parser.add_argument("-rxn", "--rxn_template", type=str, default='hb', choices=["hb","pis"],
                         help="Choose from ['hb', 'pis']")
+    # File I/O
+    parser.add_argument(
+        "--input-file",
+        type=str,
+        default="data/pre-process/split/synthetic-trees-valid.json.gz", # TODO think about filename vs dir
+        help="Input file for the splitted generated synthetic trees (*.json.gz)",
+    )
+    parser.add_argument(
+        "--output-dir",
+        type=str,
+        default=str(Path(DATA_FEATURIZED_DIR)) + "debug-newversion",
+        help="Output directory for the splitted synthetic trees (*.json.gz)",
+    )
     return parser.parse_args()
+
+def _extract_dataset(filename: str) -> str:
+    stem = Path(filename).stem.split(".")[0]
+    return stem.split("-")[-1] # TODO: avoid hard coding
 
 if __name__ == '__main__':
     logger.info("Start.")
@@ -36,42 +51,30 @@ if __name__ == '__main__':
     # Parse input args
     args = get_args()
     logger.info(f"Arguments: {json.dumps(vars(args),indent=2)}")
+    dataset_type = _extract_dataset(args.input_file)
 
-    # Parse & set inputs
-    reaction_template_id = args.rxn_template
-    building_blocks_id = "enamine_us-2021-smiles"
-    dataset_type = args.datasettype
-    embedding = args.targetembedding
-    assert dataset_type is not None, "Must specify which dataset to use."
-
-    # Load synthetic trees subset {train,valid,test}
-    file = f'{DATA_PREPARED_DIR}/synthetic-trees-{dataset_type}.json.gz'
-    st_set = SyntheticTreeSet()
-    st_set.load(file)
-    logger.info("Number of synthetic trees: {len(st_set.sts}")
+    st_set = SyntheticTreeSet().load(args.input_file)
+    logger.info(f"Number of synthetic trees: {len(st_set.sts)}")
     data: list = st_set.sts
     del st_set
-
-    # Set output directory
-    save_dir = Path(DATA_FEATURIZED_DIR) / f'{reaction_template_id}_{embedding}_{args.radius}_{args.nbits}_{args.outputembedding}/'
-    Path(save_dir).mkdir(parents=1,exist_ok=1)
 
     # Start splitting synthetic trees in states and steps
     states = []
     steps = []
-
+    stf = SynTreeFeaturizer()
     for st in tqdm(data):
         try:
-            state, step = organize(st, target_embedding=embedding,
-            radius=args.radius,
-            nBits=args.nbits,
-            output_embedding=args.outputembedding)
+            state, step = stf.featurize(st)
         except Exception as e:
             logger.exception(e,exc_info=e)
             continue
         states.append(state)
         steps.append(step)
 
+    # Set output directory
+    save_dir = Path(args.output_dir) / "hb_fp_2_4096_fp_256" # TODO: Save info as json in dir?
+    Path(save_dir).mkdir(parents=1,exist_ok=1)
+    dataset_type = _extract_dataset(args.input_file)
 
     # Finally, save.
     logger.info(f"Saving to {save_dir}")
@@ -81,4 +84,5 @@ if __name__ == '__main__':
     sparse.save_npz(save_dir / f"steps_{dataset_type}.npz", steps)
 
     logger.info("Save successful.")
+    logger.info("Completed.")
 

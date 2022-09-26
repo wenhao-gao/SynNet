@@ -243,12 +243,8 @@ def synthetic_tree_generator(
 
     return tree, action
 
-def prep_data(main_dir, num_rxn, out_dim, datasets=None):
-    """
-    Loads the states and steps from preprocessed *.npz files and saves data
-    specific to the Action, Reactant 1, Reaction, and Reactant 2 networks in
-    their own *.npz files.
-
+def prep_data(main_dir: str, num_rxn: int, out_dim: int, datasets=None):
+    """Split the featurized data into X,y-chunks for the {act,rt1,rxn,rt2}-networks.
     Args:
         main_dir (str): The path to the directory containing the *.npz files.
         num_rxn (int): Number of reactions in the dataset.
@@ -270,17 +266,24 @@ def prep_data(main_dir, num_rxn, out_dim, datasets=None):
         states = sparse.csc_matrix(sparse.vstack(states_list))
         steps = sparse.csc_matrix(sparse.vstack(steps_list))
 
-        # extract Action data
+        # Extract data for each network...
+
+        # ... action data
+        # X: [z_state]
+        # y: [action id] (int)
         X = states
         y = steps[:, 0]
         sparse.save_npz(main_dir / f'X_act_{dataset}.npz', X)
         sparse.save_npz(main_dir / f'y_act_{dataset}.npz', y)
-
-        states = sparse.csc_matrix(states.A[(steps[:, 0].A != 3).reshape(-1, )])
-        steps = sparse.csc_matrix(steps.A[(steps[:, 0].A != 3).reshape(-1, )])
         print(f'  saved data for "Action"')
 
-        # extract Reaction data
+        # Delete all data where tree was ended (i.e. tree expansion did not trigger reaction)
+        states = sparse.csc_matrix(states.A[(steps[:, 0].A != 3).reshape(-1, )])
+        steps = sparse.csc_matrix(steps.A[(steps[:, 0].A != 3).reshape(-1, )])
+
+        # ... reaction data
+        # X: [state, z_reactant_1]
+        # y: [reaction_id] (int)
         X = sparse.hstack([states, steps[:, (2 * out_dim + 2):]])
         y = steps[:, out_dim + 1]
         sparse.save_npz(main_dir / f'X_rxn_{dataset}.npz', X)
@@ -292,9 +295,10 @@ def prep_data(main_dir, num_rxn, out_dim, datasets=None):
 
         enc = OneHotEncoder(handle_unknown='ignore')
         enc.fit([[i] for i in range(num_rxn)])
-        # import ipdb; ipdb.set_trace(context=9)
 
-        # extract Reactant 2 data
+        # ... reactant 2 data
+        # X: [z_state, z_reactant_1, reaction_id]
+        # y: [z'_reactant_2]
         X = sparse.hstack(
             [states,
              steps[:, (2 * out_dim + 2):],
@@ -308,7 +312,9 @@ def prep_data(main_dir, num_rxn, out_dim, datasets=None):
         states = sparse.csc_matrix(states.A[(steps[:, 0].A != 1).reshape(-1, )])
         steps = sparse.csc_matrix(steps.A[(steps[:, 0].A != 1).reshape(-1, )])
 
-        # extract Reactant 1 data
+        # ... reactant 1 data
+        # X: [z_state]
+        # y: [z'_reactant_1]
         X = states
         y = steps[:, 1: (out_dim+1)]
         sparse.save_npz(main_dir / f'X_rt1_{dataset}.npz', X)

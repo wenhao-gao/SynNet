@@ -252,7 +252,7 @@ def synthetic_tree_decoder(
             k = k_reactant1 if mol_recent is None else 1
 
             _, idxs = kdtree.query(z_mol1,k=k) # idxs.shape = (1,k)
-            mol1 = building_blocks[idxs[0][k]]
+            mol1 = building_blocks[idxs[0][k-1]]
         elif act == 1 or act == 2:
             # Expand or Merge
             mol1 = mol_recent
@@ -423,7 +423,7 @@ def synthetic_tree_decoder_rt1(
                 k = 1
 
             _, idxs = kdtree.query(z_mol1,k=k) # idxs.shape = (1,k)
-            mol1 = building_blocks[idxs[0][k]]
+            mol1 = building_blocks[idxs[0][k-1]]
 
         elif act == 1 or act == 2:
             # Expand or Merge

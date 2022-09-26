@@ -218,7 +218,10 @@ def synthetic_tree_decoder(
     # Initialization
     tree = SyntheticTree()
     mol_recent = None
-    kdtree = BallTree(bb_emb, metric=cosine_distance)  # TODO: cache this or use class
+    if isinstance(bb_emb,str):
+        kdtree = _fetch_bb_embeddings_as_balltree(bb_emb)
+    else:
+        kdtree = BallTree(bb_emb, metric=cosine_distance)
 
     # Start iteration
     for i in range(max_step):

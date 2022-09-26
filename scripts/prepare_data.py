@@ -11,10 +11,8 @@ from syn_net.utils.prep_utils import prep_data
 
 logger = logging.getLogger(__file__)
 
-if __name__ == "__main__":
-
+def get_args():
     import argparse
-
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "-e", "--targetembedding", type=str, default="fp", help="Choose from ['fp', 'gin']"
@@ -38,8 +36,16 @@ if __name__ == "__main__":
         choices=["hb", "pis"],
         help="Choose from ['hb', 'pis']",
     )
+    return parser.parse_args()
 
-    args = parser.parse_args()
+if __name__ == "__main__":
+    logger.info("Start.")
+    # Parse input args
+    args = get_args()
+    logger.info(f"Arguments: {vars(args)}")
+    import argparse
+
+
     reaction_template_id = args.rxn_template
     embedding = args.targetembedding
     output_emb = args.outputembedding

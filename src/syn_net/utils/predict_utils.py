@@ -2,6 +2,7 @@
 This file contains various utils for creating molecular embeddings and for
 decoding synthetic trees.
 """
+import functools
 from typing import Callable, Tuple
 
 import numpy as np
@@ -323,6 +324,14 @@ def synthetic_tree_decoder(
 
     return tree, act
 
+@functools.lru_cache(maxsize=1)
+def _fetch_bb_embeddings_as_balltree(filename: str): # TODO: find more elegant way / use MolEmbedder-cls
+    """Helper function to cache computing BallTree.
+    Can hash string, but not numpy array easily, hence this workaround.
+    """
+    from syn_net.MolEmbedder import MolEmbedder
+    molemedder = MolEmbedder().load_precomputed(filename)
+    return BallTree(molemedder.get_embeddings(), metric=cosine_distance)
 
 def synthetic_tree_decoder_rt1(
     z_target: np.ndarray,
@@ -373,7 +382,10 @@ def synthetic_tree_decoder_rt1(
     # Initialization
     tree = SyntheticTree()
     mol_recent = None
-    kdtree = BallTree(bb_emb, metric=cosine_distance)  # TODO: cache this or use class
+    if isinstance(bb_emb,str):
+        kdtree = _fetch_bb_embeddings_as_balltree(bb_emb)
+    else:
+        kdtree = BallTree(bb_emb, metric=cosine_distance)
 
     # Start iteration
     for i in range(max_step):

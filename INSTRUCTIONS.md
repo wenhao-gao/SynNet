@@ -79,7 +79,7 @@ Let's start.
 
     Each *synthetic tree* is serializable and so we save all trees in a compressed `.json` file.
 
-3. Split *synthetic trees* into train,valid,test-data
+5. Split *synthetic trees* into train,valid,test-data
 
     We load the `.json`-file with all *synthetic trees* and
     straightforward split it into three files: `{train,test,valid}.json`.
@@ -91,7 +91,7 @@ Let's start.
         --output-dir "data/pre-process/split"
     ```
 
-4. Featurization
+6. Featurization
 
    > :bulb: All following steps depend on the representations for the data. Hence, you have to specify the parameters for the representations as input argument for most of the scripts so that it can operate on the right data.
 
@@ -108,7 +108,7 @@ Let's start.
 
     This script will load the `input-file`, featurize it, and it in `<output-dir>/states_{train,valid,test}.np` and `<output-dir>/steps_{train,valid,test}.np`.
 
-5. Split features
+7. Split features
 
     Up to this point, we worked with a (featurized) *synthetic tree* as a whole,
     now we split it up to into "consumable" input/output data for each of the four networks.
@@ -118,7 +118,7 @@ Let's start.
     python scripts/07-prepare_data.py
     ```
 
-6. Train the networks
+8. Train the networks
 
     Finally, we can train each of the four networks in `src/syn_net/models/` separately:
 

@@ -30,7 +30,7 @@ def get_args():
     parser.add_argument(
         "--output-dir",
         type=str,
-        default=str(Path(DATA_FEATURIZED_DIR)) + "debug-newversion",
+        default=str(Path(DATA_FEATURIZED_DIR)),
         help="Output directory for the splitted synthetic trees (*.json.gz)",
     )
     return parser.parse_args()

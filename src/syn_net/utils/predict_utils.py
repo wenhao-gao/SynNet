@@ -347,7 +347,7 @@ def synthetic_tree_decoder_rt1(
     rxn_template: str,
     n_bits: int,
     max_step: int = 15,
-    rt1_index=0,
+    k_reactant1=1,
 ) -> Tuple[SyntheticTree, int]:
     """
     Computes the synthetic tree given an input molecule embedding, using the
@@ -371,7 +371,7 @@ def synthetic_tree_decoder_rt1(
             to 3.
         max_step (int, optional): Maximum number of steps to include in the
             synthetic tree
-        rt1_index (int, optional): Index for molecule in the building blocks
+        k_reactant1 (int, optional): Index for molecule in the building blocks
             corresponding to reactant 1.
 
     Returns:
@@ -409,14 +409,14 @@ def synthetic_tree_decoder_rt1(
 
         # Select first molecule
         if act == 0:  # Add
-            if mol_recent is not None:
-                dist, ind = nn_search(z_mol1,_tree=kdtree)
-                mol1 = building_blocks[ind]
-            else:  # no recent mol
-                dist, ind = nn_search_rt1(
-                    z_mol1, _tree=kdtree, _k=rt1_index + 1
-                )  # TODO: why is there an option to select the k-th? rt1_index (???)
-                mol1 = building_blocks[ind[rt1_index]]
+            if mol_recent is None: # proxy to determine if we have an empty syntree (<=> i==0)
+                k = k_reactant1
+            else:
+                k = 1
+
+            _, idxs = kdtree.query(z_mol1,k=k) # idxs.shape = (1,k)
+            mol1 = building_blocks[idxs[0][k]]
+
         elif act == 1 or act == 2:
             # Expand or Merge
             mol1 = mol_recent
@@ -499,8 +499,8 @@ def synthetic_tree_decoder_beam_search(
     **kwargs
 ) -> Tuple[str, float, SyntheticTree, int]:
     """
-    Wrapper around `synthetic_tree_decoder_rt1` with a beam search.
-    Selects the k-th first reactant in the k-NN search and expands in a greedy manner.
+    Wrapper around `synthetic_tree_decoder_rt1` with variable `k` for kNN search of 1st reactant.
+    Will keep the syntree that comprises of a molecule most similar to the target mol.
 
     Args:
         beam_width (int): The beam width to use for Reactant 1 search. Defaults to 3.
@@ -517,10 +517,7 @@ def synthetic_tree_decoder_beam_search(
     acts: list[int] = []
 
     for i in range(beam_width):
-        tree, act = synthetic_tree_decoder_rt1(
-            **kwargs,
-            rt1_index=i,
-        )
+        tree, act = synthetic_tree_decoder_rt1(k_reactant1=i, **kwargs)
 
         # Find the chemical in this tree that is most similar to the target.
         # Note: This does not have to be the final root mol, but any, as we can truncate tree to our liking.

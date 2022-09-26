@@ -91,24 +91,28 @@ Let's start.
         --output-dir "data/pre-process/split"
     ```
 
-4. Featurization and
+4. Featurization
 
    > :bulb: All following steps depend on the representations for the data. Hence, you have to specify the parameters for the representations as input argument for most of the scripts so that it can operate on the right data.
 
-   We organize each *synthetic tree* into states and actions.
-   That is, we break down each tree to the action at each iteration ("Add", "Expand", "Extend", "End") and a corresponding "super state" vector.
-   We call it "super state" here, as it contains all states for all networks.
-   However, recall that the input state vector is different for each network.
+   We featurize each *synthetic tree*.
+   That is, we break down each tree to each iteration step ("Add", "Expand", "Extend", "End") and featurize it.
+   This results in a "state" vector and a a corresponding "super step" vector.
+   We call it "super step" here, as it contains all (featurized) data for all networks.
 
     ```bash
-    python scripts/06-st2steps.py
+    python scripts/06-featurize-syntrees.py \
+        --input-file "data/pre-process/split/synthetic-trees-train.json.gz" # or {train,valid,test}
+        --output-dir "data/featurized"
     ```
+
+    This script will load the `input-file`, featurize it, and it in `<output-dir>/states_{train,valid,test}.np` and `<output-dir>/steps_{train,valid,test}.np`.
 
 5. Split features
 
     Up to this point, we worked with a (featurized) *synthetic tree* as a whole,
-    now we split it up to into "consumable" input data for each of the four networks.
-    This includes picking the right state(s) from the "super state" vector from the previous step.
+    now we split it up to into "consumable" input/output data for each of the four networks.
+    This includes picking the right featurized data from the "super step" vector from the previous step.
 
     ```bash
     python scripts/07-prepare_data.py

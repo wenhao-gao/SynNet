@@ -17,7 +17,7 @@ def get_args():
     parser.add_argument(
         "--input-dir",
         type=str,
-        default=str(Path(DATA_FEATURIZED_DIR)) + "hb_fp_2_4096_fp_256", # TODO: dont hardcode
+        default=str(Path(DATA_FEATURIZED_DIR)) + "/hb_fp_2_4096_fp_256", # TODO: dont hardcode
         help="Input directory for the featurized synthetic trees (with {train,valid,test}-data).",
     )
     return parser.parse_args()

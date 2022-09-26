@@ -1,28 +1,25 @@
 """
 Generate synthetic trees for a set of specified query molecules. Multiprocessing.
 """
+import logging
 import multiprocessing as mp
 from pathlib import Path
-from typing import Union, Tuple
-import logging
+from typing import Tuple, Union
 
 logger = logging.getLogger(__name__)
 import numpy as np
 import pandas as pd
 
-from syn_net.config import (
-    CHECKPOINTS_DIR,
-    DATA_EMBEDDINGS_DIR,
-    DATA_PREPARED_DIR,
-    DATA_PREPROCESS_DIR,
-    DATA_RESULT_DIR,
-)
+from syn_net.config import (CHECKPOINTS_DIR, DATA_EMBEDDINGS_DIR, DATA_PREPARED_DIR,
+                            DATA_PREPROCESS_DIR, DATA_RESULT_DIR)
+from syn_net.data_generation.preprocessing import (BuildingBlockFileHandler,
+                                                   ReactionTemplateFileHandler)
 from syn_net.models.chkpt_loader import load_modules_from_checkpoint
-from syn_net.utils.data_utils import SyntheticTreeSet, SyntheticTree
+from syn_net.utils.data_utils import SyntheticTree, SyntheticTreeSet
 from syn_net.utils.predict_utils import mol_fp, synthetic_tree_decoder_multireactant
-from syn_net.data_generation.preprocessing import ReactionTemplateFileHandler, BuildingBlockFileHandler
 
 Path(DATA_RESULT_DIR).mkdir(exist_ok=True)
+from syn_net.MolEmbedder import MolEmbedder
 
 
 def _fetch_data_chembl(name: str) -> list[str]:
@@ -50,11 +47,6 @@ def _fetch_data(name: str) -> list[str]:
     else:  # Hopefully got a filename instead
         smis_query = _fetch_data_from_file(name)
     return smis_query
-
-
-def _fetch_building_blocks_embeddings(file: str):
-    """Load the purchasable building block embeddings."""
-    return np.load(file)
 
 def find_best_model_ckpt(path: str) -> Union[Path, None]:  # TODO: move to utils.py
     """Find checkpoint with lowest val_loss.
@@ -190,7 +182,7 @@ if __name__ == "__main__":
 
     # ... building block embedding
     file = Path(DATA_EMBEDDINGS_DIR) / f"{args.rxn_template}-{building_blocks_id}-embeddings.npy"
-    bb_emb = _fetch_building_blocks_embeddings(file)
+    bb_emb = MolEmbedder.load(file)
     logger.info("...loading data completed.")
 
     # ... models

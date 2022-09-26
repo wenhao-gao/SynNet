@@ -1,36 +1,59 @@
 """
 Splits a synthetic tree into states and steps.
 """
-from pathlib import Path
-from tqdm import tqdm
 import json
-from scipy import sparse
-from syn_net.utils.data_utils import SyntheticTreeSet
-from syn_net.data_generation.syntrees import SynTreeFeaturizer
 import logging
+from pathlib import Path
+
+from scipy import sparse
+from tqdm import tqdm
+
+from syn_net.data_generation.syntrees import SynTreeFeaturizer
+from syn_net.utils.data_utils import SyntheticTreeSet
+
 logger = logging.getLogger(__file__)
 
 from syn_net.config import DATA_FEATURIZED_DIR
+
+
 def get_args():
     import argparse
+
     parser = argparse.ArgumentParser()
-    parser.add_argument("-e", "--targetembedding", type=str, default='fp',
-                        help="Choose from ['fp', 'gin']")
-    parser.add_argument("-o", "--outputembedding", type=str, default='fp_256',
-                        help="Choose from ['fp_4096', 'fp_256', 'gin', 'rdkit2d']")
-    parser.add_argument("-r", "--radius", type=int, default=2,
-                        help="Radius for Morgan Fingerprint")
-    parser.add_argument("-b", "--nbits", type=int, default=4096,
-                        help="Number of Bits for Morgan Fingerprint")
-    parser.add_argument("-d", "--datasettype", type=str, choices=["train","valid","test"],
-                        help="Choose from ['train', 'valid', 'test']")
-    parser.add_argument("-rxn", "--rxn_template", type=str, default='hb', choices=["hb","pis"],
-                        help="Choose from ['hb', 'pis']")
+    parser.add_argument(
+        "-e", "--targetembedding", type=str, default="fp", help="Choose from ['fp', 'gin']"
+    )
+    parser.add_argument(
+        "-o",
+        "--outputembedding",
+        type=str,
+        default="fp_256",
+        help="Choose from ['fp_4096', 'fp_256', 'gin', 'rdkit2d']",
+    )
+    parser.add_argument("-r", "--radius", type=int, default=2, help="Radius for Morgan Fingerprint")
+    parser.add_argument(
+        "-b", "--nbits", type=int, default=4096, help="Number of Bits for Morgan Fingerprint"
+    )
+    parser.add_argument(
+        "-d",
+        "--datasettype",
+        type=str,
+        choices=["train", "valid", "test"],
+        help="Choose from ['train', 'valid', 'test']",
+    )
+    parser.add_argument(
+        "-rxn",
+        "--rxn_template",
+        type=str,
+        default="hb",
+        choices=["hb", "pis"],
+        help="Choose from ['hb', 'pis']",
+    )
     # File I/O
     parser.add_argument(
         "--input-file",
         type=str,
-        default="data/pre-process/split/synthetic-trees-valid.json.gz", # TODO think about filename vs dir
+        default="data/pre-process/split/synthetic-trees-valid.json.gz",  # TODO think about filename vs dir
         help="Input file for the splitted generated synthetic trees (*.json.gz)",
     )
     parser.add_argument(
@@ -41,11 +64,13 @@ def get_args():
     )
     return parser.parse_args()
 
+
 def _extract_dataset(filename: str) -> str:
     stem = Path(filename).stem.split(".")[0]
-    return stem.split("-")[-1] # TODO: avoid hard coding
+    return stem.split("-")[-1]  # TODO: avoid hard coding
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     logger.info("Start.")
 
     # Parse input args
@@ -66,14 +91,14 @@ if __name__ == '__main__':
         try:
             state, step = stf.featurize(st)
         except Exception as e:
-            logger.exception(e,exc_info=e)
+            logger.exception(e, exc_info=e)
             continue
         states.append(state)
         steps.append(step)
 
     # Set output directory
-    save_dir = Path(args.output_dir) / "hb_fp_2_4096_fp_256" # TODO: Save info as json in dir?
-    Path(save_dir).mkdir(parents=1,exist_ok=1)
+    save_dir = Path(args.output_dir) / "hb_fp_2_4096_fp_256"  # TODO: Save info as json in dir?
+    Path(save_dir).mkdir(parents=1, exist_ok=1)
     dataset_type = _extract_dataset(args.input_file)
 
     # Finally, save.
@@ -85,4 +110,3 @@ if __name__ == '__main__':
 
     logger.info("Save successful.")
     logger.info("Completed.")
-

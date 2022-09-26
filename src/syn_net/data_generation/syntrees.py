@@ -374,7 +374,7 @@ class IdentityIntEncoder:
 class SynTreeFeaturizer:
     def __init__(self) -> None:
         # Embedders
-        self.reactant_embedder = MorganFingerprintEncoder(2, 256)
+        self.reactant_embedder = MorganFingerprintEncoder(2, 256) # TODO: pass these in script, not here
         self.mol_embedder = MorganFingerprintEncoder(2, 4096)
         self.rxn_embedder = IdentityIntEncoder()
         self.action_embedder = IdentityIntEncoder()

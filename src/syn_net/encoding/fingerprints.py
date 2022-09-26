@@ -21,7 +21,7 @@ def mol_fp(smi, _radius=2, _nBits=4096):
     else:
         mol = Chem.MolFromSmiles(smi)
         features_vec = Chem.AllChem.GetMorganFingerprintAsBitVect(mol, _radius, _nBits)
-        return np.array(features_vec)
+        return np.array(features_vec) # TODO: much slower compared to `DataStructs.ConvertToNumpyArray` (20x?) so deprecates
 
 def fp_embedding(smi, _radius=2, _nBits=4096):
     """

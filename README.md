@@ -115,14 +115,8 @@ Use `python some_script.py --help` or check the source code to see the instructi
 
 ### Prerequisites
 
-In addition to the necessary data, see [Data](#data), we pre-compute an embedding of the building blocks. Please double-check the filename of your building blocks.
-
-```bash
-python scripts/compute_embedding_mp.py \
-    --feature "fp_256" \
-    --rxn-template "hb" \
-    --ncpu 10
-```
+In addition to the necessary data, we will need to pre-compute an embedding of the building blocks.
+To do so, please follow steps 0-2 from the [INSTRUCTIONS.md](INSTRUCTIONS.md).
 
 #### Synthesis Planning
 
@@ -139,7 +133,7 @@ This script will feed a list of ten randomly selected molecules from the validat
 The decoded results, i.e. the predicted synthesis trees, are saved to `DATA_RESULT_DIR`.
 (Paths are defined in [src/syn_net/config.py](src/syn_net/config.py).)
 
-*Note*: To do synthesis planning, you will need a list of target molecules, building blocks and compute their embedding. As mentioned, we cannot share the building blocks from enamine.net and you will have to request access yourselfs.
+*Note*: To do synthesis planning, you will need a list of target molecules (provided), building blocks (need to download) and embeddings (need to compute).
 
 #### Synthesizable Molecular Design
 

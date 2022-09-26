@@ -106,7 +106,9 @@ Let's start.
         --output-dir "data/featurized"
     ```
 
-    This script will load the `input-file`, featurize it, and it in `<output-dir>/states_{train,valid,test}.np` and `<output-dir>/steps_{train,valid,test}.np`.
+    This script will load the `input-file`, featurize it, and it in
+      - `<output-dir>/hb_fp_2_4096_fp_256/states_{train,valid,test}.np` and
+      - `<output-dir>/hb_fp_2_4096_fp_256/steps_{train,valid,test}.np`.
 
 7. Split features
 
@@ -115,7 +117,8 @@ Let's start.
     This includes picking the right featurized data from the "super step" vector from the previous step.
 
     ```bash
-    python scripts/07-prepare_data.py
+    python scripts/08-split-data-for-networks.py \
+        --input-dir "data/featurized/hb_fp_2_4096_fp_256"
     ```
 
 8. Train the networks

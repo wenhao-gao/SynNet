@@ -545,20 +545,25 @@ def synthetic_tree_decoder_multireactant(
             rt1_index=i,
         )
 
-        similarities_ = np.array(
+        # Find the chemical in this tree that is most similar to the target.
+        # Note: This does not have to be the final root mol, but any, as we can truncate tree to our liking.
+        similarities_in_tree = np.array(
             tanimoto_similarity(z_target, [node.smiles for node in tree.chemicals])
         )
-        max_simi_idx = np.where(similarities_ == np.max(similarities_))[0][0]
+        max_similar_idx = np.argmax(similarities_in_tree)
+        max_similarity = similarities_in_tree[max_similar_idx]
 
-        similarities.append(np.max(similarities_))
-        smiles.append(tree.chemicals[max_simi_idx].smiles)
+        similarities.append(max_similarity)
+        # Keep track of generated trees
+        smiles.append(tree.chemicals[max_similar_idx].smiles)
         trees.append(tree)
         acts.append(act)
 
-    max_simi_idx = np.where(similarities == np.max(similarities))[0][0]
-    similarity = similarities[max_simi_idx]
-    tree = trees[max_simi_idx]
-    smi = smiles[max_simi_idx]
-    act = acts[max_simi_idx]
+    # Identify most similar among all trees
+    max_similar_idx = np.argmax(similarities)
+    similarity = similarities[max_similar_idx]
+    tree = trees[max_similar_idx]
+    smi = smiles[max_similar_idx]
+    act = acts[max_similar_idx]
 
     return smi, similarity, tree, act

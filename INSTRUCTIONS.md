@@ -139,7 +139,19 @@ Please refer to the [README.md](./README.md) for inference instructions.
 
 ### Visualizing trees
 
-To be added.
+To visualize trees, there is a hacky script that represents *Synthetic Trees* as [mermaid](https://github.com/mermaid-js/mermaid) diagrams.
+
+To demo it:
+
+```bash
+python src/syn_net/visualize/visualizer.py
+```
+
+Still to be implemented: i) target molecule, ii) "end" action
+
+To render the markdown file incl. the diagram directly in VS Code, install the extension [vscode-markdown-mermaid](https://github.com/mjbvz/vscode-markdown-mermaid) and use the built-in markdown preview.
+
+*Info*: If the images of the molecules do not load, edit + save the markdown file anywhere. For example add and delete a character with the preview open. Not sure why this happens.
 
 ### Mean reciprocal rank
 

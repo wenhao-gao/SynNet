@@ -20,35 +20,6 @@ def get_args():
     import argparse
 
     parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "-e", "--targetembedding", type=str, default="fp", help="Choose from ['fp', 'gin']"
-    )
-    parser.add_argument(
-        "-o",
-        "--outputembedding",
-        type=str,
-        default="fp_256",
-        help="Choose from ['fp_4096', 'fp_256', 'gin', 'rdkit2d']",
-    )
-    parser.add_argument("-r", "--radius", type=int, default=2, help="Radius for Morgan Fingerprint")
-    parser.add_argument(
-        "-b", "--nbits", type=int, default=4096, help="Number of Bits for Morgan Fingerprint"
-    )
-    parser.add_argument(
-        "-d",
-        "--datasettype",
-        type=str,
-        choices=["train", "valid", "test"],
-        help="Choose from ['train', 'valid', 'test']",
-    )
-    parser.add_argument(
-        "-rxn",
-        "--rxn_template",
-        type=str,
-        default="hb",
-        choices=["hb", "pis"],
-        help="Choose from ['hb', 'pis']",
-    )
     # File I/O
     parser.add_argument(
         "--input-file",

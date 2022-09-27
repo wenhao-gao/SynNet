@@ -181,3 +181,10 @@ synth_net/params
 tmp/
 scripts/oracle
 temp.py
+
+.dev/
+.old/
+.notes/
+.aliases
+figures/
+*.html

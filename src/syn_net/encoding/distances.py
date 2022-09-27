@@ -1,20 +1,14 @@
 import numpy as np
 from syn_net.encoding.fingerprints import mol_fp
 
-def cosine_distance(v1, v2, eps=1e-15):
-    """Computes the cosine similarity between two vectors.
+def cosine_distance(v1, v2):
+    """Compute the cosine distance between two 1d-vectors.
 
-    Args:
-        v1 (np.ndarray): First vector.
-        v2 (np.ndarray): Second vector.
-        eps (float, optional): Small value, for numerical stability. Defaults
-            to 1e-15.
-
-    Returns:
-        float: The cosine similarity.
+    Note:
+        cosine_similarity = x'y / (||x|| ||y||) in [-1,1]
+        cosine_distance   = 1 - cosine_similarity in [0,2]
     """
-    return (1 - np.dot(v1, v2)
-            / (np.linalg.norm(v1, ord=2) * np.linalg.norm(v2, ord=2) + eps))
+    return max(0,min( 1-np.dot(v1,v2)/(np.linalg.norm(v1)*np.linalg.norm(v2)),2))
 
 def ce_distance(y, y_pred, eps=1e-15):
     """Computes the cross-entropy between two vectors.

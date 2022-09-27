@@ -188,6 +188,8 @@ class Reaction:
 
 
         if self.num_reactant == 1:
+            if len(r)==2: # Provided two reactants for unimolecular reaction -> no rxn possible
+                return None
             if not self.is_reactant(r[0]):
                 return None
         elif self.num_reactant == 2:
@@ -200,6 +202,7 @@ class Reaction:
                 return None
         else:
             raise ValueError('This reaction is neither uni- nor bi-molecular.')
+
         # Run reaction with rdkit magic
         ps = rxn.RunReactants(r)
 

@@ -19,7 +19,8 @@ Let's start.
     Extract SMILES from the `.sdf` file from enamine.net.
 
     ```shell
-    python scripts/00-extract-smiles-from-sdf.py --file="data/assets/building-blocks/enamine-us.sdf"
+    python scripts/00-extract-smiles-from-sdf.py \
+        --input-file="data/assets/building-blocks/enamine-us.sdf"
     ```
 
 1. Filter building blocks.

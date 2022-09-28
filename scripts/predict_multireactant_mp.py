@@ -1,22 +1,28 @@
 """
 Generate synthetic trees for a set of specified query molecules. Multiprocessing.
-"""
+"""  # TODO: Clean up
+import json
 import logging
 import multiprocessing as mp
 from pathlib import Path
 from typing import Tuple, Union
-import json
+
+from syn_net.encoding.distances import cosine_distance
 
 logger = logging.getLogger(__name__)
 import numpy as np
 import pandas as pd
 
-from syn_net.config import (CHECKPOINTS_DIR, DATA_EMBEDDINGS_DIR, DATA_PREPARED_DIR,
-                            DATA_PREPROCESS_DIR, DATA_RESULT_DIR)
-from syn_net.data_generation.preprocessing import (BuildingBlockFileHandler,
-                                                   ReactionTemplateFileHandler)
+from syn_net.config import (
+    CHECKPOINTS_DIR,
+    DATA_EMBEDDINGS_DIR,
+    DATA_PREPARED_DIR,
+    DATA_PREPROCESS_DIR,
+    DATA_RESULT_DIR,
+)
+from syn_net.data_generation.preprocessing import BuildingBlockFileHandler
 from syn_net.models.chkpt_loader import load_modules_from_checkpoint
-from syn_net.utils.data_utils import SyntheticTree, SyntheticTreeSet, ReactionSet
+from syn_net.utils.data_utils import ReactionSet, SyntheticTree, SyntheticTreeSet
 from syn_net.utils.predict_utils import mol_fp, synthetic_tree_decoder_beam_search
 
 Path(DATA_RESULT_DIR).mkdir(exist_ok=True)
@@ -48,6 +54,7 @@ def _fetch_data(name: str) -> list[str]:
     else:  # Hopefully got a filename instead
         smis_query = _fetch_data_from_file(name)
     return smis_query
+
 
 def find_best_model_ckpt(path: str) -> Union[Path, None]:  # TODO: move to utils.py
     """Find checkpoint with lowest val_loss.
@@ -88,7 +95,7 @@ def _load_pretrained_model(path_to_checkpoints: list[Path]):
     return act_net, rt1_net, rxn_net, rt2_net
 
 
-def func(smiles: str) -> Tuple[str,float,SyntheticTree]:
+def func(smiles: str) -> Tuple[str, float, SyntheticTree]:
     """Generate a synthetic tree for the input molecular embedding."""
     emb = mol_fp(smiles)
     try:
@@ -97,7 +104,7 @@ def func(smiles: str) -> Tuple[str,float,SyntheticTree]:
             building_blocks=building_blocks,
             bb_dict=building_blocks_dict,
             reaction_templates=rxns,
-            mol_embedder=mol_fp,
+            mol_embedder=bblocks_molembedder.kdtree,  # TODO: fix this, currently misused
             action_net=act_net,
             reactant1_net=rt1_net,
             rxn_net=rxn_net,
@@ -109,7 +116,7 @@ def func(smiles: str) -> Tuple[str,float,SyntheticTree]:
             max_step=15,
         )
     except Exception as e:
-        logger.error(e,exc_info=e)
+        logger.error(e, exc_info=e)
         action = -1
 
     if action != 3:  # aka tree has not been properly ended
@@ -118,6 +125,7 @@ def func(smiles: str) -> Tuple[str,float,SyntheticTree]:
         tree = None
 
     return smi, similarity, tree
+
 
 def get_args():
     import argparse
@@ -134,7 +142,7 @@ def get_args():
         "-r", "--rxn_template", type=str, default="hb", help="Choose from ['hb', 'pis']"
     )
     parser.add_argument("--ncpu", type=int, default=1, help="Number of cpus")
-    parser.add_argument("-n", "--num", type=int, default=1, help="Number of molecules to predict.")
+    parser.add_argument("-n", "--num", type=int, default=-1, help="Number of molecules to predict.")
     parser.add_argument(
         "-d",
         "--data",
@@ -163,11 +171,11 @@ if __name__ == "__main__":
     param_dir = f"{args.rxn_template}_{args.featurize}_{args.radius}_{nbits}_{out_dim}"
 
     # Load data ...
-    logger.info("Stat loading data...")
+    logger.info("Start loading data...")
     # ... query molecules (i.e. molecules to decode)
     smiles_queries = _fetch_data(args.data)
     if args.num > 0:  # Select only n queries
-        smiles_queries = smiles_queries[:args.num]
+        smiles_queries = smiles_queries[: args.num]
 
     # ... building blocks
     file = Path(DATA_PREPROCESS_DIR) / f"{args.rxn_template}-{building_blocks_id}-matched.csv.gz"
@@ -175,14 +183,22 @@ if __name__ == "__main__":
     building_blocks_dict = {
         block: i for i, block in enumerate(building_blocks)
     }  # dict is used as lookup table for 2nd reactant during inference
+    logger.info("...loading building blocks completed.")
 
     # ... reaction templates
-    file = Path(DATA_PREPROCESS_DIR) / f"reaction-sets_{args.rxn_template}_{building_blocks_id}.json.gz"
+    file = (
+        Path(DATA_PREPROCESS_DIR)
+        / f"reaction-sets_{args.rxn_template}_{building_blocks_id}.json.gz"
+    )
     rxns = ReactionSet().load(file).rxns
+    logger.info("...loading reaction collection completed.")
 
     # ... building block embedding
     file = Path(DATA_EMBEDDINGS_DIR) / f"{args.rxn_template}-{building_blocks_id}-embeddings.npy"
-    bb_emb = MolEmbedder().load_precomputed(file).embeddings
+    bblocks_molembedder = MolEmbedder().load_precomputed(file).init_balltree(cosine_distance)
+    bb_emb = bblocks_molembedder.get_embeddings()
+
+    logger.info("...loading building block embeddings completed.")
     logger.info("...loading data completed.")
 
     # ... models
@@ -197,8 +213,12 @@ if __name__ == "__main__":
 
     # Decode queries, i.e. the target molecules.
     logger.info(f"Start to decode {len(smiles_queries)} target molecules.")
-    with mp.Pool(processes=args.ncpu) as pool:
-        results = pool.map(func, smiles_queries)
+    if args.ncpu == 1:
+        results = [func(smi) for smi in smiles_queries]
+    else:
+        with mp.Pool(processes=args.ncpu) as pool:
+            logger.info(f"Starting MP with ncpu={args.ncpu}")
+            results = pool.map(func, smiles_queries)
     logger.info("Finished decoding.")
 
     # Print some results from the prediction
@@ -209,13 +229,14 @@ if __name__ == "__main__":
     recovery_rate = (np.asfarray(similarities) == 1.0).sum() / len(similarities)
     avg_similarity = np.mean(similarities)
     logger.info(f"For {args.data}:")
-    logger.info(f"  {len(smiles_queries)=}")
+    logger.info(f"  Total number of attempted  reconstructions: {len(smiles_queries)}")
+    logger.info(f"  Total number of successful reconstructions: {len(smis_decoded)}")
     logger.info(f"  {recovery_rate=}")
     logger.info(f"  {avg_similarity=}")
 
     # Save to local dir
     output_dir = DATA_RESULT_DIR if args.output_dir is None else args.output_dir
-    logger.info("Saving results to {output_dir} ...")
+    logger.info(f"Saving results to {output_dir} ...")
     df = pd.DataFrame(
         {"query SMILES": smiles_queries, "decode SMILES": smis_decoded, "similarity": similarities}
     )
@@ -224,4 +245,4 @@ if __name__ == "__main__":
     synthetic_tree_set = SyntheticTreeSet(sts=trees)
     synthetic_tree_set.save(f"{output_dir}/decoded_st_{args.data}.json.gz")
 
-    logger.info("Finish!")
+    logger.info("Completed.")

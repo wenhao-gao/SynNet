@@ -64,7 +64,7 @@ class SynTreeGenerator:
         *,
         building_blocks: list[str],
         rxn_templates: list[str],
-        rng=np.random.default_rng(),
+        rng=np.random.default_rng(), # TODO: Think about this...
         processes: int = MAX_PROCESSES,
         verbose: bool = False,
     ) -> None:

@@ -119,8 +119,11 @@ Let's start.
 
     ```bash
     python scripts/07-split-data-for-networks.py \
-        --input-dir "data/featurized/hb_fp_2_4096_fp_256"
+        --input-dir "data/featurized/"
     ```
+
+    This will create 24 new files (3 splits, 4 networks, X + y).
+    All new files will be saved in `<input-dir>/Xy`.
 
 8. Train the networks
 

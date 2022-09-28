@@ -243,83 +243,82 @@ def synthetic_tree_generator(
 
     return tree, action
 
-def prep_data(main_dir: str, num_rxn: int, out_dim: int, datasets=None):
+def split_data_into_Xy(
+    dataset_type: str,
+    steps_file: str,
+    states_file: str,
+    output_dir: Path,
+    num_rxn: int,
+    out_dim: int,
+    ) -> None:
     """Split the featurized data into X,y-chunks for the {act,rt1,rxn,rt2}-networks.
+
     Args:
-        main_dir (str): The path to the directory containing the *.npz files.
         num_rxn (int): Number of reactions in the dataset.
-        out_dim (int): Size of the output feature vectors.
+        out_dim (int): Size of the output feature vectors (used in kNN-search for rt1,rt2)
     """
-    if datasets is None:
-        datasets = ['train', 'valid', 'test']
-    main_dir = Path(main_dir)
+    output_dir = Path(output_dir)
+    output_dir.mkdir(exist_ok=True,parents=True)
 
-    for dataset in datasets:
+    # Load data # TODO: separate functionality?
+    states = sparse.load_npz(states_file)
+    steps = sparse.load_npz(steps_file)
 
-        print(f'Reading {dataset} data ...')
-        states_list = []
-        steps_list = []
+    # Extract data for each network...
 
-        states_list.append(sparse.load_npz(main_dir / f'states_{dataset}.npz'))
-        steps_list.append(sparse.load_npz(main_dir / f'steps_{dataset}.npz'))
+    # ... action data
+    # X: [z_state]
+    # y: [action id] (int)
+    X = states
+    y = steps[:, 0]
+    sparse.save_npz(output_dir / f'X_act_{dataset_type}.npz', X)
+    sparse.save_npz(output_dir / f'y_act_{dataset_type}.npz', y)
+    logger.info(f'  saved data for "Action" to {output_dir}')
 
-        states = sparse.csc_matrix(sparse.vstack(states_list))
-        steps = sparse.csc_matrix(sparse.vstack(steps_list))
+    # Delete all data where tree was ended (i.e. tree expansion did not trigger reaction)
+    # TODO: Look into simpler slicing with boolean indices, perhabs consider CSR for row slicing
+    states = sparse.csc_matrix(states.A[(steps[:, 0].A != 3).reshape(-1, )])
+    steps  = sparse.csc_matrix(steps.A[(steps[:, 0].A != 3).reshape(-1, )])
 
-        # Extract data for each network...
+    # ... reaction data
+    # X: [state, z_reactant_1]
+    # y: [reaction_id] (int)
+    X = sparse.hstack([states, steps[:, (2 * out_dim + 2):]])
+    y = steps[:, out_dim + 1]
+    sparse.save_npz(output_dir / f'X_rxn_{dataset_type}.npz', X)
+    sparse.save_npz(output_dir / f'y_rxn_{dataset_type}.npz', y)
+    logger.info(f'  saved data for "Reaction" to {output_dir}')
 
-        # ... action data
-        # X: [z_state]
-        # y: [action id] (int)
-        X = states
-        y = steps[:, 0]
-        sparse.save_npz(main_dir / f'X_act_{dataset}.npz', X)
-        sparse.save_npz(main_dir / f'y_act_{dataset}.npz', y)
-        print(f'  saved data for "Action"')
+    states = sparse.csc_matrix(states.A[(steps[:, 0].A != 2).reshape(-1, )])
+    steps = sparse.csc_matrix(steps.A[(steps[:, 0].A != 2).reshape(-1, )])
 
-        # Delete all data where tree was ended (i.e. tree expansion did not trigger reaction)
-        states = sparse.csc_matrix(states.A[(steps[:, 0].A != 3).reshape(-1, )])
-        steps = sparse.csc_matrix(steps.A[(steps[:, 0].A != 3).reshape(-1, )])
+    enc = OneHotEncoder(handle_unknown='ignore')
+    enc.fit([[i] for i in range(num_rxn)])
 
-        # ... reaction data
-        # X: [state, z_reactant_1]
-        # y: [reaction_id] (int)
-        X = sparse.hstack([states, steps[:, (2 * out_dim + 2):]])
-        y = steps[:, out_dim + 1]
-        sparse.save_npz(main_dir / f'X_rxn_{dataset}.npz', X)
-        sparse.save_npz(main_dir / f'y_rxn_{dataset}.npz', y)
-        print(f'  saved data for "Reaction"')
+    # ... reactant 2 data
+    # X: [z_state, z_reactant_1, reaction_id]
+    # y: [z'_reactant_2]
+    X = sparse.hstack(
+        [states,
+            steps[:, (2 * out_dim + 2):],
+            sparse.csc_matrix(enc.transform(steps[:, out_dim+1].A.reshape((-1, 1))).toarray())]
+    )
+    y = steps[:, (out_dim+2): (2 * out_dim + 2)]
+    sparse.save_npz(output_dir / f'X_rt2_{dataset_type}.npz', X)
+    sparse.save_npz(output_dir / f'y_rt2_{dataset_type}.npz', y)
+    logger.info(f'  saved data for "Reactant 2" to {output_dir}')
 
-        states = sparse.csc_matrix(states.A[(steps[:, 0].A != 2).reshape(-1, )])
-        steps = sparse.csc_matrix(steps.A[(steps[:, 0].A != 2).reshape(-1, )])
+    states = sparse.csc_matrix(states.A[(steps[:, 0].A != 1).reshape(-1, )])
+    steps = sparse.csc_matrix(steps.A[(steps[:, 0].A != 1).reshape(-1, )])
 
-        enc = OneHotEncoder(handle_unknown='ignore')
-        enc.fit([[i] for i in range(num_rxn)])
-
-        # ... reactant 2 data
-        # X: [z_state, z_reactant_1, reaction_id]
-        # y: [z'_reactant_2]
-        X = sparse.hstack(
-            [states,
-             steps[:, (2 * out_dim + 2):],
-             sparse.csc_matrix(enc.transform(steps[:, out_dim+1].A.reshape((-1, 1))).toarray())]
-        )
-        y = steps[:, (out_dim+2): (2 * out_dim + 2)]
-        sparse.save_npz(main_dir / f'X_rt2_{dataset}.npz', X)
-        sparse.save_npz(main_dir / f'y_rt2_{dataset}.npz', y)
-        print(f'  saved data for "Reactant 2"')
-
-        states = sparse.csc_matrix(states.A[(steps[:, 0].A != 1).reshape(-1, )])
-        steps = sparse.csc_matrix(steps.A[(steps[:, 0].A != 1).reshape(-1, )])
-
-        # ... reactant 1 data
-        # X: [z_state]
-        # y: [z'_reactant_1]
-        X = states
-        y = steps[:, 1: (out_dim+1)]
-        sparse.save_npz(main_dir / f'X_rt1_{dataset}.npz', X)
-        sparse.save_npz(main_dir / f'y_rt1_{dataset}.npz', y)
-        print(f'  saved data for "Reactant 1"')
+    # ... reactant 1 data
+    # X: [z_state]
+    # y: [z'_reactant_1]
+    X = states
+    y = steps[:, 1: (out_dim+1)]
+    sparse.save_npz(output_dir / f'X_rt1_{dataset_type}.npz', X)
+    sparse.save_npz(output_dir / f'y_rt1_{dataset_type}.npz', y)
+    logger.info(f'  saved data for "Reactant 1" to {output_dir}')
 
     return None
 
@@ -349,7 +348,7 @@ class Sdf2SmilesExtractor:
             f.writelines("SMILES\n")
             f.writelines((s + "\n" for s in self.smiles))
 
-    def _to_csv_gz(self, file: Path) -> None:
+    def _to_txt(self, file: Path) -> None:
         with open(file, "wt") as f:
             f.writelines("SMILES\n")
             f.writelines((s + "\n" for s in self.smiles))

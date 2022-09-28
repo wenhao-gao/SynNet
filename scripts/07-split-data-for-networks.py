@@ -32,7 +32,7 @@ if __name__ == "__main__":
     input_dir = Path(args.input_dir)
     output_dir = input_dir / "Xy"
     for dataset_type in "train valid test".split():
-        logger.info("Split {dataset_type}-data...")
+        logger.info(f"Split {dataset_type}-data...")
         split_data_into_Xy(
             dataset_type=dataset_type,
             steps_file=input_dir / f"{dataset_type}_steps.npz",

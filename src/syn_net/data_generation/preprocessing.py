@@ -1,6 +1,8 @@
-from tqdm import tqdm
-from syn_net.config import MAX_PROCESSES
+from pathlib import Path
 
+from tqdm import tqdm
+
+from syn_net.config import MAX_PROCESSES
 from syn_net.utils.data_utils import Reaction
 
 
@@ -25,7 +27,7 @@ class BuildingBlockFilter:
         self.rxn_templates = rxn_templates
 
         # Init reactions
-        self.rxns = [Reaction(template=template.strip()) for template in self.rxn_templates]
+        self.rxns = [Reaction(template=template) for template in self.rxn_templates]
         # Init other stuff
         self.processes = processes
         self.verbose = verbose
@@ -66,9 +68,6 @@ class BuildingBlockFilter:
         return self
 
 
-from pathlib import Path
-
-
 class BuildingBlockFileHandler:
     def _load_csv(self, file: str) -> list[str]:
         """Load building blocks as smiles from `*.csv` or `*.csv.gz`."""
@@ -85,7 +84,7 @@ class BuildingBlockFileHandler:
             raise NotImplementedError
 
     def _save_csv(self, file: Path, building_blocks: list[str]):
-        """Save building blocks to `*.csv`"""
+        """Save building blocks to `*.csv.gz`"""
         import pandas as pd
 
         # remove possible 1 or more extensions, i.e.
@@ -100,17 +99,20 @@ class BuildingBlockFileHandler:
     def save(self, file: str, building_blocks: list[str]):
         """Save building blocks to file."""
         file = Path(file)
+        file.parent.mkdir(parents=True, exist_ok=True)
         if ".csv" in file.suffixes:
             self._save_csv(file, building_blocks)
         else:
             raise NotImplementedError
 
-class ReactionTemplateFileHandler:
 
+class ReactionTemplateFileHandler:
     def load(self, file: str) -> list[str]:
         """Load reaction templates from file."""
         with open(file, "rt") as f:
             rxn_templates = f.readlines()
+
+        rxn_templates = [tmplt.strip() for tmplt in rxn_templates]
 
         if not all([self._validate(t)] for t in rxn_templates):
             raise ValueError("Not all reaction templates are valid.")

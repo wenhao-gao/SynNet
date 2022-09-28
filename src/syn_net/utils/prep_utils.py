@@ -1,14 +1,10 @@
 """
 This file contains various utils for data preparation and preprocessing.
 """
-from typing import Iterator, Union, Tuple
+from typing import Iterator, Union
 import numpy as np
 from scipy import sparse
 from sklearn.preprocessing import OneHotEncoder
-from syn_net.utils.data_utils import Reaction, SyntheticTree
-from syn_net.utils.predict_utils import (can_react, get_action_mask,
-                                         get_reaction_mask, )
-from syn_net.encoding.fingerprints import mol_fp
 
 from pathlib import Path
 from rdkit import Chem

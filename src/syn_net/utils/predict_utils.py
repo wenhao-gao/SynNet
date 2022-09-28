@@ -219,10 +219,7 @@ def synthetic_tree_decoder(
     # Initialization
     tree = SyntheticTree()
     mol_recent = None
-    if isinstance(bb_emb,str):
-        kdtree = _fetch_bb_embeddings_as_balltree(bb_emb)
-    else:
-        kdtree = BallTree(bb_emb, metric=cosine_distance)
+    kdtree = mol_embedder # TODO: dont mis-use this arg
 
     # Start iteration
     for i in range(max_step):
@@ -331,15 +328,6 @@ def synthetic_tree_decoder(
         tree.update(act, None, None, None, None)
 
     return tree, act
-
-@functools.lru_cache(maxsize=1)
-def _fetch_bb_embeddings_as_balltree(filename: str): # TODO: find more elegant way / use MolEmbedder-cls
-    """Helper function to cache computing BallTree.
-    Can hash string, but not numpy array easily, hence this workaround.
-    """
-    from syn_net.MolEmbedder import MolEmbedder
-    molemedder = MolEmbedder().load_precomputed(filename)
-    return BallTree(molemedder.get_embeddings(), metric=cosine_distance)
 
 
 

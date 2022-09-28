@@ -2,7 +2,6 @@
 This file contains various utils for creating molecular embeddings and for
 decoding synthetic trees.
 """
-import functools
 from typing import Callable, Tuple
 
 import numpy as np
@@ -121,7 +120,7 @@ def get_reaction_mask(smi: str, rxns: list[Reaction]):
     return reaction_mask, available_list
 
 
-def nn_search(_e: np.ndarray, _tree: BallTree, _k: int = 1) -> Tuple[float, float]:
+def nn_search(_e: np.ndarray, _tree: BallTree, _k: int = 1) -> Tuple[float, float]: # TODO: merge w `nn_search_rt1`
     """
     Conducts a nearest neighbor search to find the molecule from the tree most
     simimilar to the input embedding.

@@ -1,5 +1,6 @@
 import numpy as np
 
+
 def one_hot_encoder(dim, space):
     """
     Create a one-hot encoded vector of length=`space`, with a non-zero element

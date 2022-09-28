@@ -1,7 +1,8 @@
 """Central place for all configuration, paths, and parameter."""
 import multiprocessing
+
 # Multiprocessing
-MAX_PROCESSES = min(32,multiprocessing.cpu_count())-1
+MAX_PROCESSES = min(32, multiprocessing.cpu_count()) - 1
 
 # TODO: Remove these paths bit by bit (not used except for decoing as of now)
 # Paths
@@ -26,4 +27,4 @@ DATA_FEATURIZED_DIR = "data/featurized"
 DATA_RESULT_DIR = "results"
 
 # Checkpoints (& pre-trained weights)
-CHECKPOINTS_DIR = "checkpoints" #
+CHECKPOINTS_DIR = "checkpoints"

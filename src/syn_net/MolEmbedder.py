@@ -4,7 +4,9 @@ from typing import Callable, Union
 
 import numpy as np
 from sklearn.neighbors import BallTree
+
 from syn_net.config import MAX_PROCESSES
+
 logger = logging.getLogger(__name__)
 
 
@@ -79,9 +81,7 @@ class MolEmbedder:
         if self.embeddings is None:
             raise ValueError("Need emebddings to compute kdtree.")
         X = self.embeddings
-        self.kdtree_metric = metric.__name__ if not isinstance(metric,str) else metric
+        self.kdtree_metric = metric.__name__ if not isinstance(metric, str) else metric
         self.kdtree = BallTree(X, metric=metric)
 
         return self
-
-

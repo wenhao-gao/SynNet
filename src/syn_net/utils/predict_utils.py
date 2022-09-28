@@ -10,6 +10,7 @@ import rdkit
 import torch
 from rdkit import Chem
 from sklearn.neighbors import BallTree
+
 from syn_net.encoding.distances import cosine_distance, tanimoto_similarity
 from syn_net.encoding.fingerprints import mol_fp
 from syn_net.encoding.utils import one_hot_encoder
@@ -120,7 +121,9 @@ def get_reaction_mask(smi: str, rxns: list[Reaction]):
     return reaction_mask, available_list
 
 
-def nn_search(_e: np.ndarray, _tree: BallTree, _k: int = 1) -> Tuple[float, float]: # TODO: merge w `nn_search_rt1`
+def nn_search(
+    _e: np.ndarray, _tree: BallTree, _k: int = 1
+) -> Tuple[float, float]:  # TODO: merge w `nn_search_rt1`
     """
     Conducts a nearest neighbor search to find the molecule from the tree most
     simimilar to the input embedding.
@@ -144,7 +147,9 @@ def nn_search_rt1(_e: np.ndarray, _tree: BallTree, _k: int = 1) -> Tuple[np.ndar
     return dist[0], ind[0]
 
 
-def set_embedding(z_target: np.ndarray, state: list[str], nbits: int, _mol_embedding: Callable) -> np.ndarray:
+def set_embedding(
+    z_target: np.ndarray, state: list[str], nbits: int, _mol_embedding: Callable
+) -> np.ndarray:
     """
     Computes embeddings for all molecules in the input space.
     Embedding = [z_mol1, z_mol2, z_target]
@@ -158,7 +163,7 @@ def set_embedding(z_target: np.ndarray, state: list[str], nbits: int, _mol_embed
     Returns:
         embedding (np.ndarray): shape (1,d+2*nbits)
     """
-    z_target = np.atleast_2d(z_target) # (1,d)
+    z_target = np.atleast_2d(z_target)  # (1,d)
     if len(state) == 0:
         z_mol1 = np.zeros((1, nbits))
         z_mol2 = np.zeros((1, nbits))
@@ -171,7 +176,8 @@ def set_embedding(z_target: np.ndarray, state: list[str], nbits: int, _mol_embed
     else:
         raise ValueError
     embedding = np.concatenate([z_mol1, z_mol2, z_target], axis=1)
-    return embedding # (1,d+2*nbits)
+    return embedding  # (1,d+2*nbits)
+
 
 def synthetic_tree_decoder(
     z_target: np.ndarray,
@@ -218,7 +224,7 @@ def synthetic_tree_decoder(
     # Initialization
     tree = SyntheticTree()
     mol_recent = None
-    kdtree = mol_embedder # TODO: dont mis-use this arg
+    kdtree = mol_embedder  # TODO: dont mis-use this arg
 
     # Start iteration
     for i in range(max_step):
@@ -238,7 +244,7 @@ def synthetic_tree_decoder(
             break
 
         z_mol1 = reactant1_net(torch.Tensor(z_state))
-        z_mol1 = z_mol1.detach().numpy() # (1,dimension_output_embedding), default: (1,256)
+        z_mol1 = z_mol1.detach().numpy()  # (1,dimension_output_embedding), default: (1,256)
 
         # Select first molecule
         if act == 0:
@@ -247,8 +253,8 @@ def synthetic_tree_decoder(
             # Idea: Increase the chances of generating a better tree.
             k = k_reactant1 if mol_recent is None else 1
 
-            _, idxs = kdtree.query(z_mol1,k=k) # idxs.shape = (1,k)
-            mol1 = building_blocks[idxs[0][k-1]]
+            _, idxs = kdtree.query(z_mol1, k=k)  # idxs.shape = (1,k)
+            mol1 = building_blocks[idxs[0][k - 1]]
         elif act == 1 or act == 2:
             # Expand or Merge
             mol1 = mol_recent
@@ -263,19 +269,21 @@ def synthetic_tree_decoder(
         reaction_proba = rxn_net(torch.Tensor(z))
         reaction_proba = reaction_proba.squeeze().detach().numpy() + 1e-10  # (nReactionTemplate,)
 
-        if act==0 or act==1:  # add or expand
+        if act == 0 or act == 1:  # add or expand
             reaction_mask, available_list = get_reaction_mask(mol1, reaction_templates)
         else:  # merge
             _, reaction_mask = can_react(tree.get_state(), reaction_templates)
-            available_list = [[] for rxn in reaction_templates] # TODO: if act=merge, this is not used at all
+            available_list = [
+                [] for rxn in reaction_templates
+            ]  # TODO: if act=merge, this is not used at all
 
         # If we ended up in a state where no reaction is possible, end this iteration.
         if reaction_mask is None:
-            if len(state) == 1: # only a single root mol, so this syntree is valid
+            if len(state) == 1:  # only a single root mol, so this syntree is valid
                 act = 3
                 break
             else:
-                break # action != 3, so in our analysis we will see this tree as "invalid"
+                break  # action != 3, so in our analysis we will see this tree as "invalid"
 
         # Select reaction template
         rxn_id = np.argmax(reaction_proba * reaction_mask)
@@ -311,11 +319,11 @@ def synthetic_tree_decoder(
         # Run reaction
         mol_product = rxn.run_reaction((mol1, mol2))
         if mol_product is None or Chem.MolFromSmiles(mol_product) is None:
-            if len(state) == 1: # only a single root mol, so this syntree is valid
+            if len(state) == 1:  # only a single root mol, so this syntree is valid
                 act = 3
                 break
             else:
-                break # action != 3, so in our analysis we will see this tree as "invalid"
+                break  # action != 3, so in our analysis we will see this tree as "invalid"
 
         # Update
         tree.update(act, int(rxn_id), mol1, mol2, mol_product)
@@ -329,10 +337,8 @@ def synthetic_tree_decoder(
     return tree, act
 
 
-
 def synthetic_tree_decoder_beam_search(
-    beam_width: int = 3,
-    **kwargs
+    beam_width: int = 3, **kwargs
 ) -> Tuple[str, float, SyntheticTree, int]:
     """
     Wrapper around `synthetic_tree_decoder_rt1` with variable `k` for kNN search of 1st reactant.
@@ -353,7 +359,7 @@ def synthetic_tree_decoder_beam_search(
     acts: list[int] = []
 
     for i in range(beam_width):
-        tree, act = synthetic_tree_decoder(k_reactant1=i+1, **kwargs)
+        tree, act = synthetic_tree_decoder(k_reactant1=i + 1, **kwargs)
 
         # Find the chemical in this tree that is most similar to the target.
         # Note: This does not have to be the final root mol, but any, as we can truncate tree to our liking.

@@ -104,7 +104,7 @@ if __name__ == "__main__":
             ncpu=args.ncpu,
         )
     else:  # load from checkpt -> only for fp, not gin
-    # TODO: Use `ckpt_path`, c.f. https://pytorch-lightning.readthedocs.io/en/stable/api/pytorch_lightning.trainer.trainer.Trainer.html#pytorch_lightning.trainer.trainer.Trainer.fit
+        # TODO: Use `ckpt_path`, c.f. https://pytorch-lightning.readthedocs.io/en/stable/api/pytorch_lightning.trainer.trainer.Trainer.html#pytorch_lightning.trainer.trainer.Trainer.fit
         mlp = MLP.load_from_checkpoint(
             path_to_rxn,
             input_dim=input_dim,

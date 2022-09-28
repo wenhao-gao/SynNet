@@ -1,7 +1,9 @@
-from typing import Tuple
-from syn_net.models.mlp import MLP
+from typing import List, Tuple
+
 import pytorch_lightning as pl
-from typing import List
+
+from syn_net.models.mlp import MLP
+
 
 def load_modules_from_checkpoint(
     path_to_act: str,

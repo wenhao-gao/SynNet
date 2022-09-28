@@ -64,7 +64,7 @@ class SynTreeGenerator:
         *,
         building_blocks: list[str],
         rxn_templates: list[str],
-        rng=np.random.default_rng(), # TODO: Think about this...
+        rng=np.random.default_rng(),  # TODO: Think about this...
         processes: int = MAX_PROCESSES,
         verbose: bool = False,
     ) -> None:
@@ -336,16 +336,17 @@ def save_syntreegenerator(syntreegenerator: SynTreeGenerator, file: str) -> None
 # TODO: Move all these encoders to "from syn_net.encoding/"
 # TODO: Evaluate if One-Hot-Encoder can be replaced with encoder from sklearn
 
-from abc import abstractmethod, ABC
+from abc import ABC, abstractmethod
+
 
 class Encoder(ABC):
-
     @abstractmethod
-    def encode(self,*args,**kwargs):
+    def encode(self, *args, **kwargs):
         ...
 
     def __repr__(self) -> str:
         return f"'{self.__class__.__name__}': {self.__dict__}"
+
 
 class OneHotEncoder(Encoder):
     def __init__(self, d: int) -> None:
@@ -375,7 +376,6 @@ class MorganFingerprintEncoder(Encoder):
         return fp  # (1,d)
 
 
-
 class IdentityIntEncoder(Encoder):
     def __init__(self) -> None:
         pass
@@ -385,7 +385,9 @@ class IdentityIntEncoder(Encoder):
 
 
 class SynTreeFeaturizer:
-    def __init__(self, *,
+    def __init__(
+        self,
+        *,
         reactant_embedder: Encoder,
         mol_embedder: Encoder,
         rxn_embedder: Encoder,

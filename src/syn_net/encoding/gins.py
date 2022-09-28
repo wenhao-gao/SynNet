@@ -5,16 +5,15 @@ import torch
 import tqdm
 from dgl.nn.pytorch.glob import AvgPooling
 from dgllife.model import load_pretrained
-from dgllife.utils import (PretrainAtomFeaturizer, PretrainBondFeaturizer,
-                           mol_to_bigraph)
+from dgllife.utils import PretrainAtomFeaturizer, PretrainBondFeaturizer, mol_to_bigraph
 from rdkit import Chem
 
 
 @functools.lru_cache(1)
 def _fetch_gin_pretrained_model(model_name: str):
     """Get a GIN pretrained model to use for creating molecular embeddings"""
-    device = 'cpu'
-    model = load_pretrained(model_name).to(device) # used to learn embedding
+    device = "cpu"
+    model = load_pretrained(model_name).to(device)  # used to learn embedding
     model.eval()
     return model
 
@@ -39,10 +38,13 @@ def graph_construction_and_featurization(smiles):
             if mol is None:
                 success.append(False)
                 continue
-            g = mol_to_bigraph(mol, add_self_loop=True,
-                                node_featurizer=PretrainAtomFeaturizer(),
-                                edge_featurizer=PretrainBondFeaturizer(),
-                                canonical_atom_order=False)
+            g = mol_to_bigraph(
+                mol,
+                add_self_loop=True,
+                node_featurizer=PretrainAtomFeaturizer(),
+                edge_featurizer=PretrainBondFeaturizer(),
+                canonical_atom_order=False,
+            )
             graphs.append(g)
             success.append(True)
         except:
@@ -50,7 +52,8 @@ def graph_construction_and_featurization(smiles):
 
     return graphs, success
 
-def mol_embedding(smi, device='cpu', readout=AvgPooling()):
+
+def mol_embedding(smi, device="cpu", readout=AvgPooling()):
     """
     Constructs a graph embedding using the GIN network for an input SMILES.
 
@@ -61,7 +64,7 @@ def mol_embedding(smi, device='cpu', readout=AvgPooling()):
     Returns:
         np.ndarray: Either a zeros array or the graph embedding.
     """
-    name = 'gin_supervised_contextpred'
+    name = "gin_supervised_contextpred"
     gin_pretrained_model = _fetch_gin_pretrained_model(name)
 
     # get the embedding
@@ -70,21 +73,37 @@ def mol_embedding(smi, device='cpu', readout=AvgPooling()):
     else:
         mol = Chem.MolFromSmiles(smi)
         # convert RDKit.Mol into featurized bi-directed DGLGraph
-        g = mol_to_bigraph(mol, add_self_loop=True,
-                           node_featurizer=PretrainAtomFeaturizer(),
-                           edge_featurizer=PretrainBondFeaturizer(),
-                           canonical_atom_order=False)
+        g = mol_to_bigraph(
+            mol,
+            add_self_loop=True,
+            node_featurizer=PretrainAtomFeaturizer(),
+            edge_featurizer=PretrainBondFeaturizer(),
+            canonical_atom_order=False,
+        )
         bg = g.to(device)
-        nfeats = [bg.ndata.pop('atomic_number').to(device),
-                  bg.ndata.pop('chirality_type').to(device)]
-        efeats = [bg.edata.pop('bond_type').to(device),
-                  bg.edata.pop('bond_direction_type').to(device)]
+        nfeats = [
+            bg.ndata.pop("atomic_number").to(device),
+            bg.ndata.pop("chirality_type").to(device),
+        ]
+        efeats = [
+            bg.edata.pop("bond_type").to(device),
+            bg.edata.pop("bond_direction_type").to(device),
+        ]
         with torch.no_grad():
             node_repr = gin_pretrained_model(bg, nfeats, efeats)
-        return readout(bg, node_repr).detach().cpu().numpy().reshape(-1, ).tolist()
+        return (
+            readout(bg, node_repr)
+            .detach()
+            .cpu()
+            .numpy()
+            .reshape(
+                -1,
+            )
+            .tolist()
+        )
 
 
-def get_mol_embedding(smi, model, device='cpu', readout=AvgPooling()):
+def get_mol_embedding(smi, model, device="cpu", readout=AvgPooling()):
     """
     Computes the molecular graph embedding for the input SMILES.
 
@@ -100,19 +119,19 @@ def get_mol_embedding(smi, model, device='cpu', readout=AvgPooling()):
         torch.Tensor: Learned embedding for the input molecule.
     """
     mol = Chem.MolFromSmiles(smi)
-    g = mol_to_bigraph(mol, add_self_loop=True,
-                       node_featurizer=PretrainAtomFeaturizer(),
-                       edge_featurizer=PretrainBondFeaturizer(),
-                       canonical_atom_order=False)
+    g = mol_to_bigraph(
+        mol,
+        add_self_loop=True,
+        node_featurizer=PretrainAtomFeaturizer(),
+        edge_featurizer=PretrainBondFeaturizer(),
+        canonical_atom_order=False,
+    )
     bg = g.to(device)
-    nfeats = [bg.ndata.pop('atomic_number').to(device),
-              bg.ndata.pop('chirality_type').to(device)]
-    efeats = [bg.edata.pop('bond_type').to(device),
-              bg.edata.pop('bond_direction_type').to(device)]
+    nfeats = [bg.ndata.pop("atomic_number").to(device), bg.ndata.pop("chirality_type").to(device)]
+    efeats = [bg.edata.pop("bond_type").to(device), bg.edata.pop("bond_direction_type").to(device)]
     with torch.no_grad():
         node_repr = model(bg, nfeats, efeats)
     return readout(bg, node_repr).detach().cpu().numpy()[0]
-
 
 
 def graph_construction_and_featurization(smiles):
@@ -127,7 +146,7 @@ def graph_construction_and_featurization(smiles):
         success (list of bool): Indicators for whether the SMILES string can be
             parsed by RDKit.
     """
-    graphs  = []
+    graphs = []
     success = []
     for smi in tqdm(smiles):
         try:
@@ -135,10 +154,13 @@ def graph_construction_and_featurization(smiles):
             if mol is None:
                 success.append(False)
                 continue
-            g = mol_to_bigraph(mol, add_self_loop=True,
-                               node_featurizer=PretrainAtomFeaturizer(),
-                               edge_featurizer=PretrainBondFeaturizer(),
-                               canonical_atom_order=False)
+            g = mol_to_bigraph(
+                mol,
+                add_self_loop=True,
+                node_featurizer=PretrainAtomFeaturizer(),
+                edge_featurizer=PretrainBondFeaturizer(),
+                canonical_atom_order=False,
+            )
             graphs.append(g)
             success.append(True)
         except:

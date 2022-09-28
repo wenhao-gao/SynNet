@@ -4,8 +4,8 @@
 # Helper to select validation func based on output dim
 from typing import Union
 
-import torch
 import numpy as np
+import torch
 from scipy import sparse
 
 VALIDATION_OPTS = {
@@ -43,7 +43,9 @@ def get_args():
     return parser.parse_args()
 
 
-def xy_to_dataloader(X_file: str, y_file: str, task: str = "regression", n: Union[int, float] = 1.0, **kwargs):
+def xy_to_dataloader(
+    X_file: str, y_file: str, task: str = "regression", n: Union[int, float] = 1.0, **kwargs
+):
     """Loads featurized X,y `*.npz`-data into a `DataLoader`"""
     X = sparse.load_npz(X_file)
     y = sparse.load_npz(y_file)
@@ -60,7 +62,11 @@ def xy_to_dataloader(X_file: str, y_file: str, task: str = "regression", n: Unio
     else:
         pass  #
     X = np.atleast_2d(np.asarray(X.todense()))
-    y = np.atleast_2d(np.asarray(y.todense())) if task == "regression" else np.asarray(y.todense()).squeeze()
+    y = (
+        np.atleast_2d(np.asarray(y.todense()))
+        if task == "regression"
+        else np.asarray(y.todense()).squeeze()
+    )
     dataset = torch.utils.data.TensorDataset(
         torch.Tensor(X),
         torch.Tensor(y),

@@ -32,7 +32,7 @@ if __name__ == "__main__":
         X_file=Path(DATA_FEATURIZED_DIR) / f"{id}/X_{MODEL_ID}_{dataset}.npz",
         y_file=Path(DATA_FEATURIZED_DIR) / f"{id}/y_{MODEL_ID}_{dataset}.npz",
         n=None if not args.debug else 1000,
-        task = "classification",
+        task="classification",
         batch_size=args.batch_size,
         num_workers=args.ncpu,
         shuffle=True if dataset == "train" else False,
@@ -43,7 +43,7 @@ if __name__ == "__main__":
         X_file=Path(DATA_FEATURIZED_DIR) / f"{id}/X_{MODEL_ID}_{dataset}.npz",
         y_file=Path(DATA_FEATURIZED_DIR) / f"{id}/y_{MODEL_ID}_{dataset}.npz",
         n=None if not args.debug else 1000,
-        task = "classification",
+        task="classification",
         batch_size=args.batch_size,
         num_workers=args.ncpu,
         shuffle=True if dataset == "train" else False,
@@ -83,7 +83,7 @@ if __name__ == "__main__":
     save_dir.mkdir(exist_ok=True, parents=True)
 
     tb_logger = pl_loggers.TensorBoardLogger(save_dir, name="")
-    csv_logger = pl_loggers.CSVLogger(save_dir,name="")
+    csv_logger = pl_loggers.CSVLogger(save_dir, name="")
     logger.info(f"Log dir set to: {tb_logger.log_dir}")
 
     checkpoint_callback = ModelCheckpoint(
@@ -101,7 +101,7 @@ if __name__ == "__main__":
         max_epochs=max_epochs,
         progress_bar_refresh_rate=int(len(train_dataloader) * 0.05),
         callbacks=[checkpoint_callback],
-        logger=[tb_logger,csv_logger],
+        logger=[tb_logger, csv_logger],
         fast_dev_run=args.fast_dev_run,
     )
 

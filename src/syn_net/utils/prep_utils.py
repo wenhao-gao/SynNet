@@ -1,15 +1,17 @@
 """
 This file contains various utils for data preparation and preprocessing.
 """
+import logging
+from pathlib import Path
 from typing import Iterator, Union
+
 import numpy as np
+from rdkit import Chem
 from scipy import sparse
 from sklearn.preprocessing import OneHotEncoder
 
-from pathlib import Path
-from rdkit import Chem
-import logging
 logger = logging.getLogger(__name__)
+
 
 def rdkit2d_embedding(smi):
     """
@@ -22,20 +24,27 @@ def rdkit2d_embedding(smi):
         np.ndarray: A molecular embedding corresponding to the input molecule.
     """
     from tdc.chem_utils import MolConvert
+
     if smi is None:
-        return np.zeros(200).reshape((-1, ))
+        return np.zeros(200).reshape((-1,))
     else:
         # define the RDKit 2D descriptor
-        rdkit2d = MolConvert(src = 'SMILES', dst = 'RDKit2D')
-        return rdkit2d(smi).reshape(-1, )
+        rdkit2d = MolConvert(src="SMILES", dst="RDKit2D")
+        return rdkit2d(smi).reshape(
+            -1,
+        )
+
 
 import functools
+
+
 @functools.lru_cache(maxsize=1)
 def _fetch_gin_pretrained_model(model_name: str):
     from dgllife.model import load_pretrained
+
     """Get a GIN pretrained model to use for creating molecular embeddings"""
-    device     = 'cpu'
-    model      = load_pretrained(model_name).to(device)
+    device = "cpu"
+    model = load_pretrained(model_name).to(device)
     model.eval()
     return model
 
@@ -47,7 +56,7 @@ def split_data_into_Xy(
     output_dir: Path,
     num_rxn: int,
     out_dim: int,
-    ) -> None:
+) -> None:
     """Split the featurized data into X,y-chunks for the {act,rt1,rxn,rt2}-networks.
 
     Args:
@@ -55,7 +64,7 @@ def split_data_into_Xy(
         out_dim (int): Size of the output feature vectors (used in kNN-search for rt1,rt2)
     """
     output_dir = Path(output_dir)
-    output_dir.mkdir(exist_ok=True,parents=True)
+    output_dir.mkdir(exist_ok=True, parents=True)
 
     # Load data # TODO: separate functionality?
     states = sparse.load_npz(states_file)
@@ -68,56 +77,95 @@ def split_data_into_Xy(
     # y: [action id] (int)
     X = states
     y = steps[:, 0]
-    sparse.save_npz(output_dir / f'X_act_{dataset_type}.npz', X)
-    sparse.save_npz(output_dir / f'y_act_{dataset_type}.npz', y)
+    sparse.save_npz(output_dir / f"X_act_{dataset_type}.npz", X)
+    sparse.save_npz(output_dir / f"y_act_{dataset_type}.npz", y)
     logger.info(f'  saved data for "Action" to {output_dir}')
 
     # Delete all data where tree was ended (i.e. tree expansion did not trigger reaction)
     # TODO: Look into simpler slicing with boolean indices, perhabs consider CSR for row slicing
-    states = sparse.csc_matrix(states.A[(steps[:, 0].A != 3).reshape(-1, )])
-    steps  = sparse.csc_matrix(steps.A[(steps[:, 0].A != 3).reshape(-1, )])
+    states = sparse.csc_matrix(
+        states.A[
+            (steps[:, 0].A != 3).reshape(
+                -1,
+            )
+        ]
+    )
+    steps = sparse.csc_matrix(
+        steps.A[
+            (steps[:, 0].A != 3).reshape(
+                -1,
+            )
+        ]
+    )
 
     # ... reaction data
     # X: [state, z_reactant_1]
     # y: [reaction_id] (int)
-    X = sparse.hstack([states, steps[:, (2 * out_dim + 2):]])
+    X = sparse.hstack([states, steps[:, (2 * out_dim + 2) :]])
     y = steps[:, out_dim + 1]
-    sparse.save_npz(output_dir / f'X_rxn_{dataset_type}.npz', X)
-    sparse.save_npz(output_dir / f'y_rxn_{dataset_type}.npz', y)
+    sparse.save_npz(output_dir / f"X_rxn_{dataset_type}.npz", X)
+    sparse.save_npz(output_dir / f"y_rxn_{dataset_type}.npz", y)
     logger.info(f'  saved data for "Reaction" to {output_dir}')
 
-    states = sparse.csc_matrix(states.A[(steps[:, 0].A != 2).reshape(-1, )])
-    steps = sparse.csc_matrix(steps.A[(steps[:, 0].A != 2).reshape(-1, )])
+    states = sparse.csc_matrix(
+        states.A[
+            (steps[:, 0].A != 2).reshape(
+                -1,
+            )
+        ]
+    )
+    steps = sparse.csc_matrix(
+        steps.A[
+            (steps[:, 0].A != 2).reshape(
+                -1,
+            )
+        ]
+    )
 
-    enc = OneHotEncoder(handle_unknown='ignore')
+    enc = OneHotEncoder(handle_unknown="ignore")
     enc.fit([[i] for i in range(num_rxn)])
 
     # ... reactant 2 data
     # X: [z_state, z_reactant_1, reaction_id]
     # y: [z'_reactant_2]
     X = sparse.hstack(
-        [states,
-            steps[:, (2 * out_dim + 2):],
-            sparse.csc_matrix(enc.transform(steps[:, out_dim+1].A.reshape((-1, 1))).toarray())]
+        [
+            states,
+            steps[:, (2 * out_dim + 2) :],
+            sparse.csc_matrix(enc.transform(steps[:, out_dim + 1].A.reshape((-1, 1))).toarray()),
+        ]
     )
-    y = steps[:, (out_dim+2): (2 * out_dim + 2)]
-    sparse.save_npz(output_dir / f'X_rt2_{dataset_type}.npz', X)
-    sparse.save_npz(output_dir / f'y_rt2_{dataset_type}.npz', y)
+    y = steps[:, (out_dim + 2) : (2 * out_dim + 2)]
+    sparse.save_npz(output_dir / f"X_rt2_{dataset_type}.npz", X)
+    sparse.save_npz(output_dir / f"y_rt2_{dataset_type}.npz", y)
     logger.info(f'  saved data for "Reactant 2" to {output_dir}')
 
-    states = sparse.csc_matrix(states.A[(steps[:, 0].A != 1).reshape(-1, )])
-    steps = sparse.csc_matrix(steps.A[(steps[:, 0].A != 1).reshape(-1, )])
+    states = sparse.csc_matrix(
+        states.A[
+            (steps[:, 0].A != 1).reshape(
+                -1,
+            )
+        ]
+    )
+    steps = sparse.csc_matrix(
+        steps.A[
+            (steps[:, 0].A != 1).reshape(
+                -1,
+            )
+        ]
+    )
 
     # ... reactant 1 data
     # X: [z_state]
     # y: [z'_reactant_1]
     X = states
-    y = steps[:, 1: (out_dim+1)]
-    sparse.save_npz(output_dir / f'X_rt1_{dataset_type}.npz', X)
-    sparse.save_npz(output_dir / f'y_rt1_{dataset_type}.npz', y)
+    y = steps[:, 1 : (out_dim + 1)]
+    sparse.save_npz(output_dir / f"X_rt1_{dataset_type}.npz", X)
+    sparse.save_npz(output_dir / f"y_rt1_{dataset_type}.npz", y)
     logger.info(f'  saved data for "Reactant 1" to {output_dir}')
 
     return None
+
 
 class Sdf2SmilesExtractor:
     """Helper class for data generation."""

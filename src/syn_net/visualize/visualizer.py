@@ -146,8 +146,9 @@ def demo():
     """Demo syntree visualisation"""
     # 1. Load syntree
     import json
+
     infile = "tests/assets/syntree-small.json"
-    with open(infile,"rt") as f:
+    with open(infile, "rt") as f:
         data = json.load(f)
 
     st = SyntheticTree()
@@ -170,6 +171,7 @@ def demo():
     print(f"  Input file:", infile)
     print(f"  Output file:", outfile)
     return None
+
 
 if __name__ == "__main__":
     demo()

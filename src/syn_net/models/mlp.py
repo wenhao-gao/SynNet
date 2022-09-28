@@ -110,7 +110,9 @@ class MLP(pl.LightningModule):
             elif self.valid_loss == "huber":
                 loss = F.huber_loss(y_hat, y)
             else:
-                raise ValueError("Not specified validation loss function for '%s'" % self.valid_loss)
+                raise ValueError(
+                    "Not specified validation loss function for '%s'" % self.valid_loss
+                )
             self.log("val_loss", loss, on_step=False, on_epoch=True, prog_bar=True, logger=True)
         else:
             pass

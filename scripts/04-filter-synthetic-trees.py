@@ -4,7 +4,6 @@
 import json
 import logging
 
-
 import numpy as np
 from rdkit import Chem, RDLogger
 from tqdm import tqdm
@@ -47,7 +46,7 @@ class OracleFilter(Filter):
 
     def _random(self, st: SyntheticTree):
         """Filter molecules that fail the `_qed` filter; i.e. randomly select low qed molecules."""
-        return self.rng.random() < self.oracle_fct(st.root.smiles) / self.threshold
+        return self.rng.random() < (self.oracle_fct(st.root.smiles) / self.threshold)
 
     def filter(self, st: SyntheticTree) -> bool:
         return self._qed(st) or self._random(st)
@@ -93,6 +92,7 @@ if __name__ == "__main__":
     valid_root_mol_filter = ValidRootMolFilter()
     interesting_mol_filter = OracleFilter(threshold=0.5, rng=np.random.default_rng())
 
+    logger.info(f"Start filtering syntrees...")
     syntrees = []
     syntree_collection = [s for s in syntree_collection if s is not None]
     syntree_collection = tqdm(syntree_collection) if args.verbose else syntree_collection
@@ -111,6 +111,7 @@ if __name__ == "__main__":
 
         # We passed all filters. This tree ascended to our dataset
         syntrees.append(st)
+    logger.info(f"Successfully filtered syntrees.")
 
     # Save filtered synthetic trees on disk
     SyntheticTreeSet(syntrees).save(args.output_file)

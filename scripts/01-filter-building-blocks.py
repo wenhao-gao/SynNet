@@ -3,10 +3,17 @@
 import logging
 
 from rdkit import RDLogger
-from syn_net.data_generation.preprocessing import BuildingBlockFileHandler, BuildingBlockFilter
+
 from syn_net.config import MAX_PROCESSES
+from syn_net.data_generation.preprocessing import (
+    BuildingBlockFileHandler,
+    BuildingBlockFilter,
+    ReactionTemplateFileHandler,
+)
+
 RDLogger.DisableLog("rdApp.*")
 logger = logging.getLogger(__name__)
+import json
 
 
 def get_args():
@@ -17,7 +24,7 @@ def get_args():
     parser.add_argument(
         "--building-blocks-file",
         type=str,
-        help="Input file with SMILES strings (First row `SMILES`, then one per line).",
+        help="File with SMILES strings (First row `SMILES`, then one per line).",
     )
     parser.add_argument(
         "--rxn-templates-file",
@@ -36,13 +43,15 @@ def get_args():
 
 
 if __name__ == "__main__":
-    args = get_args()
     logger.info("Start.")
+
+    # Parse input args
+    args = get_args()
+    logger.info(f"Arguments: {json.dumps(vars(args),indent=2)}")
 
     # Load assets
     bblocks = BuildingBlockFileHandler().load(args.building_blocks_file)
-    with open(args.rxn_templates_file, "rt") as f:
-        rxn_templates = f.readlines()
+    rxn_templates = ReactionTemplateFileHandler().load(args.rxn_templates_file)
 
     bbf = BuildingBlockFilter(
         building_blocks=bblocks,

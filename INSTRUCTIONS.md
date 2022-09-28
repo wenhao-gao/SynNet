@@ -36,8 +36,7 @@ Let's start.
     python scripts/01-filter-building-blocks.py \
         --building-blocks-file "data/assets/building-blocks/enamine-us-smiles.csv.gz"  \
         --rxn-templates-file "data/assets/reaction-templates/hb.txt"  \
-        --output-file "data/pre-process/building-blocks/enamine-us-smiles.csv.gz" \
-        --verbose
+        --output-file "data/pre-process/building-blocks/enamine-us-smiles.csv.gz" --verbose
     ```
 
     > :bulb: All following steps use this matched building blocks <-> reaction template data. You have to specify the correct files for every script to that it can load the right data. It can save some time to store these as environment variables.
@@ -93,8 +92,6 @@ Let's start.
     ```
 
 6. Featurization
-
-   > :bulb: All following steps depend on the representations for the data. Hence, you have to specify the parameters for the representations as input argument for most of the scripts so that it can operate on the right data.
 
    We featurize each *synthetic tree*.
    That is, we break down each tree to each iteration step ("Add", "Expand", "Extend", "End") and featurize it.

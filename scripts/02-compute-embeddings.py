@@ -5,28 +5,24 @@ The embeddings are also referred to as "output embedding".
 In the embedding space, a kNN-search will identify the 1st or 2nd reactant.
 """
 
+import json
 import logging
+from functools import partial
 
-from syn_net.data_generation.preprocessing import BuildingBlockFileHandler
-from syn_net.encoding.fingerprints import fp_256, fp_512, fp_1024, fp_2048, fp_4096
-from syn_net.MolEmbedder import MolEmbedder
 from syn_net.config import MAX_PROCESSES
-# from syn_net.encoding.gins import mol_embedding
-# from syn_net.utils.prep_utils import rdkit2d_embedding
-
+from syn_net.data_generation.preprocessing import BuildingBlockFileHandler
+from syn_net.encoding.fingerprints import mol_fp
+from syn_net.MolEmbedder import MolEmbedder
 
 logger = logging.getLogger(__file__)
 
-
 FUNCTIONS = {
-    # "gin": mol_embedding,
-    "fp_4096": fp_4096,
-    "fp_2048": fp_2048,
-    "fp_1024": fp_1024,
-    "fp_512": fp_512,
-    "fp_256": fp_256,
-    # "rdkit2d": rdkit2d_embedding,
-}
+    "fp_4096": partial(mol_fp, _radius=2, _nBits=4096),
+    "fp_2048": partial(mol_fp, _radius=2, _nBits=2048),
+    "fp_1024": partial(mol_fp, _radius=2, _nBits=1024),
+    "fp_512": partial(mol_fp, _radius=2, _nBits=512),
+    "fp_256": partial(mol_fp, _radius=2, _nBits=256),
+}  # TODO: think about refactor/merge with `MorganFingerprintEncoder`
 
 
 def get_args():
@@ -42,7 +38,7 @@ def get_args():
     parser.add_argument(
         "--rxn-templates-file",
         type=str,
-        help="Input file with reaction templates as SMARTS(No header, one per line).",
+        help="Input file with reaction templates as SMARTS (No header, one per line).",
     )
     parser.add_argument(
         "--output-file",
@@ -52,9 +48,8 @@ def get_args():
     parser.add_argument(
         "--featurization-fct",
         type=str,
-        default="fp_256",
         choices=FUNCTIONS.keys(),
-        help="Objective function to optimize",
+        help="Featurization function applied to each molecule.",
     )
     # Processing
     parser.add_argument("--ncpu", type=int, default=MAX_PROCESSES, help="Number of cpus")
@@ -63,8 +58,11 @@ def get_args():
 
 
 if __name__ == "__main__":
+    logger.info("Start.")
 
+    # Parse input args
     args = get_args()
+    logger.info(f"Arguments: {json.dumps(vars(args),indent=2)}")
 
     # Load building blocks
     bblocks = BuildingBlockFileHandler().load(args.building_blocks_file)
@@ -77,3 +75,5 @@ if __name__ == "__main__":
 
     # Save?
     molembedder.save_precomputed(args.output_file)
+
+    logger.info("Completed.")

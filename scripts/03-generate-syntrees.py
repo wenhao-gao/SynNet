@@ -1,5 +1,9 @@
+"""Generate synthetic trees.
+"""  # TODO: clean up this mess
+import json
 import logging
 from collections import Counter
+from pathlib import Path
 
 from rdkit import RDLogger
 from tqdm import tqdm
@@ -43,7 +47,7 @@ def get_args():
     )
     # Parameters
     parser.add_argument(
-        "--number-syntrees", type=int, default=1000, help="Number of SynTrees to generate."
+        "--number-syntrees", type=int, default=100, help="Number of SynTrees to generate."
     )
 
     # Processing
@@ -59,12 +63,14 @@ def generate_mp() -> Tuple[dict[int, str], list[Union[SyntheticTree, None]]]:
     from pathos import multiprocessing as mp
 
     def wrapper(stgen, _):
-        stgen.rng = np.random.default_rng()
+        stgen.rng = np.random.default_rng()  # TODO: Think about this...
         return wraps_syntreegenerator_generate(stgen)
 
     func = partial(wrapper, stgen)
-    with mp.Pool(processes=4) as pool:
+
+    with mp.Pool(processes=args.ncpu) as pool:
         results = pool.map(func, range(args.number_syntrees))
+
     outcomes = {
         i: e.__class__.__name__ if e is not None else "success" for i, (_, e) in enumerate(results)
     }
@@ -86,25 +92,35 @@ def generate() -> Tuple[dict[int, str], list[Union[SyntheticTree, None]]]:
 
 if __name__ == "__main__":
     logger.info("Start.")
+
     # Parse input args
     args = get_args()
-    logger.info(f"Arguments: {vars(args)}")
+    logger.info(f"Arguments: {json.dumps(vars(args),indent=2)}")
 
     # Load assets
     bblocks = BuildingBlockFileHandler().load(args.building_blocks_file)
     rxn_templates = ReactionTemplateFileHandler().load(args.rxn_templates_file)
+    logger.info("Loaded building block & rxn-template assets.")
 
     # Init SynTree Generator
+    logger.info("Start initializing SynTreeGenerator...")
     stgen = SynTreeGenerator(
         building_blocks=bblocks, rxn_templates=rxn_templates, verbose=args.verbose
     )
+    logger.info("Successfully initialized SynTreeGenerator.")
+
     # Generate synthetic trees
     logger.info(f"Start generation of {args.number_syntrees} SynTrees...")
     if args.ncpu > 1:
         outcomes, syntrees = generate_mp()
     else:
         outcomes, syntrees = generate()
-    logger.info(f"SynTree generation completed. Results: {Counter(outcomes.values())}")
+    result_summary = Counter(outcomes.values())
+    logger.info(f"SynTree generation completed. Results: {result_summary}")
+
+    summary_file = Path(args.output_file).parent / "results-summary.txt"
+    summary_file.parent.mkdir(parents=True, exist_ok=True)
+    summary_file.write_text(json.dumps(result_summary, indent=2))
 
     # Save synthetic trees on disk
     syntree_collection = SyntheticTreeSet(syntrees)

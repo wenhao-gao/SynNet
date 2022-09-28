@@ -1,3 +1,5 @@
+"""Extract chemicals as SMILES from a downloaded `*.sdf*` file.
+"""
 import json
 import logging
 from pathlib import Path
@@ -7,13 +9,11 @@ from syn_net.utils.prep_utils import Sdf2SmilesExtractor
 logger = logging.getLogger(__name__)
 
 
-def main(file):
-    file = Path(file)
-    if not file.exists():
-        raise FileNotFoundError(file)
-    logger.info(f"Start parsing {file}")
-    outfile = file.with_name(f"{file.name}-smiles").with_suffix(".csv.gz")
-    Sdf2SmilesExtractor().from_sdf(file).to_file(outfile)
+def main():
+    if not input_file.exists():
+        raise FileNotFoundError(input_file)
+    logger.info(f"Start parsing {input_file}")
+    Sdf2SmilesExtractor().from_sdf(input_file).to_file(outfile)
     logger.info(f"Parsed file. Output written to {outfile}.")
 
 
@@ -22,6 +22,11 @@ def get_args():
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--input-file", type=str, help="An *.sdf file")
+    parser.add_argument(
+        "--output-file",
+        type=str,
+        help="File with SMILES strings (First row `SMILES`, then one per line).",
+    )
     return parser.parse_args()
 
 
@@ -32,6 +37,8 @@ if __name__ == "__main__":
     args = get_args()
     logger.info(f"Arguments: {json.dumps(vars(args),indent=2)}")
 
-    main(args.input_file)
+    input_file = Path(args.input_file)
+    outfile = Path(args.output_file)
+    main()
 
     logger.info(f"Complete.")

@@ -30,7 +30,6 @@ class MolEmbedder:
 
     def compute_embeddings(self, func: Callable, building_blocks: list[str]):
         logger.info(f"Will compute embedding with {self.processes} processes.")
-        logger.info(f"Embedding function: {func.__name__}")
         self.func = func
         if self.processes == 1:
             embeddings = list(map(self.func, building_blocks))
@@ -46,7 +45,7 @@ class MolEmbedder:
 
         embeddings = np.asarray(self.embeddings)  # assume at least 2d
         np.save(file, embeddings)
-        logger.info(f"Successfully saved data (shape={embeddings.shape}) to {file}.")
+        logger.info(f"Successfully saved data (shape={embeddings.shape}) to {file} .")
         return self
 
     def save_precomputed(self, file: str):
@@ -56,7 +55,7 @@ class MolEmbedder:
         if file.suffixes == [".npy"]:
             self._save_npy(file)
         else:
-            raise NotImplementedError(f"File have 'npy' extension, not {file.suffixes}")
+            raise NotImplementedError(f"File must have 'npy' extension, not {file.suffixes}")
         return self
 
     def _load_npy(self, file: Path):

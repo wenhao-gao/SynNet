@@ -87,8 +87,8 @@ Let's start.
 
     ```bash
     python scripts/05-split-syntrees.py \
-        --input-file "data/pre-process/synthetic-trees-filtered.json.gz"
-        --output-dir "data/pre-process/split"
+        --input-file "data/pre-process/syntrees/synthetic-trees-filtered.json.gz" \
+        --output-dir "data/pre-process/syntrees/"
     ```
 
 6. Featurization
@@ -96,17 +96,20 @@ Let's start.
    We featurize each *synthetic tree*.
    That is, we break down each tree to each iteration step ("Add", "Expand", "Extend", "End") and featurize it.
    This results in a "state" vector and a a corresponding "super step" vector.
-   We call it "super step" here, as it contains all (featurized) data for all networks.
+   We call it "super step" here, as it contains all featurized data for all networks.
 
     ```bash
     python scripts/06-featurize-syntrees.py \
-        --input-file "data/pre-process/split/synthetic-trees-train.json.gz" # or {train,valid,test}
-        --output-dir "data/featurized"
+        --input-dir "data/pre-process/syntrees/"
+        --output-dir "data/featurized" --verbose
     ```
 
-    This script will load the `input-file`, featurize it, and it in
-      - `<output-dir>/hb_fp_2_4096_fp_256/states_{train,valid,test}.np` and
-      - `<output-dir>/hb_fp_2_4096_fp_256/steps_{train,valid,test}.np`.
+    This script will load the `{train,valid,test}` data, featurize it, and save it in
+      - `<output-dir>/{train,valid,test}_states.npz` and
+      - `<output-dir>/{train,valid,test}_steps.npz`.
+
+    The encoders for the molecules must be provided in the script.
+    A short text summary of the encoders will be saved as well.
 
 7. Split features
 

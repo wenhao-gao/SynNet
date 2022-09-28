@@ -1,11 +1,10 @@
-"""
-Reads synthetic tree data and splits it into training, validation and testing sets.
+"""Reads synthetic tree data and splits it into training, validation and testing sets.
 """
 import json
 import logging
 from pathlib import Path
 
-from syn_net.config import DATA_PREPROCESS_DIR, MAX_PROCESSES
+from syn_net.config import MAX_PROCESSES
 from syn_net.utils.data_utils import SyntheticTreeSet
 
 logger = logging.getLogger(__name__)
@@ -19,13 +18,11 @@ def get_args():
     parser.add_argument(
         "--input-file",
         type=str,
-        default="data/pre-process/synthetic-trees.json.gz",
         help="Input file for the filtered generated synthetic trees (*.json.gz)",
     )
     parser.add_argument(
         "--output-dir",
         type=str,
-        default=str(Path(DATA_PREPROCESS_DIR) / "split"),
         help="Output directory for the splitted synthetic trees (*.json.gz)",
     )
 
@@ -66,12 +63,12 @@ if __name__ == "__main__":
     out_dir.mkdir(parents=True, exist_ok=True)
 
     logger.info(f"Saving training dataset. Number of syntrees: {len(data_train)}")
-    SyntheticTreeSet(data_train).save(out_dir / "synthetic-trees-train.json.gz")
+    SyntheticTreeSet(data_train).save(out_dir / "synthetic-trees-filtered-train.json.gz")
 
     logger.info(f"Saving validation dataset. Number of syntrees: {len(data_valid)}")
-    SyntheticTreeSet(data_valid).save(out_dir / "synthetic-trees-valid.json.gz")
+    SyntheticTreeSet(data_valid).save(out_dir / "synthetic-trees-filtered-valid.json.gz")
 
     logger.info(f"Saving testing dataset. Number of syntrees: {len(data_test)}")
-    SyntheticTreeSet(data_test).save(out_dir / "synthetic-trees-test.json.gz")
+    SyntheticTreeSet(data_test).save(out_dir / "synthetic-trees-filtered-test.json.gz")
 
     logger.info(f"Completed.")

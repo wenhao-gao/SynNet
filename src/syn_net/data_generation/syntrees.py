@@ -335,7 +335,19 @@ def save_syntreegenerator(syntreegenerator: SynTreeGenerator, file: str) -> None
 
 # TODO: Move all these encoders to "from syn_net.encoding/"
 # TODO: Evaluate if One-Hot-Encoder can be replaced with encoder from sklearn
-class OneHotEncoder:
+
+from abc import abstractmethod, ABC
+
+class Encoder(ABC):
+
+    @abstractmethod
+    def encode(self,*args,**kwargs):
+        ...
+
+    def __repr__(self) -> str:
+        return f"'{self.__class__.__name__}': {self.__dict__}"
+
+class OneHotEncoder(Encoder):
     def __init__(self, d: int) -> None:
         self.d = d
 
@@ -346,7 +358,7 @@ class OneHotEncoder:
         return onehot  # (1,d)
 
 
-class MorganFingerprintEncoder:
+class MorganFingerprintEncoder(Encoder):
     def __init__(self, radius: int, nbits: int) -> None:
         self.radius = radius
         self.nbits = nbits
@@ -360,10 +372,11 @@ class MorganFingerprintEncoder:
             fp = np.empty(self.nbits)
             Chem.DataStructs.ConvertToNumpyArray(bv, fp)
             fp = fp[None, :]
-        return fp
+        return fp  # (1,d)
 
 
-class IdentityIntEncoder:
+
+class IdentityIntEncoder(Encoder):
     def __init__(self) -> None:
         pass
 
@@ -372,12 +385,20 @@ class IdentityIntEncoder:
 
 
 class SynTreeFeaturizer:
-    def __init__(self) -> None:
+    def __init__(self, *,
+        reactant_embedder: Encoder,
+        mol_embedder: Encoder,
+        rxn_embedder: Encoder,
+        action_embedder: Encoder,
+    ) -> None:
         # Embedders
-        self.reactant_embedder = MorganFingerprintEncoder(2, 256) # TODO: pass these in script, not here
-        self.mol_embedder = MorganFingerprintEncoder(2, 4096)
-        self.rxn_embedder = IdentityIntEncoder()
-        self.action_embedder = IdentityIntEncoder()
+        self.reactant_embedder = reactant_embedder
+        self.mol_embedder = mol_embedder
+        self.rxn_embedder = rxn_embedder
+        self.action_embedder = action_embedder
+
+    def __repr__(self) -> str:
+        return f"{self.__dict__}"
 
     def featurize(self, syntree: SyntheticTree):
         """Featurize a synthetic tree at every state.

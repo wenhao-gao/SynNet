@@ -10,20 +10,14 @@ from rdkit.Chem import AllChem
 import multiprocessing as mp
 from rdkit import DataStructs
 
-def func(fp):
+def func(fp: np.ndarray, fps_reference: np.ndarray):
+    """Finds most similar fingerprint in a reference set for `fp`.
+    Uses Tanimoto Similarity.
     """
-    Finds the most similar molecule in the training set to the input molecule
-    using the Tanimoto similarity.
-
-    Args:
-        fp (np.ndarray): Morgan fingerprint to find similars to in the training set.
-
-    Returns:
-        np.float: The maximum similarity found to the training set fingerprints.
-        np.ndarray: Fingerprint of the most similar training set molecule.
-    """
-    dists = np.array([DataStructs.FingerprintSimilarity(fp, fp_, metric=DataStructs.TanimotoSimilarity) for fp_ in fps_train])
-    return dists.max(), dists.argmax()
+    dists = np.array(
+        [DataStructs.FingerprintSimilarity(fp, fp_, metric=DataStructs.TanimotoSimilarity) for fp_ in fps_train])
+    similarity_score, idx = dists.max(), dists.argmax()
+    return similarity_score, idx
 
 def _compute_fp_bitvector(smiles: list[str], radius: int=2, nbits: int=1024):
      return [AllChem.GetMorganFingerprintAsBitVect(Chem.MolFromSmiles(smi), radius, nBits=nbits) for smi in smiles]

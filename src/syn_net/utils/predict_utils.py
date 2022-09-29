@@ -337,7 +337,7 @@ def synthetic_tree_decoder(
     return tree, act
 
 
-def synthetic_tree_decoder_beam_search(
+def synthetic_tree_decoder_greedy_search(
     beam_width: int = 3, **kwargs
 ) -> Tuple[str, float, SyntheticTree, int]:
     """

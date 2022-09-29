@@ -8,7 +8,7 @@ import numpy as np
 import pandas as pd
 
 from syn_net.utils.predict_utils import (
-    synthetic_tree_decoder_beam_search,
+    synthetic_tree_decoder_greedy_search,
     mol_fp,
 )
 from syn_net.utils.data_utils import SyntheticTreeSet, ReactionSet
@@ -83,7 +83,7 @@ class TestPredict(unittest.TestCase):
         trees = []
         for smi in smis_query:
             emb = mol_fp(smi)
-            smi, similarity, tree, action = synthetic_tree_decoder_beam_search(
+            smi, similarity, tree, action = synthetic_tree_decoder_greedy_search(
                 z_target=emb,
                 building_blocks=building_blocks,
                 bb_dict=bb_dict,

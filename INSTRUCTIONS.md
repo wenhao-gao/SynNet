@@ -29,14 +29,15 @@ Let's start.
     In other words, filter out all building blocks that do not match any reaction template.
     There is no need to keep them, as they cannot act as reactant.
     In a first step, we match all building blocks with each reaction template.
-    In a second step, we save all matched building blocks.
+    In a second step, we save all matched building blocks
+    and a collection of `Reaction`s with their available building blocks.
 
     ```bash
-    # Match
     python scripts/01-filter-building-blocks.py \
-        --building-blocks-file "data/assets/building-blocks/enamine-us-smiles.csv.gz"  \
-        --rxn-templates-file "data/assets/reaction-templates/hb.txt"  \
-        --output-file "data/pre-process/building-blocks/enamine-us-smiles.csv.gz" --verbose
+        --building-blocks-file "data/assets/building-blocks/enamine-us-smiles.csv.gz" \
+        --rxn-templates-file "data/assets/reaction-templates/hb.txt" \
+        --output-bblock-file "data/pre-process/building-blocks-rxns/bblocks-enamine-us.csv.gz" \
+        --output-rxns-file "data/pre-process/building-blocks-rxns/rxns-hb-enamine-us.json.gz" --verbose
     ```
 
     > :bulb: All following steps use this matched building blocks <-> reaction template data. You have to specify the correct files for every script to that it can load the right data. It can save some time to store these as environment variables.
@@ -79,7 +80,7 @@ Let's start.
 
     Each *synthetic tree* is serializable and so we save all trees in a compressed `.json` file.
 
-5. Split *synthetic trees* into train,valid,test-data
+4. Split *synthetic trees* into train,valid,test-data
 
     We load the `.json`-file with all *synthetic trees* and
     straightforward split it into three files: `{train,test,valid}.json`.
@@ -91,7 +92,7 @@ Let's start.
         --output-dir "data/pre-process/syntrees/"
     ```
 
-6. Featurization
+5. Featurization
 
    We featurize each *synthetic tree*.
    That is, we break down each tree to each iteration step ("Add", "Expand", "Extend", "End") and featurize it.
@@ -111,7 +112,7 @@ Let's start.
     The encoders for the molecules must be provided in the script.
     A short text summary of the encoders will be saved as well.
 
-7. Split features
+6. Split features
 
     Up to this point, we worked with a (featurized) *synthetic tree* as a whole,
     now we split it up to into "consumable" input/output data for each of the four networks.
@@ -125,7 +126,7 @@ Let's start.
     This will create 24 new files (3 splits, 4 networks, X + y).
     All new files will be saved in `<input-dir>/Xy`.
 
-8. Train the networks
+7. Train the networks
 
     Finally, we can train each of the four networks in `src/syn_net/models/` separately:
 

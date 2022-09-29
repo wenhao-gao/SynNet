@@ -10,6 +10,7 @@ from syn_net.data_generation.preprocessing import (
     BuildingBlockFilter,
     ReactionTemplateFileHandler,
 )
+from syn_net.utils.data_utils import ReactionSet
 
 RDLogger.DisableLog("rdApp.*")
 logger = logging.getLogger(__name__)
@@ -32,9 +33,14 @@ def get_args():
         help="Input file with reaction templates as SMARTS(No header, one per line).",
     )
     parser.add_argument(
-        "--output-file",
+        "--output-bblock-file",
         type=str,
-        help="Output file for the filtered building-blocks file.",
+        help="Output file for the filtered building-blocks.",
+    )
+    parser.add_argument(
+        "--output-rxns-file",
+        type=str,
+        help="Output file for the collection of reactions matched with building-blocks.",
     )
     # Processing
     parser.add_argument("--ncpu", type=int, default=MAX_PROCESSES, help="Number of cpus")
@@ -64,7 +70,11 @@ if __name__ == "__main__":
 
     # ... and save to disk
     bblocks_filtered = bbf.building_blocks_filtered
-    BuildingBlockFileHandler().save(args.output_file, bblocks_filtered)
+    BuildingBlockFileHandler().save(args.output_bblock_file, bblocks_filtered)
+
+    # Save collection of reactions which have "available reactants" set (for convenience)
+    rxn_collection = ReactionSet(bbf.rxns)
+    rxn_collection.save(args.output_rxns_file)
 
     logger.info(f"Total number of building blocks {len(bblocks):d}")
     logger.info(f"Matched number of building blocks {len(bblocks_filtered):d}")

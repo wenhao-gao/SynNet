@@ -4,7 +4,7 @@ from rdkit.Chem import AllChem, DataStructs
 
 
 ## Morgan fingerprints
-def mol_fp(smi, _radius=2, _nBits=4096):
+def mol_fp(smi, _radius=2, _nBits=4096) -> np.ndarray: # dtype=int64
     """
     Computes the Morgan fingerprint for the input SMILES.
 
@@ -27,7 +27,7 @@ def mol_fp(smi, _radius=2, _nBits=4096):
         )  # TODO: much slower compared to `DataStructs.ConvertToNumpyArray` (20x?) so deprecates
 
 
-def fp_embedding(smi, _radius=2, _nBits=4096):
+def fp_embedding(smi, _radius=2, _nBits=4096) -> list[float]:
     """
     General function for building variable-size & -radius Morgan fingerprints.
 

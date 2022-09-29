@@ -1,10 +1,13 @@
 """
 Computes the fingerprint similarity of molecules in the validation and test set to
 molecules in the training set.
-"""
+""" # TODO: clean up, un-nest a couple of fcts
+from functools import partial
+import json
+from typing import Tuple
 import numpy as np
 import pandas as pd
-from syn_net.utils.data_utils import *
+from syn_net.utils.data_utils import SyntheticTreeSet
 from rdkit import Chem
 from rdkit.Chem import AllChem
 import multiprocessing as mp
@@ -46,7 +49,7 @@ def _match_dataset_filename(path: str, dataset_type: str) -> Path: # TODO: conso
         raise ValueError(f"Can not find unique '{dataset_type} 'file, got {files}")
     return files[0]
 
-def func(fp: np.ndarray, fps_reference: np.ndarray):
+def find_similar_fp(fp: np.ndarray, fps_reference: np.ndarray):
     """Finds most similar fingerprint in a reference set for `fp`.
     Uses Tanimoto Similarity.
     """
@@ -58,9 +61,29 @@ def func(fp: np.ndarray, fps_reference: np.ndarray):
 def _compute_fp_bitvector(smiles: list[str], radius: int=2, nbits: int=1024):
      return [AllChem.GetMorganFingerprintAsBitVect(Chem.MolFromSmiles(smi), radius, nBits=nbits) for smi in smiles]
 
+def get_smiles_and_fps(dataset: str) -> Tuple[list[str],list[np.ndarray]]:
+    file = _match_dataset_filename(args.input_dir,dataset)
+    syntree_collection = SyntheticTreeSet().load(file)
+    smiles = [st.root.smiles for st in syntree_collection]
+    fps = _compute_fp_bitvector(smiles)
+    return smiles, fps
+
 def _save_df(file: str, df):
     if file is None: return
     df.to_csv(file, index=False)
+
+def compute_most_similar_smiles(split: str, fps: np.ndarray, smiles: list[str]) -> pd.DataFrame:
+    with mp.Pool(processes=args.ncpu) as pool:
+        results = pool.map(func, fps)
+
+    similarities, idx = np.asfarray(results).T
+    most_similiar_ref_smiles = np.asarray(smiles_train)[idx.astype(int)] # use numpy for slicin'
+
+    df = pd.DataFrame(
+        {'smiles': smiles,
+        'split': split,
+        'most similar': most_similiar_ref_smiles, 'similarity': similarities})
+    return df
 
 if __name__ == "__main__":
     logger.info("Start.")
@@ -68,38 +91,21 @@ if __name__ == "__main__":
     # Parse input args
     args = get_args()
     logger.info(f"Arguments: {json.dumps(vars(args),indent=2)}")
+    args.input_dir = "/home/ulmer/SynNet/data/pre-process/syntrees"
 
-    file = '/pool001/whgao/data/synth_net/st_hb/st_train.json.gz'
-    syntree_collection = SyntheticTreeSet().load(file)
-    data_train = [st.root.smiles for st in syntree_collection]
-    fps_train = _compute_fp_bitvector(data_train)
+    # Load data
+    smiles_train, fps_train = get_smiles_and_fps("train")
+    smiles_valid, fps_valid = get_smiles_and_fps("valid")
+    smiles_test, fps_test = get_smiles_and_fps("test")
 
-    file = '/pool001/whgao/data/synth_net/st_hb/st_test.json.gz'
-    syntree_collection = SyntheticTreeSet().load(file)
-    data_test = [st.root.smiles for st in syntree_collection]
-    fps_test = _compute_fp_bitvector(data_test)
+    # Compute (mp)
+    func = partial(find_similar_fp,fps_reference=fps_train)
+    df_valid = compute_most_similar_smiles("valid",fps_valid,smiles_valid)
+    df_test = compute_most_similar_smiles("test",fps_test,smiles_test)
 
-    file = '/pool001/whgao/data/synth_net/st_hb/st_valid.json.gz'
-    syntree_collection = SyntheticTreeSet().load(file)
-    data_valid = [st.root.smiles for st in syntree_collection]
-    fps_valid = _compute_fp_bitvector(data_valid)
-
-    with mp.Pool(processes=args.ncpu) as pool:
-        results = pool.map(func, fps_valid)
-
-    similaritys = [r[0] for r in results]
-    indices = [data_train[r[1]] for r in results]
-    df1 = pd.DataFrame({'smiles': data_valid, 'split': 'valid', 'most similar': indices, 'similarity': similaritys})
-
-    with mp.Pool(processes=args.ncpu) as pool:
-        results = pool.map(func, fps_test)
-
-    similaritys = [r[0] for r in results]
-    indices = [data_train[r[1]] for r in results]
-    df2 = pd.DataFrame({'smiles': data_test, 'split': 'test', 'most similar': indices, 'similarity': similaritys})
-
+    # Save
     outfile = 'data_similarity.csv'
-    _save_df(outfile,  pd.concat([df1, df2], axis=0, ignore_index=True))
+    _save_df(outfile,  pd.concat([df_valid, df_test], axis=0, ignore_index=True))
 
 
-    print('Finish!')
+    logger.info("Completed.")

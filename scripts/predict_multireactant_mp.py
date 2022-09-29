@@ -1,6 +1,6 @@
 """
 Generate synthetic trees for a set of specified query molecules. Multiprocessing.
-"""  # TODO: Clean up
+"""  # TODO: Clean up + dont hardcode file paths
 import json
 import logging
 import multiprocessing as mp
@@ -16,7 +16,6 @@ import pandas as pd
 from syn_net.config import (
     CHECKPOINTS_DIR,
     DATA_EMBEDDINGS_DIR,
-    DATA_PREPARED_DIR,
     DATA_PREPROCESS_DIR,
     DATA_RESULT_DIR,
 )
@@ -44,7 +43,7 @@ def _fetch_data_from_file(name: str) -> list[str]:
 
 def _fetch_data(name: str) -> list[str]:
     if args.data in ["train", "valid", "test"]:
-        file = Path(DATA_PREPARED_DIR) / f"synthetic-trees-{args.data}.json.gz"
+        file = Path(DATA_PREPROCESS_DIR) / "syntrees" / f"synthetic-trees-filtered-{args.data}.json.gz"
         logger.info(f"Reading data from {file}")
         sts = SyntheticTreeSet()
         sts.load(file)
@@ -167,7 +166,6 @@ if __name__ == "__main__":
 
     nbits = args.nbits
     out_dim = args.outputembedding.split("_")[-1]  # <=> morgan fingerprint with 256 bits
-    building_blocks_id = "enamine_us-2021-smiles"
     param_dir = f"{args.rxn_template}_{args.featurize}_{args.radius}_{nbits}_{out_dim}"
 
     # Load data ...
@@ -178,7 +176,7 @@ if __name__ == "__main__":
         smiles_queries = smiles_queries[: args.num]
 
     # ... building blocks
-    file = Path(DATA_PREPROCESS_DIR) / f"{args.rxn_template}-{building_blocks_id}-matched.csv.gz"
+    file = Path(DATA_PREPROCESS_DIR) / "building-blocks-rxns" / f"enamine-us-smiles.csv.gz"  # TODO: Do not hardcode
     building_blocks = BuildingBlockFileHandler().load(file)
     building_blocks_dict = {
         block: i for i, block in enumerate(building_blocks)
@@ -186,15 +184,12 @@ if __name__ == "__main__":
     logger.info("...loading building blocks completed.")
 
     # ... reaction templates
-    file = (
-        Path(DATA_PREPROCESS_DIR)
-        / f"reaction-sets_{args.rxn_template}_{building_blocks_id}.json.gz"
-    )
+    file = (Path(DATA_PREPROCESS_DIR) / "building-blocks-rxns" / "hb-enamine-us.json.gz") # TODO: Do not hardcode
     rxns = ReactionSet().load(file).rxns
     logger.info("...loading reaction collection completed.")
 
     # ... building block embedding
-    file = Path(DATA_EMBEDDINGS_DIR) / f"{args.rxn_template}-{building_blocks_id}-embeddings.npy"
+    file = Path(DATA_PREPROCESS_DIR) / "embeddings" / f"hb-enamine-embeddings.npy"  # TODO: Do not hardcode
     bblocks_molembedder = MolEmbedder().load_precomputed(file).init_balltree(cosine_distance)
     bb_emb = bblocks_molembedder.get_embeddings()
 
@@ -205,7 +200,7 @@ if __name__ == "__main__":
     logger.info("Start loading models from checkpoints...")
     path = Path(CHECKPOINTS_DIR) / f"{param_dir}"
     paths = [
-        find_best_model_ckpt("results/logs/hb_fp_2_4096/" + model)
+        find_best_model_ckpt("results/logs/hb_fp_2_4096/" + model) # TODO: Do not hardcode
         for model in "act rt1 rxn rt2".split()
     ]
     act_net, rt1_net, rxn_net, rt2_net = _load_pretrained_model(paths)

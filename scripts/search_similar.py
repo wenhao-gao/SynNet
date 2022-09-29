@@ -22,6 +22,10 @@ def func(fp: np.ndarray, fps_reference: np.ndarray):
 def _compute_fp_bitvector(smiles: list[str], radius: int=2, nbits: int=1024):
      return [AllChem.GetMorganFingerprintAsBitVect(Chem.MolFromSmiles(smi), radius, nBits=nbits) for smi in smiles]
 
+def _save_df(file: str, df):
+    if file is None: return
+    df.to_csv(file, index=False)
+
 if __name__ == '__main__':
 
     ncpu = 64
@@ -55,6 +59,8 @@ if __name__ == '__main__':
     indices = [data_train[r[1]] for r in results]
     df2 = pd.DataFrame({'smiles': data_test, 'split': 'test', 'most similar': indices, 'similarity': similaritys})
 
-    df = pd.concat([df1, df2], axis=0, ignore_index=True)
-    df.to_csv('data_similarity.csv', index=False)
+    outfile = 'data_similarity.csv'
+    _save_df(outfile,  pd.concat([df1, df2], axis=0, ignore_index=True))
+
+
     print('Finish!')

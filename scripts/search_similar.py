@@ -8,17 +8,7 @@ from syn_net.utils.data_utils import *
 from rdkit import Chem
 from rdkit.Chem import AllChem
 import multiprocessing as mp
-
-
 from rdkit import DataStructs
-
-data_path = '/pool001/whgao/data/synth_net/st_hb/st_train.json.gz'
-st_set = SyntheticTreeSet()
-st_set.load(data_path)
-data = st_set.sts
-data_train = [t.root.smiles for t in data]
-fps_train = [AllChem.GetMorganFingerprintAsBitVect(Chem.MolFromSmiles(smi), 2, nBits=1024) for smi in data_train]
-
 
 def func(fp):
     """
@@ -40,23 +30,18 @@ if __name__ == '__main__':
 
     ncpu = 64
 
-    data_path = '/pool001/whgao/data/synth_net/st_hb/st_train.json.gz'
-    st_set = SyntheticTreeSet()
-    st_set.load(data_path)
-    data = st_set.sts
-    data_train = [t.root.smiles for t in data]
+    file = '/pool001/whgao/data/synth_net/st_hb/st_train.json.gz'
+    syntree_collection = SyntheticTreeSet().load(file)
+    data_train = [st.root.smiles for st in syntree_collection]
+    fps_train = [AllChem.GetMorganFingerprintAsBitVect(Chem.MolFromSmiles(smi), 2, nBits=1024) for smi in data_train]
 
-    data_path = '/pool001/whgao/data/synth_net/st_hb/st_test.json.gz'
-    st_set = SyntheticTreeSet()
-    st_set.load(data_path)
-    data = st_set.sts
-    data_test = [t.root.smiles for t in data]
+    file = '/pool001/whgao/data/synth_net/st_hb/st_test.json.gz'
+    syntree_collection = SyntheticTreeSet().load(file)
+    data_test = [st.root.smiles for st in syntree_collection]
 
-    data_path = '/pool001/whgao/data/synth_net/st_hb/st_valid.json.gz'
-    st_set = SyntheticTreeSet()
-    st_set.load(data_path)
-    data = st_set.sts
-    data_valid = [t.root.smiles for t in data]
+    file = '/pool001/whgao/data/synth_net/st_hb/st_valid.json.gz'
+    syntree_collection = SyntheticTreeSet().load(file)
+    data_valid = [st.root.smiles for st in syntree_collection]
 
     fps_valid = [AllChem.GetMorganFingerprintAsBitVect(Chem.MolFromSmiles(smi), 2, nBits=1024) for smi in data_valid]
     fps_test = [AllChem.GetMorganFingerprintAsBitVect(Chem.MolFromSmiles(smi), 2, nBits=1024) for smi in data_test]

@@ -52,7 +52,7 @@ class BuildingBlockFilter:
         Info: This can take a while for lots of possible reactants."""
         self.rxns = tqdm(self.rxns) if self.verbose else self.rxns
         if self.processes == 1:
-            [rxn.set_available_reactants(self.building_blocks) for rxn in self.rxns]
+            self.rxns = [rxn.set_available_reactants(self.building_blocks) for rxn in self.rxns]
         else:
             self._match_mp()
 

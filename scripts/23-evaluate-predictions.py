@@ -3,7 +3,6 @@ The predictions are generated in `20-predict-targets.py`.
 """
 from tdc import Evaluator
 import pandas as pd
-import glob
 import numpy as np
 
 kl_divergence = Evaluator(name = 'KL_Divergence')
@@ -70,12 +69,16 @@ if __name__ == '__main__':
     unrecovered_fcd_distance_all = fcd_distance(unrecovered['query SMILES'].tolist(), unrecovered['decode SMILES'].tolist())
     unrecovered_kl_divergence_all = kl_divergence(unrecovered['query SMILES'].tolist(), unrecovered['decode SMILES'].tolist())
 
-    print('N recovered, N unrecovered, N total (% recovered):', n_recovered, ',', n_unrecovered, ',', n_total, ', (', 100*n_recovered/n_total, '%)')
+    # Print info
+    print(f'N total {n_total}')
+    print(f'N recovered {n_recovered} ({n_recovered/n_total:.2f})')
+    print(f'N unrecovered {n_unrecovered} ({n_recovered/n_total:.2f})')
+
     n_finished = n_recovered + n_unrecovered
     n_unfinished = n_total - n_finished
-    print('N finished trees (%):', n_finished, '(', 100*n_finished/n_total,'%)')
-    print('N unfinished trees (NaN) (%):', n_unfinished, '(', 100*n_unfinished/n_total,'%)')
-    print('Average similarity (unrecovered only)', np.mean(similarity))
+    print(f'N finished tree {n_finished} ({n_finished/n_total:.2f})')
+    print(f'N unfinished trees (NaN) {n_unfinished} ({n_unfinished/n_total:.2f})')
+    print(f'Average similarity (unrecovered only) {np.mean(similarity)}')
 
     print('Novelty, recovered:', recovered_novelty_all)
     print('Novelty, unrecovered:', unrecovered_novelty_all)

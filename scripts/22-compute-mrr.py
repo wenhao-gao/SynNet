@@ -9,8 +9,7 @@ from sklearn.neighbors import BallTree
 import torch
 from syn_net.encoding.distances import cosine_distance, ce_distance
 
-if __name__ == '__main__':
-
+def get_args():
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument("--ckpt-file", type=str,help="Checkpoint to load trained reactant 1 network.")
@@ -27,8 +26,23 @@ if __name__ == '__main__':
                         help="")
     parser.add_argument("--distance", type=str, default="euclidean",
                         choices=['euclidean', 'manhattan', 'chebyshev', 'cross_entropy', 'cosine'],help="Distance function for `BallTree`.")
-    args = parser.parse_args()
+    return parser.parse_args()
 
+if __name__ == '__main__':
+
+    args = get_args()
+
+
+    bb_emb_fp_256 = np.load(args.embeddings_file)
+    n, d = bb_emb_fp_256.shape
+
+    metric = args.distance
+    if metric == 'cross_entropy':
+        metric = ce_distance
+    elif metric == 'cosine':
+        metric = cosine_distance
+
+    kdtree_fp_256 = BallTree(bb_emb_fp_256, metric=metric)
 
     path_to_rt1 = args.ckpt_file
     batch_size = args.batch_size
@@ -58,20 +72,7 @@ if __name__ == '__main__':
     rt1_net.eval()
     rt1_net.to(args.device)
 
-    bb_emb_fp_256 = np.load(args.embeddings_file)
-    n, d = bb_emb_fp_256.shape
 
-    # for kw_metric_ in ['euclidean', 'manhattan', 'chebyshev', 'cross_entropy', 'cosine']:
-    kw_metric_ = args.distance
-
-    if kw_metric_ == 'cross_entropy':
-        kw_metric = ce_distance
-    elif kw_metric_ == 'cosine':
-        kw_metric = cosine_distance
-    else:
-        kw_metric = kw_metric_
-
-    kdtree_fp_256 = BallTree(bb_emb_fp_256, metric=kw_metric)
 
     ranks = []
     for X, y in data_iter:
@@ -84,9 +85,9 @@ if __name__ == '__main__':
     ranks = np.array(ranks)
     rrs = 1 / (ranks + 1)
 
-    np.save('ranks_' + kw_metric_ + '.npy', ranks) # TODO: do not hard code
+    np.save('ranks_' + metric + '.npy', ranks) # TODO: do not hard code
 
-    print(f"Result using metric: {kw_metric_}")
+    print(f"Result using metric: {metric}")
     print(f"The mean reciprocal ranking is: {rrs.mean():.3f}")
     print(f"The Top-1 recovery rate is: {sum(ranks < 1) / len(ranks) :.3f}, {sum(ranks < 1)} / {len(ranks)}")
     print(f"The Top-3 recovery rate is: {sum(ranks < 3) / len(ranks) :.3f}, {sum(ranks < 3)} / {len(ranks)}")

@@ -13,12 +13,7 @@ logger = logging.getLogger(__name__)
 import numpy as np
 import pandas as pd
 
-from syn_net.config import (
-    CHECKPOINTS_DIR,
-    DATA_EMBEDDINGS_DIR,
-    DATA_PREPROCESS_DIR,
-    DATA_RESULT_DIR,
-)
+from syn_net.config import CHECKPOINTS_DIR, DATA_PREPROCESS_DIR, DATA_RESULT_DIR
 from syn_net.data_generation.preprocessing import BuildingBlockFileHandler
 from syn_net.models.chkpt_loader import load_modules_from_checkpoint
 from syn_net.utils.data_utils import ReactionSet, SyntheticTree, SyntheticTreeSet

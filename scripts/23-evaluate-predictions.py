@@ -46,9 +46,9 @@ if __name__ == '__main__':
         unrecovered = pd.concat([unrecovered, result_df[~is_recovered].dropna()])
         recovered   = pd.concat([recovered, result_df[is_recovered].dropna()])
 
-    n_recovered += len(recovered)
-    n_unrecovered += len(unrecovered)
-    similarity += unrecovered['similarity'].tolist()
+        n_recovered += len(recovered)
+        n_unrecovered += len(unrecovered)
+        similarity += unrecovered['similarity'].tolist()
 
     # compute the following properties, using the TDC, for the succesfully recovered molecules
     recovered_novelty_all = novelty(

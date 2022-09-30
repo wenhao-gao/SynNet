@@ -28,20 +28,19 @@ def _fetch_molembedder():
 
 
 if __name__ == "__main__":
+    logger.info("Start.")
 
+    # Parse input args
     args = get_args()
+    logger.info(f"Arguments: {json.dumps(vars(args),indent=2)}")
 
-    validation_option = VALIDATION_OPTS[args.out_dim]
+    pl.seed_everything(0)
 
-    # Get ID for the data to know what we're working with and find right files.
-    id = (
-        f"{args.rxn_template}_{args.featurize}_{args.radius}_{args.nbits}_{validation_option[12:]}/"
-    )
-
+    # Set up dataloaders
     dataset = "train"
     train_dataloader = xy_to_dataloader(
-        X_file=Path(DATA_FEATURIZED_DIR) / f"{id}/X_{MODEL_ID}_{dataset}.npz",
-        y_file=Path(DATA_FEATURIZED_DIR) / f"{id}/y_{MODEL_ID}_{dataset}.npz",
+        X_file=Path(args.data_dir) / "X_{MODEL_ID}_{dataset}.npz",
+        y_file=Path(args.data_dir) / "y_{MODEL_ID}_{dataset}.npz",
         n=None if not args.debug else 1000,
         batch_size=args.batch_size,
         num_workers=args.ncpu,
@@ -58,11 +57,6 @@ if __name__ == "__main__":
         shuffle=True if dataset == "train" else False,
     )
     logger.info(f"Set up dataloaders.")
-
-    # Fetch Molembedder and init BallTree
-    molembedder = _fetch_molembedder()
-
-    pl.seed_everything(0)
     INPUT_DIMS = {
         "fp": {
             "hb": int(4 * args.nbits + 91),

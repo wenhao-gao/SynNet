@@ -3,6 +3,7 @@ Action network.
 """
 import logging
 from pathlib import Path
+import json
 
 import pytorch_lightning as pl
 from pytorch_lightning import loggers as pl_loggers
@@ -17,20 +18,19 @@ logger = logging.getLogger(__name__)
 MODEL_ID = Path(__file__).stem
 
 if __name__ == "__main__":
+    logger.info("Start.")
 
+    # Parse input args
     args = get_args()
+    logger.info(f"Arguments: {json.dumps(vars(args),indent=2)}")
 
-    validation_option = VALIDATION_OPTS[args.out_dim]
+    pl.seed_everything(0)
 
-    # Get ID for the data to know what we're working with and find right files.
-    id = (
-        f"{args.rxn_template}_{args.featurize}_{args.radius}_{args.nbits}_{validation_option[12:]}/"
-    )
-
+    # Set up dataloaders
     dataset = "train"
     train_dataloader = xy_to_dataloader(
-        X_file=Path(DATA_FEATURIZED_DIR) / f"{id}/X_{MODEL_ID}_{dataset}.npz",
-        y_file=Path(DATA_FEATURIZED_DIR) / f"{id}/y_{MODEL_ID}_{dataset}.npz",
+        X_file=Path(args.data_dir) / "X_{MODEL_ID}_{dataset}.npz",
+        y_file=Path(args.data_dir) / "y_{MODEL_ID}_{dataset}.npz",
         n=None if not args.debug else 1000,
         task="classification",
         batch_size=args.batch_size,
@@ -50,7 +50,6 @@ if __name__ == "__main__":
     )
     logger.info(f"Set up dataloaders.")
 
-    pl.seed_everything(0)
     INPUT_DIMS = {
         "fp": int(3 * args.nbits),
         "gin": int(2 * args.nbits + args.out_dim),

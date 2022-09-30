@@ -73,7 +73,7 @@ Let's start.
 
     ```bash
     # Filter
-    python scripts/04-filter-synthetic-trees.py \
+    python scripts/04-filter-syntrees.py \
         --input-file  "data/pre-process/synthetic-trees.json.gz" \
         --output-file "data/pre-process/synthetic-trees-filtered.json.gz"
     ```

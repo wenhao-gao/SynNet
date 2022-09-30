@@ -18,9 +18,6 @@ DATA_PREPROCESS_DIR = "data/pre-process"
 DATA_EMBEDDINGS_DIR = "data/pre-process/embeddings"
 
 # Prepared data
-DATA_PREPARED_DIR = "data/prepared"
-
-# Prepared data
 DATA_FEATURIZED_DIR = "data/featurized"
 
 # Results

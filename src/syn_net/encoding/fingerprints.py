@@ -4,7 +4,7 @@ from rdkit.Chem import AllChem, DataStructs
 
 
 ## Morgan fingerprints
-def mol_fp(smi, _radius=2, _nBits=4096) -> np.ndarray: # dtype=int64
+def mol_fp(smi, _radius=2, _nBits=4096) -> np.ndarray:  # dtype=int64
     """
     Computes the Morgan fingerprint for the input SMILES.
 

@@ -43,7 +43,9 @@ def _fetch_data_from_file(name: str) -> list[str]:
 
 def _fetch_data(name: str) -> list[str]:
     if args.data in ["train", "valid", "test"]:
-        file = Path(DATA_PREPROCESS_DIR) / "syntrees" / f"synthetic-trees-filtered-{args.data}.json.gz"
+        file = (
+            Path(DATA_PREPROCESS_DIR) / "syntrees" / f"synthetic-trees-filtered-{args.data}.json.gz"
+        )
         logger.info(f"Reading data from {file}")
         sts = SyntheticTreeSet()
         sts.load(file)
@@ -176,7 +178,9 @@ if __name__ == "__main__":
         smiles_queries = smiles_queries[: args.num]
 
     # ... building blocks
-    file = Path(DATA_PREPROCESS_DIR) / "building-blocks-rxns" / f"enamine-us-smiles.csv.gz"  # TODO: Do not hardcode
+    file = (
+        Path(DATA_PREPROCESS_DIR) / "building-blocks-rxns" / f"enamine-us-smiles.csv.gz"
+    )  # TODO: Do not hardcode
     building_blocks = BuildingBlockFileHandler().load(file)
     building_blocks_dict = {
         block: i for i, block in enumerate(building_blocks)
@@ -184,12 +188,16 @@ if __name__ == "__main__":
     logger.info("...loading building blocks completed.")
 
     # ... reaction templates
-    file = (Path(DATA_PREPROCESS_DIR) / "building-blocks-rxns" / "hb-enamine-us.json.gz") # TODO: Do not hardcode
+    file = (
+        Path(DATA_PREPROCESS_DIR) / "building-blocks-rxns" / "hb-enamine-us.json.gz"
+    )  # TODO: Do not hardcode
     rxns = ReactionSet().load(file).rxns
     logger.info("...loading reaction collection completed.")
 
     # ... building block embedding
-    file = Path(DATA_PREPROCESS_DIR) / "embeddings" / f"hb-enamine-embeddings.npy"  # TODO: Do not hardcode
+    file = (
+        Path(DATA_PREPROCESS_DIR) / "embeddings" / f"hb-enamine-embeddings.npy"
+    )  # TODO: Do not hardcode
     bblocks_molembedder = MolEmbedder().load_precomputed(file).init_balltree(cosine_distance)
     bb_emb = bblocks_molembedder.get_embeddings()
 
@@ -200,7 +208,7 @@ if __name__ == "__main__":
     logger.info("Start loading models from checkpoints...")
     path = Path(CHECKPOINTS_DIR) / f"{param_dir}"
     paths = [
-        find_best_model_ckpt("results/logs/hb_fp_2_4096/" + model) # TODO: Do not hardcode
+        find_best_model_ckpt("results/logs/hb_fp_2_4096/" + model)  # TODO: Do not hardcode
         for model in "act rt1 rxn rt2".split()
     ]
     act_net, rt1_net, rxn_net, rt2_net = _load_pretrained_model(paths)

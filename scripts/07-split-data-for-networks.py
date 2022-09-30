@@ -1,15 +1,17 @@
 """Split the featurized data into X,y-chunks for the {act,rt1,rxn,rt2}-networks
 """
+import json
 import logging
 from pathlib import Path
-import json
 
 from syn_net.utils.prep_utils import split_data_into_Xy
 
 logger = logging.getLogger(__file__)
 
+
 def get_args():
     import argparse
+
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--input-dir",
@@ -17,6 +19,7 @@ def get_args():
         help="Input directory for the featurized synthetic trees (with {train,valid,test}-data).",
     )
     return parser.parse_args()
+
 
 if __name__ == "__main__":
     logger.info("Start.")
@@ -27,8 +30,8 @@ if __name__ == "__main__":
 
     # Split datasets for each MLP
     logger.info("Start splitting data.")
-    num_rxn = 91 # Auxiliary var for indexing TODO: Dont hardcode
-    out_dim = 256 # Auxiliary var for indexing TODO: Dont hardcode
+    num_rxn = 91  # Auxiliary var for indexing TODO: Dont hardcode
+    out_dim = 256  # Auxiliary var for indexing TODO: Dont hardcode
     input_dir = Path(args.input_dir)
     output_dir = input_dir / "Xy"
     for dataset_type in "train valid test".split():
@@ -40,6 +43,6 @@ if __name__ == "__main__":
             output_dir=input_dir / "Xy",
             num_rxn=num_rxn,
             out_dim=out_dim,
-            )
+        )
 
     logger.info(f"Completed.")

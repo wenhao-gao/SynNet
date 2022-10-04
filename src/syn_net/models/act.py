@@ -1,18 +1,18 @@
 """
 Action network.
 """
+import json
 import logging
 from pathlib import Path
-import json
 
 import pytorch_lightning as pl
 from pytorch_lightning import loggers as pl_loggers
 from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 from pytorch_lightning.callbacks.model_checkpoint import ModelCheckpoint
+from pytorch_lightning.callbacks.progress import TQDMProgressBar
 
-from syn_net.config import DATA_FEATURIZED_DIR
-from syn_net.models.common import VALIDATION_OPTS, get_args, xy_to_dataloader
-from syn_net.models.mlp import MLP, load_array
+from syn_net.models.common import get_args, xy_to_dataloader
+from syn_net.models.mlp import MLP
 
 logger = logging.getLogger(__name__)
 MODEL_ID = Path(__file__).stem
@@ -29,9 +29,9 @@ if __name__ == "__main__":
     # Set up dataloaders
     dataset = "train"
     train_dataloader = xy_to_dataloader(
-        X_file=Path(args.data_dir) / "X_{MODEL_ID}_{dataset}.npz",
-        y_file=Path(args.data_dir) / "y_{MODEL_ID}_{dataset}.npz",
-        n=None if not args.debug else 1000,
+        X_file=Path(args.data_dir) / f"X_{MODEL_ID}_{dataset}.npz",
+        y_file=Path(args.data_dir) / f"y_{MODEL_ID}_{dataset}.npz",
+        n=None if not args.debug else 128,
         task="classification",
         batch_size=args.batch_size,
         num_workers=args.ncpu,
@@ -40,9 +40,9 @@ if __name__ == "__main__":
 
     dataset = "valid"
     valid_dataloader = xy_to_dataloader(
-        X_file=Path(DATA_FEATURIZED_DIR) / f"{id}/X_{MODEL_ID}_{dataset}.npz",
-        y_file=Path(DATA_FEATURIZED_DIR) / f"{id}/y_{MODEL_ID}_{dataset}.npz",
-        n=None if not args.debug else 1000,
+        X_file=Path(args.data_dir) / f"X_{MODEL_ID}_{dataset}.npz",
+        y_file=Path(args.data_dir) / f"y_{MODEL_ID}_{dataset}.npz",
+        n=None if not args.debug else 128,
         task="classification",
         batch_size=args.batch_size,
         num_workers=args.ncpu,

@@ -20,7 +20,9 @@ def get_args():
     import argparse
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("--data-dir",type=str,help="Directory with X,y data.")
+    parser.add_argument(
+        "--data-dir", type=str, default="data/featurized/Xy", help="Directory with X,y data."
+    )
     parser.add_argument(
         "-f", "--featurize", type=str, default="fp", help="Choose from ['fp', 'gin']"
     )

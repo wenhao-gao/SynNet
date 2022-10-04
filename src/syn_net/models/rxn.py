@@ -31,7 +31,7 @@ if __name__ == "__main__":
     train_dataloader = xy_to_dataloader(
         X_file=Path(args.data_dir) / f"X_{MODEL_ID}_{dataset}.npz",
         y_file=Path(args.data_dir) / f"y_{MODEL_ID}_{dataset}.npz",
-        n=None if not args.debug else 1000,
+        n=None if not args.debug else 128,
         task="classification",
         batch_size=args.batch_size,
         num_workers=args.ncpu,
@@ -42,7 +42,7 @@ if __name__ == "__main__":
     valid_dataloader = xy_to_dataloader(
         X_file=Path(args.data_dir) / f"X_{MODEL_ID}_{dataset}.npz",
         y_file=Path(args.data_dir) / f"y_{MODEL_ID}_{dataset}.npz",
-        n=None if not args.debug else 1000,
+        n=None if not args.debug else 128,
         task="classification",
         batch_size=args.batch_size,
         num_workers=args.ncpu,
@@ -97,7 +97,7 @@ if __name__ == "__main__":
             loss="cross_entropy",
             valid_loss="accuracy",
             optimizer="adam",
-            learning_rate=1e-4,
+            learning_rate=3e-4,
             val_freq=10,
             ncpu=args.ncpu,
         )
@@ -137,14 +137,14 @@ if __name__ == "__main__":
     )
     earlystop_callback = EarlyStopping(monitor="val_loss", patience=10)
 
-    max_epochs = args.epoch if not args.debug else 2
+    max_epochs = args.epoch if not args.debug else 300
     # Create trainer
     trainer = pl.Trainer(
         gpus=[0],
         max_epochs=max_epochs,
         progress_bar_refresh_rate=int(len(train_dataloader) * 0.05),
         callbacks=[checkpoint_callback],
-        logger=[tb_logger],
+        logger=[tb_logger, csv_logger],
     )
 
     logger.info(f"Start training")

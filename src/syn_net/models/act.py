@@ -1,5 +1,4 @@
-"""
-Action network.
+"""Action network.
 """
 import json
 import logging
@@ -68,7 +67,7 @@ if __name__ == "__main__":
         loss="cross_entropy",
         valid_loss="accuracy",
         optimizer="adam",
-        learning_rate=1e-4,
+        learning_rate=3e-4,
         val_freq=10,
         ncpu=args.ncpu,
     )
@@ -78,7 +77,7 @@ if __name__ == "__main__":
     save_dir.mkdir(exist_ok=True, parents=True)
 
     tb_logger = pl_loggers.TensorBoardLogger(save_dir, name="")
-    csv_logger = pl_loggers.CSVLogger(tb_logger.log_dir, name="",version="")
+    csv_logger = pl_loggers.CSVLogger(tb_logger.log_dir, name="", version="")
     logger.info(f"Log dir set to: {tb_logger.log_dir}")
 
     checkpoint_callback = ModelCheckpoint(
@@ -88,14 +87,14 @@ if __name__ == "__main__":
         save_weights_only=False,
     )
     earlystop_callback = EarlyStopping(monitor="val_loss", patience=10)
+    tqdm_callback = TQDMProgressBar(refresh_rate=int(len(train_dataloader) * 0.05))
 
-    max_epochs = args.epoch if not args.debug else 20
+    max_epochs = args.epoch if not args.debug else 1000
     # Create trainer
     trainer = pl.Trainer(
         gpus=[0],
         max_epochs=max_epochs,
-        progress_bar_refresh_rate=int(len(train_dataloader) * 0.05),
-        callbacks=[checkpoint_callback],
+        callbacks=[checkpoint_callback, tqdm_callback],
         logger=[tb_logger, csv_logger],
         fast_dev_run=args.fast_dev_run,
     )

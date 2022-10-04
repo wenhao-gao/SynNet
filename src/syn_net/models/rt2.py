@@ -1,5 +1,4 @@
-"""
-Reactant2 network (for predicting 2nd reactant).
+"""Reactant2 network (for predicting 2nd reactant).
 """
 import json
 import logging
@@ -10,7 +9,6 @@ from pytorch_lightning import loggers as pl_loggers
 from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 from pytorch_lightning.callbacks.model_checkpoint import ModelCheckpoint
 
-from syn_net.config import DATA_EMBEDDINGS_DIR
 from syn_net.models.common import get_args, xy_to_dataloader
 from syn_net.models.mlp import MLP, cosine_distance
 from syn_net.MolEmbedder import MolEmbedder
@@ -20,8 +18,7 @@ MODEL_ID = Path(__file__).stem
 
 
 def _fetch_molembedder():
-    knn_embedding_id = validation_option[12:]
-    file = Path(DATA_EMBEDDINGS_DIR) / f"hb-enamine_us-2021-smiles-{knn_embedding_id}.npy"
+    file = args.mol_embedder_file
     logger.info(f"Try to load precomputed MolEmbedder from {file}.")
     molembedder = MolEmbedder().load_precomputed(file).init_balltree(metric=cosine_distance)
     logger.info(f"Loaded MolEmbedder from {file}.")
@@ -42,7 +39,7 @@ if __name__ == "__main__":
     train_dataloader = xy_to_dataloader(
         X_file=Path(args.data_dir) / f"X_{MODEL_ID}_{dataset}.npz",
         y_file=Path(args.data_dir) / f"y_{MODEL_ID}_{dataset}.npz",
-        n=None if not args.debug else 1000,
+        n=None if not args.debug else 128,
         batch_size=args.batch_size,
         num_workers=args.ncpu,
         shuffle=True if dataset == "train" else False,
@@ -52,12 +49,17 @@ if __name__ == "__main__":
     valid_dataloader = xy_to_dataloader(
         X_file=Path(args.data_dir) / f"X_{MODEL_ID}_{dataset}.npz",
         y_file=Path(args.data_dir) / f"y_{MODEL_ID}_{dataset}.npz",
-        n=None if not args.debug else 1000,
+        n=None if not args.debug else 128,
         batch_size=args.batch_size,
         num_workers=args.ncpu,
         shuffle=True if dataset == "train" else False,
     )
+
     logger.info(f"Set up dataloaders.")
+
+    # Fetch Molembedder and init BallTree
+    molembedder = None  # _fetch_molembedder()
+
     INPUT_DIMS = {
         "fp": {
             "hb": int(4 * args.nbits + 91),
@@ -81,7 +83,7 @@ if __name__ == "__main__":
         loss="mse",
         valid_loss="mse",
         optimizer="adam",
-        learning_rate=1e-4,
+        learning_rate=3e-4,
         val_freq=10,
         molembedder=molembedder,
         ncpu=args.ncpu,
@@ -95,8 +97,6 @@ if __name__ == "__main__":
     csv_logger = pl_loggers.CSVLogger(tb_logger.log_dir, name="", version="")
     logger.info(f"Log dir set to: {tb_logger.log_dir}")
 
-    tb_logger = pl_loggers.TensorBoardLogger(save_dir, name="")
-
     checkpoint_callback = ModelCheckpoint(
         monitor="val_loss",
         dirpath=tb_logger.log_dir,
@@ -105,14 +105,14 @@ if __name__ == "__main__":
     )
     earlystop_callback = EarlyStopping(monitor="val_loss", patience=10)
 
-    max_epochs = args.epoch if not args.debug else 2
+    max_epochs = args.epoch if not args.debug else 300
     # Create trainer
     trainer = pl.Trainer(
         gpus=[0],
         max_epochs=max_epochs,
         progress_bar_refresh_rate=int(len(train_dataloader) * 0.05),
         callbacks=[checkpoint_callback],
-        logger=[tb_logger],
+        logger=[tb_logger, csv_logger],
     )
 
     logger.info(f"Start training")

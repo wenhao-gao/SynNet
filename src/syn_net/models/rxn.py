@@ -119,13 +119,12 @@ if __name__ == "__main__":
         )
 
     # Set up Trainer
-    # Set up Trainer
-    save_dir = Path(
-        "results/logs/"
-        + f"{args.rxn_template}_{args.featurize}_{args.radius}_{args.nbits}"
-        + f"/{MODEL_ID}"
-    )
+    save_dir = Path("results/logs/") / MODEL_ID
     save_dir.mkdir(exist_ok=True, parents=True)
+
+    tb_logger = pl_loggers.TensorBoardLogger(save_dir, name="")
+    csv_logger = pl_loggers.CSVLogger(tb_logger.log_dir, name="",version="")
+    logger.info(f"Log dir set to: {tb_logger.log_dir}")
 
     tb_logger = pl_loggers.TensorBoardLogger(save_dir, name="")
 

@@ -55,14 +55,15 @@ class MLP(pl.LightningModule):
                 modules.append(nn.Dropout(dropout))
 
         modules.append(nn.Linear(hidden_dim, output_dim))
-        if task == "classification":
-            modules.append(nn.Softmax(dim=1))
 
         self.layers = nn.Sequential(*modules)
 
     def forward(self, x):
         """Forward step for inference only."""
-        return self.layers(x)
+        y_hat = self.layers(x)
+        if self.task == "classification": # during training, `cross_entropy` loss expexts raw logits
+            y_hat = F.softmax(y_hat,dim=-1)
+        return y_hat
 
     def training_step(self, batch, batch_idx):
         """The complete training loop."""

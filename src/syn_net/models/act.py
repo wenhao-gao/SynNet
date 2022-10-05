@@ -63,7 +63,7 @@ if __name__ == "__main__":
         num_layers=5,
         dropout=0.5,
         num_dropout_layers=1,
-        task="classification-w/o-softmax",
+        task="classification",
         loss="cross_entropy",
         valid_loss="accuracy",
         optimizer="adam",

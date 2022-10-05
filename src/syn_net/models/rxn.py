@@ -81,8 +81,7 @@ if __name__ == "__main__":
     }
     output_dim = OUTPUT_DIMS[args.rxn_template]
 
-    path_to_rxn = "placeholder-path-for-checkpoint-for-resuming-training"
-    ckpt_path = path_to_rxn if args.restart else None # TODO: Unify for all networks
+    ckpt_path = args.ckpt_file # TODO: Unify for all networks
     mlp = MLP(
         input_dim=input_dim,
         output_dim=output_dim,

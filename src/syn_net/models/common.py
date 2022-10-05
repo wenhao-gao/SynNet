@@ -1,19 +1,11 @@
 """Common methods and params shared by all models.
 """
 
-# Helper to select validation func based on output dim
 from typing import Union
 
 import numpy as np
 import torch
 from scipy import sparse
-
-VALIDATION_OPTS = {
-    300: "nn_accuracy_gin",
-    4096: "nn_accuracy_fp_4096",
-    256: "nn_accuracy_fp_256",
-    200: "nn_accuracy_rdkit2d",
-}
 
 
 def get_args():
@@ -38,7 +30,10 @@ def get_args():
     parser.add_argument("--batch_size", type=int, default=64, help="Batch size")
     parser.add_argument("--epoch", type=int, default=2000, help="Maximum number of epoches.")
     parser.add_argument(
-        "--restart", type=bool, default=False, help="Indicates whether to restart training."
+        "--ckpt-file",
+        type=str,
+        default=None,
+        help="Checkpoint file. If provided, load and resume training.",
     )
     parser.add_argument("-v", "--version", type=int, default=1, help="Version")
     parser.add_argument("--debug", default=False, action="store_true")

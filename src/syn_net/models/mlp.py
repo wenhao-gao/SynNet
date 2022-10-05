@@ -61,7 +61,7 @@ class MLP(pl.LightningModule):
     def forward(self, x):
         """Forward step for inference only."""
         y_hat = self.layers(x)
-        if self.task == "classification": # during training, `cross_entropy` loss expexts raw logits
+        if self.hparams.task == "classification": # during training, `cross_entropy` loss expexts raw logits
             y_hat = F.softmax(y_hat,dim=-1)
         return y_hat
 

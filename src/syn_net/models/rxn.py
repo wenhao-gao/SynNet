@@ -9,6 +9,7 @@ import pytorch_lightning as pl
 from pytorch_lightning import loggers as pl_loggers
 from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 from pytorch_lightning.callbacks.model_checkpoint import ModelCheckpoint
+from pytorch_lightning.callbacks.progress import TQDMProgressBar
 
 from syn_net.config import CHECKPOINTS_DIR
 from syn_net.models.common import get_args, xy_to_dataloader
@@ -135,16 +136,17 @@ if __name__ == "__main__":
         filename="ckpts.{epoch}-{val_loss:.2f}",
         save_weights_only=False,
     )
-    earlystop_callback = EarlyStopping(monitor="val_loss", patience=10)
+    earlystop_callback = EarlyStopping(monitor="val_loss", patience=3)
+    tqdm_callback = TQDMProgressBar(refresh_rate=int(len(train_dataloader) * 0.05))
 
-    max_epochs = args.epoch if not args.debug else 300
+    max_epochs = args.epoch if not args.debug else 100
     # Create trainer
     trainer = pl.Trainer(
         gpus=[0],
         max_epochs=max_epochs,
-        progress_bar_refresh_rate=int(len(train_dataloader) * 0.05),
-        callbacks=[checkpoint_callback],
+        callbacks=[checkpoint_callback, tqdm_callback],
         logger=[tb_logger, csv_logger],
+        fast_dev_run=args.fast_dev_run,
     )
 
     logger.info(f"Start training")

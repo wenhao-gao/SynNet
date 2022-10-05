@@ -86,10 +86,10 @@ if __name__ == "__main__":
         filename="ckpts.{epoch}-{val_loss:.2f}",
         save_weights_only=False,
     )
-    earlystop_callback = EarlyStopping(monitor="val_loss", patience=10)
+    earlystop_callback = EarlyStopping(monitor="val_loss", patience=3)
     tqdm_callback = TQDMProgressBar(refresh_rate=int(len(train_dataloader) * 0.05))
 
-    max_epochs = args.epoch if not args.debug else 1000
+    max_epochs = args.epoch if not args.debug else 100
     # Create trainer
     trainer = pl.Trainer(
         gpus=[0],

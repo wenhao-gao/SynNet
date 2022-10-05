@@ -188,3 +188,4 @@ temp.py
 .aliases
 figures/
 *.html
+*.data*/

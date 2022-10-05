@@ -50,11 +50,6 @@ if __name__ == "__main__":
         shuffle=True if dataset == "train" else False,
     )
     logger.info(f"Set up dataloaders.")
-    param_path = (
-        Path(CHECKPOINTS_DIR)
-        / f"{args.rxn_template}_{args.featurize}_{args.radius}_{args.nbits}_v{args.version}/"
-    )
-    path_to_rxn = f"{param_path}rxn.ckpt"
 
     INPUT_DIMS = {
         "fp": {
@@ -86,39 +81,23 @@ if __name__ == "__main__":
     }
     output_dim = OUTPUT_DIMS[args.rxn_template]
 
-    if not args.restart:
-        mlp = MLP(
-            input_dim=input_dim,
-            output_dim=output_dim,
-            hidden_dim=hidden_dim,
-            num_layers=5,
-            dropout=0.5,
-            num_dropout_layers=1,
-            task="classification",
-            loss="cross_entropy",
-            valid_loss="accuracy",
-            optimizer="adam",
-            learning_rate=3e-4,
-            val_freq=10,
-            ncpu=args.ncpu,
-        )
-    else:  # load from checkpt -> only for fp, not gin
-        # TODO: Use `ckpt_path`, c.f. https://pytorch-lightning.readthedocs.io/en/stable/api/pytorch_lightning.trainer.trainer.Trainer.html#pytorch_lightning.trainer.trainer.Trainer.fit
-        mlp = MLP.load_from_checkpoint(
-            path_to_rxn,
-            input_dim=input_dim,
-            output_dim=output_dim,
-            hidden_dim=hidden_dim,
-            num_layers=5,
-            dropout=0.5,
-            num_dropout_layers=1,
-            task="classification",
-            loss="cross_entropy",
-            valid_loss="accuracy",
-            optimizer="adam",
-            learning_rate=1e-4,
-            ncpu=args.ncpu,
-        )
+    path_to_rxn = "placeholder-path-for-checkpoint-for-resuming-training"
+    ckpt_path = path_to_rxn if args.restart else None # TODO: Unify for all networks
+    mlp = MLP(
+        input_dim=input_dim,
+        output_dim=output_dim,
+        hidden_dim=hidden_dim,
+        num_layers=5,
+        dropout=0.5,
+        num_dropout_layers=1,
+        task="classification",
+        loss="cross_entropy",
+        valid_loss="accuracy",
+        optimizer="adam",
+        learning_rate=3e-4,
+        val_freq=10,
+        ncpu=args.ncpu,
+    )
 
     # Set up Trainer
     save_dir = Path("results/logs/") / MODEL_ID
@@ -147,8 +126,9 @@ if __name__ == "__main__":
         callbacks=[checkpoint_callback, tqdm_callback],
         logger=[tb_logger, csv_logger],
         fast_dev_run=args.fast_dev_run,
+
     )
 
     logger.info(f"Start training")
-    trainer.fit(mlp, train_dataloader, valid_dataloader)
+    trainer.fit(mlp, train_dataloader, valid_dataloader,ckpt_path=ckpt_path)
     logger.info(f"Training completed.")

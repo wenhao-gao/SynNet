@@ -2,7 +2,6 @@
 Multi-layer perceptron (MLP) class.
 """
 import logging
-import time
 
 import numpy as np
 import pytorch_lightning as pl
@@ -18,19 +17,19 @@ logger = logging.getLogger(__name__)
 class MLP(pl.LightningModule):
     def __init__(
         self,
-        input_dim=3072,
-        output_dim=4,
-        hidden_dim=1000,
-        num_layers=5,
-        dropout=0.5,
-        num_dropout_layers=1,
-        task="classification",
-        loss="cross_entropy",
-        valid_loss="accuracy",
-        optimizer="adam",
-        learning_rate=1e-4,
-        val_freq=10,
-        ncpu=16,
+        input_dim: int,
+        output_dim: int,
+        hidden_dim: int,
+        num_layers: int,
+        dropout: float,
+        num_dropout_layers: int = 1,
+        task: str = "classification",
+        loss: str = "cross_entropy",
+        valid_loss: str = "accuracy",
+        optimizer: str = "adam",
+        learning_rate: float = 1e-4,
+        val_freq: int = 10,
+        ncpu: int = 16,
         molembedder: MolEmbedder = None,
     ):
         super().__init__()
@@ -78,44 +77,42 @@ class MLP(pl.LightningModule):
         elif self.loss == "huber":
             loss = F.huber_loss(y_hat, y)
         else:
-            raise ValueError("Not specified loss function: % s" % self.loss)
+            raise ValueError("Unsupported loss function '%s'" % self.loss)
         self.log(f"train_loss", loss, on_step=False, on_epoch=True, prog_bar=True, logger=True)
         return loss
 
     def validation_step(self, batch, batch_idx):
         """The complete validation loop."""
-        if self.trainer.current_epoch % self.val_freq == 0:
-            x, y = batch
-            y_hat = self.layers(x)
-            if self.valid_loss == "cross_entropy":
-                loss = F.cross_entropy(y_hat, y.long())
-            elif self.valid_loss == "accuracy":
-                y_hat = torch.argmax(y_hat, axis=1)
-                accuracy = (y_hat == y).sum() / len(y)
-                loss = 1 - accuracy
-            elif self.valid_loss[:11] == "nn_accuracy":
-                # NOTE: Very slow!
-                # Performing the knn-search can easily take a couple of minutes,
-                # even for small datasets.
-                kdtree = self.molembedder.kdtree
-                y = nn_search_list(y.detach().cpu().numpy(), None, kdtree)
-                y_hat = nn_search_list(y_hat.detach().cpu().numpy(), None, kdtree)
+        if self.trainer.current_epoch % self.val_freq != 0:
+            return None
 
-                accuracy = (y_hat == y).sum() / len(y)
-                loss = 1 - accuracy
-            elif self.valid_loss == "mse":
-                loss = F.mse_loss(y_hat, y)
-            elif self.valid_loss == "l1":
-                loss = F.l1_loss(y_hat, y)
-            elif self.valid_loss == "huber":
-                loss = F.huber_loss(y_hat, y)
-            else:
-                raise ValueError(
-                    "Not specified validation loss function for '%s'" % self.valid_loss
-                )
-            self.log("val_loss", loss, on_step=False, on_epoch=True, prog_bar=True, logger=True)
+        x, y = batch
+        y_hat = self.layers(x)
+        if self.valid_loss == "cross_entropy":
+            loss = F.cross_entropy(y_hat, y.long())
+        elif self.valid_loss == "accuracy":
+            y_hat = torch.argmax(y_hat, axis=1)
+            accuracy = (y_hat == y).sum() / len(y)
+            loss = 1 - accuracy
+        elif self.valid_loss[:11] == "nn_accuracy":
+            # NOTE: Very slow!
+            # Performing the knn-search can easily take a couple of minutes,
+            # even for small datasets.
+            kdtree = self.molembedder.kdtree
+            y = nn_search_list(y.detach().cpu().numpy(), kdtree)
+            y_hat = nn_search_list(y_hat.detach().cpu().numpy(), kdtree)
+
+            accuracy = (y_hat == y).sum() / len(y)
+            loss = 1 - accuracy
+        elif self.valid_loss == "mse":
+            loss = F.mse_loss(y_hat, y)
+        elif self.valid_loss == "l1":
+            loss = F.l1_loss(y_hat, y)
+        elif self.valid_loss == "huber":
+            loss = F.huber_loss(y_hat, y)
         else:
-            pass
+            raise ValueError("Unsupported loss function '%s'" % self.valid_loss)
+        self.log("val_loss", loss, on_step=False, on_epoch=True, prog_bar=True, logger=True)
 
     def configure_optimizers(self):
         """Define Optimerzers and LR schedulers."""
@@ -131,11 +128,7 @@ def load_array(data_arrays, batch_size, is_train=True, ncpu=-1):
     return torch.utils.data.DataLoader(dataset, batch_size, shuffle=is_train, num_workers=ncpu)
 
 
-def cosine_distance(v1, v2, eps=1e-15):
-    return 1 - np.dot(v1, v2) / (np.linalg.norm(v1, ord=2) * np.linalg.norm(v2, ord=2) + eps)
-
-
-def nn_search_list(y, out_feat, kdtree):
+def nn_search_list(y, kdtree):
     y = np.atleast_2d(y)  # (n_samples, n_features)
     ind = kdtree.query(y, k=1, return_distance=False)  # (n_samples, 1)
     return ind

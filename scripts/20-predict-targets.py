@@ -13,9 +13,9 @@ logger = logging.getLogger(__name__)
 import numpy as np
 import pandas as pd
 
-from syn_net.config import CHECKPOINTS_DIR, DATA_PREPROCESS_DIR, DATA_RESULT_DIR
+from syn_net.config import DATA_PREPROCESS_DIR, DATA_RESULT_DIR, MAX_PROCESSES
 from syn_net.data_generation.preprocessing import BuildingBlockFileHandler
-from syn_net.models.chkpt_loader import load_modules_from_checkpoint
+from syn_net.models.chkpt_loader import load_mlp_from_ckpt
 from syn_net.utils.data_utils import ReactionSet, SyntheticTree, SyntheticTreeSet
 from syn_net.utils.predict_utils import mol_fp, synthetic_tree_decoder_greedy_search
 
@@ -74,31 +74,24 @@ def find_best_model_ckpt(path: str) -> Union[Path, None]:  # TODO: move to utils
 def _load_pretrained_model(path_to_checkpoints: list[Path]):
     """Wrapper to load modules from checkpoint."""
     # Define paths to pretrained models.
-    path_to_act, path_to_rt1, path_to_rxn, path_to_rt2 = path_to_checkpoints
+    act_path, rt1_path, rxn_path, rt2_path = path_to_checkpoints
 
     # Load the pre-trained models.
-    act_net, rt1_net, rxn_net, rt2_net = load_modules_from_checkpoint(
-        path_to_act=path_to_act,
-        path_to_rt1=path_to_rt1,
-        path_to_rxn=path_to_rxn,
-        path_to_rt2=path_to_rt2,
-        featurize=args.featurize,
-        rxn_template=args.rxn_template,
-        out_dim=out_dim,
-        nbits=nbits,
-        ncpu=args.ncpu,
-    )
+    act_net = load_mlp_from_ckpt(act_path)
+    rt1_net = load_mlp_from_ckpt(rt1_path)
+    rxn_net = load_mlp_from_ckpt(rxn_path)
+    rt2_net = load_mlp_from_ckpt(rt2_path)
     return act_net, rt1_net, rxn_net, rt2_net
 
 
-def func(smiles: str) -> Tuple[str, float, SyntheticTree]:
+def wrapper_decoder(smiles: str) -> Tuple[str, float, SyntheticTree]:
     """Generate a synthetic tree for the input molecular embedding."""
     emb = mol_fp(smiles)
     try:
         smi, similarity, tree, action = synthetic_tree_decoder_greedy_search(
             z_target=emb,
-            building_blocks=building_blocks,
-            bb_dict=building_blocks_dict,
+            building_blocks=bblocks,
+            bb_dict=bblocks_dict,
             reaction_templates=rxns,
             mol_embedder=bblocks_molembedder.kdtree,  # TODO: fix this, currently misused
             action_net=act_net,
@@ -106,8 +99,8 @@ def func(smiles: str) -> Tuple[str, float, SyntheticTree]:
             rxn_net=rxn_net,
             reactant2_net=rt2_net,
             bb_emb=bb_emb,
-            rxn_template=args.rxn_template,
-            n_bits=nbits,
+            rxn_template="hb",  # TODO: Do not hard code
+            n_bits=4096,  # TODO: Do not hard code
             beam_width=3,
             max_step=15,
         )
@@ -127,44 +120,46 @@ def get_args():
     import argparse
 
     parser = argparse.ArgumentParser()
+    # File I/O
     parser.add_argument(
-        "-f", "--featurize", type=str, default="fp", help="Choose from ['fp', 'gin']"
+        "--building-blocks-file",
+        type=str,
+        help="Input file with SMILES strings (First row `SMILES`, then one per line).",
     )
-    parser.add_argument("--radius", type=int, default=2, help="Radius for Morgan Fingerprint")
     parser.add_argument(
-        "-b", "--nbits", type=int, default=4096, help="Number of Bits for Morgan Fingerprint"
+        "--rxns-collection-file",
+        type=str,
+        help="Input file for the collection of reactions matched with building-blocks.",
     )
     parser.add_argument(
-        "-r", "--rxn_template", type=str, default="hb", help="Choose from ['hb', 'pis']"
+        "--embeddings-knn-file",
+        type=str,
+        help="Input file for the pre-computed embeddings (*.npy).",
     )
-    parser.add_argument("--ncpu", type=int, default=1, help="Number of cpus")
-    parser.add_argument("-n", "--num", type=int, default=-1, help="Number of molecules to predict.")
     parser.add_argument(
-        "-d",
+        "--ckpt-dir", type=str, help="Directory with checkpoints for {act,rt1,rxn,rt2}-model."
+    )
+    parser.add_argument(
+        "--output-dir", type=str, default=DATA_RESULT_DIR, help="Directory to save output."
+    )
+    # Parameters
+    parser.add_argument("--num", type=int, default=-1, help="Number of molecules to predict.")
+    parser.add_argument(
         "--data",
         type=str,
         default="test",
         help="Choose from ['train', 'valid', 'test', 'chembl'] or provide a file with one SMILES per line.",
     )
-    parser.add_argument(
-        "-o",
-        "--outputembedding",
-        type=str,
-        default="fp_256",
-        help="Choose from ['fp_4096', 'fp_256', 'gin', 'rdkit2d']",
-    )
-    parser.add_argument("--output-dir", type=str, default=None, help="Directory to save output.")
+    # Processing
+    parser.add_argument("--ncpu", type=int, default=MAX_PROCESSES, help="Number of cpus")
+    parser.add_argument("--verbose", default=False, action="store_true")
     return parser.parse_args()
 
 
 if __name__ == "__main__":
     args = get_args()
+
     logger.info(f"Arguments: {json.dumps(vars(args),indent=2)}")
-
-    nbits = args.nbits
-    out_dim = args.outputembedding.split("_")[-1]  # <=> morgan fingerprint with 256 bits
-    param_dir = f"{args.rxn_template}_{args.featurize}_{args.radius}_{nbits}_{out_dim}"
-
     # Load data ...
     logger.info("Start loading data...")
     # ... query molecules (i.e. molecules to decode)
@@ -173,56 +168,45 @@ if __name__ == "__main__":
         smiles_queries = smiles_queries[: args.num]
 
     # ... building blocks
-    file = (
-        Path(DATA_PREPROCESS_DIR) / "building-blocks-rxns" / f"enamine-us-smiles.csv.gz"
-    )  # TODO: Do not hardcode
-    building_blocks = BuildingBlockFileHandler().load(file)
-    building_blocks_dict = {
-        block: i for i, block in enumerate(building_blocks)
+    bblocks = BuildingBlockFileHandler().load(args.building_blocks_file)
+    bblocks_dict = {
+        block: i for i, block in enumerate(bblocks)
     }  # dict is used as lookup table for 2nd reactant during inference
-    logger.info("...loading building blocks completed.")
+    logger.info(f"Successfully read {args.building_blocks_file}.")
 
     # ... reaction templates
-    file = (
-        Path(DATA_PREPROCESS_DIR) / "building-blocks-rxns" / "hb-enamine-us.json.gz"
-    )  # TODO: Do not hardcode
-    rxns = ReactionSet().load(file).rxns
-    logger.info("...loading reaction collection completed.")
+    rxns = ReactionSet().load(args.output_rxns_collection_file).rxns
+    logger.info(f"Successfully read {args.output_rxns_collection_file}.")
 
     # ... building block embedding
-    file = (
-        Path(DATA_PREPROCESS_DIR) / "embeddings" / f"hb-enamine-embeddings.npy"
-    )  # TODO: Do not hardcode
-    bblocks_molembedder = MolEmbedder().load_precomputed(file).init_balltree(cosine_distance)
+    bblocks_molembedder = (
+        MolEmbedder().load_precomputed(args.embeddings_knn_file).init_balltree(cosine_distance)
+    )
     bb_emb = bblocks_molembedder.get_embeddings()
-
-    logger.info("...loading building block embeddings completed.")
+    logger.info(f"Successfully read {args.embeddings_knn_file} and initialized BallTree.")
     logger.info("...loading data completed.")
 
     # ... models
     logger.info("Start loading models from checkpoints...")
-    path = Path(CHECKPOINTS_DIR) / f"{param_dir}"
-    paths = [
-        find_best_model_ckpt("results/logs/hb_fp_2_4096/" + model)  # TODO: Do not hardcode
-        for model in "act rt1 rxn rt2".split()
-    ]
+    path = Path(args.ckpt_dir)
+    paths = [find_best_model_ckpt(path / model) for model in "act rt1 rxn rt2".split()]
     act_net, rt1_net, rxn_net, rt2_net = _load_pretrained_model(paths)
     logger.info("...loading models completed.")
 
     # Decode queries, i.e. the target molecules.
     logger.info(f"Start to decode {len(smiles_queries)} target molecules.")
     if args.ncpu == 1:
-        results = [func(smi) for smi in smiles_queries]
+        results = [wrapper_decoder(smi) for smi in smiles_queries]
     else:
         with mp.Pool(processes=args.ncpu) as pool:
             logger.info(f"Starting MP with ncpu={args.ncpu}")
-            results = pool.map(func, smiles_queries)
+            results = pool.map(wrapper_decoder, smiles_queries)
     logger.info("Finished decoding.")
 
     # Print some results from the prediction
-    smis_decoded = [r[0] for r in results]
-    similarities = [r[1] for r in results]
-    trees = [r[2] for r in results]
+    smis_decoded = [smi for smi, _, tree in results if tree is not None]
+    similarities = [sim for _, sim, tree in results if tree is not None]
+    trees = [tree for _, _, tree in results if tree is not None]
 
     recovery_rate = (np.asfarray(similarities) == 1.0).sum() / len(similarities)
     avg_similarity = np.mean(similarities)
@@ -233,7 +217,9 @@ if __name__ == "__main__":
     logger.info(f"  {avg_similarity=}")
 
     # Save to local dir
-    output_dir = DATA_RESULT_DIR if args.output_dir is None else args.output_dir
+    # 1. Dataframe with targets, decoded, smilarities
+    # 2. Synthetic trees of the decoded SMILES
+    output_dir = Path(args.output_dir)
     logger.info(f"Saving results to {output_dir} ...")
     df = pd.DataFrame(
         {"query SMILES": smiles_queries, "decode SMILES": smis_decoded, "similarity": similarities}

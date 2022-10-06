@@ -37,7 +37,7 @@ Let's start.
         --building-blocks-file "data/assets/building-blocks/enamine-us-smiles.csv.gz" \
         --rxn-templates-file "data/assets/reaction-templates/hb.txt" \
         --output-bblock-file "data/pre-process/building-blocks-rxns/bblocks-enamine-us.csv.gz" \
-        --output-rxns-file "data/pre-process/building-blocks-rxns/rxns-hb-enamine-us.json.gz" --verbose
+        --output-rxns-collection-file "data/pre-process/building-blocks-rxns/rxns-hb-enamine-us.json.gz" --verbose
     ```
 
     > :bulb: All following steps use this matched building blocks <-> reaction template data. You have to specify the correct files for every script to that it can load the right data. It can save some time to store these as environment variables.
@@ -50,7 +50,6 @@ Let's start.
     ```bash
     python scripts/02-compute-embeddings.py \
         --building-blocks-file "data/pre-process/building-blocks/enamine-us-smiles.csv.gz" \
-        --rxn-templates-file "data/assets/reaction-templates/hb.txt"
         --output-file "data/pre-process/embeddings/hb-enamine-embeddings.npy"
     ```
 

@@ -38,7 +38,7 @@ def get_args():
         help="Output file for the filtered building-blocks.",
     )
     parser.add_argument(
-        "--output-rxns-file",
+        "--output-rxns-collection-file",
         type=str,
         help="Output file for the collection of reactions matched with building-blocks.",
     )
@@ -74,7 +74,7 @@ if __name__ == "__main__":
 
     # Save collection of reactions which have "available reactants" set (for convenience)
     rxn_collection = ReactionSet(bbf.rxns)
-    rxn_collection.save(args.output_rxns_file)
+    rxn_collection.save(args.output_rxns_collection_file)
 
     logger.info(f"Total number of building blocks {len(bblocks):d}")
     logger.info(f"Matched number of building blocks {len(bblocks_filtered):d}")

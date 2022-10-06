@@ -36,11 +36,6 @@ def get_args():
         help="Input file with SMILES strings (First row `SMILES`, then one per line).",
     )
     parser.add_argument(
-        "--rxn-templates-file",
-        type=str,
-        help="Input file with reaction templates as SMARTS (No header, one per line).",
-    )
-    parser.add_argument(
         "--output-file",
         type=str,
         help="Output file for the computed embeddings file. (*.npy)",

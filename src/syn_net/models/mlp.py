@@ -61,8 +61,10 @@ class MLP(pl.LightningModule):
     def forward(self, x):
         """Forward step for inference only."""
         y_hat = self.layers(x)
-        if self.hparams.task == "classification": # during training, `cross_entropy` loss expexts raw logits
-            y_hat = F.softmax(y_hat,dim=-1)
+        if (
+            self.hparams.task == "classification"
+        ):  # during training, `cross_entropy` loss expects raw logits
+            y_hat = F.softmax(y_hat, dim=-1)
         return y_hat
 
     def training_step(self, batch, batch_idx):
@@ -134,6 +136,10 @@ def nn_search_list(y, kdtree):
     ind = kdtree.query(y, k=1, return_distance=False)  # (n_samples, 1)
     return ind
 
+def load_mlp_from_ckpt(ckpt_file: str):
+    """Load a model from a checkpoint for inference."""
+    model = MLP.load_from_checkpoint(ckpt_file)
+    return model.eval()
 
 if __name__ == "__main__":
     pass

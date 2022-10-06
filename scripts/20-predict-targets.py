@@ -15,7 +15,7 @@ import pandas as pd
 
 from syn_net.config import DATA_PREPROCESS_DIR, DATA_RESULT_DIR, MAX_PROCESSES
 from syn_net.data_generation.preprocessing import BuildingBlockFileHandler
-from syn_net.models.chkpt_loader import load_mlp_from_ckpt
+from syn_net.models.mlp import load_mlp_from_ckpt
 from syn_net.utils.data_utils import ReactionSet, SyntheticTree, SyntheticTreeSet
 from syn_net.utils.predict_utils import mol_fp, synthetic_tree_decoder_greedy_search
 

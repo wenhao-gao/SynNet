@@ -8,7 +8,7 @@ from dgllife.model import load_pretrained
 
 from syn_net.utils.data_utils import ReactionSet
 from syn_net.utils.predict_utils import synthetic_tree_decoder, tanimoto_similarity
-from syn_net.models.chkpt_loader import load_mlp_from_ckpt
+from syn_net.models.mlp import load_mlp_from_ckpt
 
 # define some constants (here, for the Hartenfeller-Button test set)
 nbits = 4096

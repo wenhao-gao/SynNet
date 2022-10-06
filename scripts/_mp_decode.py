@@ -7,11 +7,8 @@ import pandas as pd
 from dgllife.model import load_pretrained
 
 from syn_net.utils.data_utils import ReactionSet
-from syn_net.utils.predict_utils import (
-    load_modules_from_checkpoint,
-    synthetic_tree_decoder,
-    tanimoto_similarity,
-)
+from syn_net.utils.predict_utils import synthetic_tree_decoder, tanimoto_similarity
+from syn_net.models.chkpt_loader import load_mlp_from_ckpt
 
 # define some constants (here, for the Hartenfeller-Button test set)
 nbits = 4096
@@ -40,10 +37,10 @@ path_to_building_blocks = (
 
 # define paths to pretrained modules
 param_path = f"/home/whgao/synth_net/synth_net/params/{param_dir}/"
-path_to_act = f"{param_path}act.ckpt"
-path_to_rt1 = f"{param_path}rt1.ckpt"
-path_to_rxn = f"{param_path}rxn.ckpt"
-path_to_rt2 = f"{param_path}rt2.ckpt"
+act_path = f"{param_path}act.ckpt"
+rt1_path = f"{param_path}rt1.ckpt"
+rxn_path = f"{param_path}rxn.ckpt"
+rt2_path = f"{param_path}rt2.ckpt"
 
 # load the purchasable building block SMILES to a dictionary
 building_blocks = pd.read_csv(path_to_building_blocks, compression="gzip")["SMILES"].tolist()
@@ -54,17 +51,10 @@ rxn_set = ReactionSet().load(path_to_reaction_file)
 rxns = rxn_set.rxns
 
 # load the pre-trained modules
-act_net, rt1_net, rxn_net, rt2_net = load_modules_from_checkpoint(
-    path_to_act=path_to_act,
-    path_to_rt1=path_to_rt1,
-    path_to_rxn=path_to_rxn,
-    path_to_rt2=path_to_rt2,
-    featurize=featurize,
-    rxn_template=rxn_template,
-    out_dim=out_dim,
-    nbits=nbits,
-    ncpu=ncpu,
-)
+act_net = load_mlp_from_ckpt(act_path)
+rt1_net = load_mlp_from_ckpt(rt1_path)
+rxn_net = load_mlp_from_ckpt(rxn_path)
+rt2_net = load_mlp_from_ckpt(rt2_path)
 
 
 def func(emb):

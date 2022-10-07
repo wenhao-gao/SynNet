@@ -1,6 +1,4 @@
-"""
-Computes the fingerprint similarity of molecules in the validation and test set to
-molecules in the training set.
+"""Computes the fingerprint similarity of molecules in {valid,test}-set to molecules in the training set.
 """  # TODO: clean up, un-nest a couple of fcts
 import json
 import logging
@@ -35,7 +33,7 @@ def get_args():
         "--output-file",
         type=str,
         default=None,
-        help="Optional: File to save similarity-values for test,valid-synthetic trees.",
+        help="File to save similarity-values for test,valid-synthetic trees. (*csv.gz)",
     )
     # Processing
     parser.add_argument("--ncpu", type=int, default=MAX_PROCESSES, help="Number of cpus")
@@ -77,24 +75,28 @@ def get_smiles_and_fps(dataset: str) -> Tuple[list[str], list[np.ndarray]]:
     return smiles, fps
 
 
-def _save_df(file: str, df):
-    if file is None:
-        return
-    df.to_csv(file, index=False)
+def compute_most_similar_smiles(
+    split: str,
+    fps: np.ndarray,
+    smiles: list[str],
+    /,
+    fps_reference: np.ndarray,
+    smiles_reference: list[str],
+) -> pd.DataFrame:
 
-
-def compute_most_similar_smiles(split: str, fps: np.ndarray, smiles: list[str]) -> pd.DataFrame:
+    func = partial(find_similar_fp, fps_reference=fps_reference)
     with mp.Pool(processes=args.ncpu) as pool:
         results = pool.map(func, fps)
 
-    similarities, idx = np.asfarray(results).T
-    most_similiar_ref_smiles = np.asarray(smiles_train)[idx.astype(int)]  # use numpy for slicin'
+    similarities, idx = zip(*results)
+    most_similiar_ref_smiles = np.asarray(smiles_reference)[np.asarray(idx, dtype=int)]
+    # ^ Use numpy for slicing...
 
     df = pd.DataFrame(
         {
-            "smiles": smiles,
             "split": split,
-            "most similar": most_similiar_ref_smiles,
+            "smiles": smiles,
+            "most_similar_smiles": most_similiar_ref_smiles,
             "similarity": similarities,
         }
     )
@@ -107,20 +109,25 @@ if __name__ == "__main__":
     # Parse input args
     args = get_args()
     logger.info(f"Arguments: {json.dumps(vars(args),indent=2)}")
-    args.input_dir = "/home/ulmer/SynNet/data/pre-process/syntrees"
-
     # Load data
     smiles_train, fps_train = get_smiles_and_fps("train")
     smiles_valid, fps_valid = get_smiles_and_fps("valid")
     smiles_test, fps_test = get_smiles_and_fps("test")
 
     # Compute (mp)
-    func = partial(find_similar_fp, fps_reference=fps_train)
-    df_valid = compute_most_similar_smiles("valid", fps_valid, smiles_valid)
-    df_test = compute_most_similar_smiles("test", fps_test, smiles_test)
+    logger.info("Start computing most similar smiles...")
+    df_valid = compute_most_similar_smiles(
+        "valid", fps_valid, smiles_valid, fps_reference=fps_train, smiles_reference=smiles_train
+    )
+    df_test = compute_most_similar_smiles(
+        "test", fps_test, smiles_test, fps_reference=fps_train, smiles_reference=smiles_train
+    )
+    logger.info("Computed most similar smiles for {valid,test}-set.")
 
     # Save
-    outfile = "data_similarity.csv"
-    _save_df(outfile, pd.concat([df_valid, df_test], axis=0, ignore_index=True))
+    Path(args.output_file).parent.mkdir(parents=True, exist_ok=True)
+    df = pd.concat([df_valid, df_test], axis=0, ignore_index=True)
+    df.to_csv(args.output_file, index=False, compression="gzip")
+    logger.info(f"Successfully saved output to {args.output_file}.")
 
     logger.info("Completed.")

@@ -57,12 +57,7 @@ def find_similar_fp(fp: np.ndarray, fps_reference: np.ndarray):
     """Finds most similar fingerprint in a reference set for `fp`.
     Uses Tanimoto Similarity.
     """
-    dists = np.array(
-        [
-            DataStructs.FingerprintSimilarity(fp, fp_, metric=DataStructs.TanimotoSimilarity)
-            for fp_ in fps_train
-        ]
-    )
+    dists = np.asarray(DataStructs.BulkTanimotoSimilarity(fp, fps_reference))
     similarity_score, idx = dists.max(), dists.argmax()
     return similarity_score, idx
 

@@ -126,11 +126,6 @@ class MLP(pl.LightningModule):
         return optimizer
 
 
-def load_array(data_arrays, batch_size, is_train=True, ncpu=-1):
-    dataset = torch.utils.data.TensorDataset(*data_arrays)
-    return torch.utils.data.DataLoader(dataset, batch_size, shuffle=is_train, num_workers=ncpu)
-
-
 def nn_search_list(y, kdtree):
     y = np.atleast_2d(y)  # (n_samples, n_features)
     ind = kdtree.query(y, k=1, return_distance=False)  # (n_samples, 1)

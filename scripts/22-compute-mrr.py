@@ -6,6 +6,7 @@ import numpy as np
 import torch
 from scipy import sparse
 from sklearn.neighbors import BallTree
+from syn_net.models.common import xy_to_dataloader
 
 from syn_net.encoding.distances import ce_distance, cosine_distance
 from syn_net.models.mlp import MLP, load_array
@@ -58,13 +59,15 @@ if __name__ == "__main__":
     batch_size = args.batch_size
     ncpu = args.ncpu
 
-    X = sparse.load_npz(args.X_data_file)
-    y = sparse.load_npz(args.y_data_file)
-    X = torch.Tensor(X.A)
-    y = torch.Tensor(y.A)
-    _idx = np.random.choice(list(range(X.shape[0])), size=int(X.shape[0] / 10), replace=False)
-    test_data_iter = load_array((X[_idx], y[_idx]), batch_size, ncpu=ncpu, is_train=False)
-    data_iter = test_data_iter
+    # Load data
+    dataloader = xy_to_dataloader(
+        X_file = args.X_data_file,
+        y_file = args.y_data_file,
+        n=None if not args.debug else 128,
+        batch_size=args.batch_size,
+        num_workers=args.ncpu,
+        shuffle=False,
+    )
 
     rt1_net = MLP.load_from_checkpoint(
         path_to_rt1,

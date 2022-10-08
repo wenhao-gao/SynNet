@@ -1,15 +1,19 @@
-"""
-This function is used to compute the mean reciprocal ranking for reactant 1
+"""Compute the mean reciprocal ranking for reactant 1
 selection using the different distance metrics in the k-NN search.
 """
-import numpy as np
-import torch
-from scipy import sparse
-from sklearn.neighbors import BallTree
-from syn_net.models.common import xy_to_dataloader
+import json
+import logging
 
+import numpy as np
+from tqdm import tqdm
+
+from syn_net.config import MAX_PROCESSES
 from syn_net.encoding.distances import ce_distance, cosine_distance
-from syn_net.models.mlp import MLP, load_array
+from syn_net.models.common import xy_to_dataloader
+from syn_net.models.mlp import load_mlp_from_ckpt
+from syn_net.MolEmbedder import MolEmbedder
+
+logger = logging.getLogger(__name__)
 
 
 def get_args():
@@ -27,7 +31,7 @@ def get_args():
     parser.add_argument(
         "--nbits", type=int, default=4096, help="Number of Bits for Morgan fingerprint."
     )
-    parser.add_argument("--ncpu", type=int, default=8, help="Number of cpus")
+    parser.add_argument("--ncpu", type=int, default=MAX_PROCESSES, help="Number of cpus")
     parser.add_argument("--batch_size", type=int, default=64, help="Batch size")
     parser.add_argument("--device", type=str, default="cuda:0", help="")
     parser.add_argument(
@@ -37,87 +41,64 @@ def get_args():
         choices=["euclidean", "manhattan", "chebyshev", "cross_entropy", "cosine"],
         help="Distance function for `BallTree`.",
     )
+    parser.add_argument("--debug", default=False, action="store_true")
     return parser.parse_args()
 
 
 if __name__ == "__main__":
+    logger.info("Start.")
 
+    # Parse input args
     args = get_args()
+    logger.info(f"Arguments: {json.dumps(vars(args),indent=2)}")
 
-    bb_emb_fp_256 = np.load(args.embeddings_file)
-    n, d = bb_emb_fp_256.shape
-
-    metric = args.distance
-    if metric == "cross_entropy":
+    # Init BallTree for kNN-search
+    if args.distance == "cross_entropy":
         metric = ce_distance
-    elif metric == "cosine":
+    elif args.distance == "cosine":
         metric = cosine_distance
+    else:
+        metric = args.distance
 
-    kdtree_fp_256 = BallTree(bb_emb_fp_256, metric=metric)
-
-    path_to_rt1 = args.ckpt_file
-    batch_size = args.batch_size
-    ncpu = args.ncpu
+    # Recall default: Morgan fingerprint with radius=2, nbits=256
+    mol_embedder = MolEmbedder().load_precomputed(args.embeddings_file)
+    mol_embedder.init_balltree(metric=metric)
+    n, d = mol_embedder.embeddings.shape
 
     # Load data
     dataloader = xy_to_dataloader(
-        X_file = args.X_data_file,
-        y_file = args.y_data_file,
+        X_file=args.X_data_file,
+        y_file=args.y_data_file,
         n=None if not args.debug else 128,
         batch_size=args.batch_size,
         num_workers=args.ncpu,
         shuffle=False,
     )
 
-    rt1_net = MLP.load_from_checkpoint(
-        path_to_rt1,
-        input_dim=int(3 * args.nbits),
-        output_dim=d,
-        hidden_dim=1200,
-        num_layers=5,
-        dropout=0.5,
-        num_dropout_layers=1,
-        task="regression",
-        loss="mse",
-        valid_loss="mse",
-        optimizer="adam",
-        learning_rate=1e-4,
-        ncpu=ncpu,
-    )
-    rt1_net.eval()
+    # Load MLP
+    rt1_net = load_mlp_from_ckpt(args.ckpt_file)
     rt1_net.to(args.device)
 
     ranks = []
-    for X, y in data_iter:
+    for X, y in tqdm(dataloader):
         X, y = X.to(args.device), y.to(args.device)
-        y_hat = rt1_net(X)
-        dist_true, ind_true = kdtree_fp_256.query(y.detach().cpu().numpy(), k=1)
-        dist, ind = kdtree_fp_256.query(y_hat.detach().cpu().numpy(), k=n)
-        ranks = ranks + [np.where(ind[i] == ind_true[i])[0][0] for i in range(len(ind_true))]
+        y_hat = rt1_net(X)  # (batch_size,nbits)
 
-    ranks = np.array(ranks)
-    rrs = 1 / (ranks + 1)
+        ind_true = mol_embedder.kdtree.query(y.detach().cpu().numpy(), k=1, return_distance=False)
+        ind = mol_embedder.kdtree.query(y_hat.detach().cpu().numpy(), k=n, return_distance=False)
 
-    np.save("ranks_" + metric + ".npy", ranks)  # TODO: do not hard code
+        irows, icols = np.nonzero(ind == ind_true)  # irows = range(batch_size), icols = ranks
+        ranks.append(icols)
+
+    ranks = np.asarray(ranks, dtype=int).flatten()  # (nSamples,)
+    rrs = 1 / (ranks + 1)  # +1 for offset 0-based indexing
+
+    # np.save("ranks_" + metric + ".npy", ranks)  # TODO: do not hard code
 
     print(f"Result using metric: {metric}")
     print(f"The mean reciprocal ranking is: {rrs.mean():.3f}")
-    print(
-        f"The Top-1 recovery rate is: {sum(ranks < 1) / len(ranks) :.3f}, {sum(ranks < 1)} / {len(ranks)}"
-    )
-    print(
-        f"The Top-3 recovery rate is: {sum(ranks < 3) / len(ranks) :.3f}, {sum(ranks < 3)} / {len(ranks)}"
-    )
-    print(
-        f"The Top-5 recovery rate is: {sum(ranks < 5) / len(ranks) :.3f}, {sum(ranks < 5)} / {len(ranks)}"
-    )
-    print(
-        f"The Top-10 recovery rate is: {sum(ranks < 10) / len(ranks) :.3f}, {sum(ranks < 10)} / {len(ranks)}"
-    )
-    print(
-        f"The Top-15 recovery rate is: {sum(ranks < 15) / len(ranks) :.3f}, {sum(ranks < 15)} / {len(ranks)}"
-    )
-    print(
-        f"The Top-30 recovery rate is: {sum(ranks < 30) / len(ranks) :.3f}, {sum(ranks < 30)} / {len(ranks)}"
-    )
-    print()
+    TOP_N_RANKS = (1, 3, 5, 10, 15, 30)
+    for i in TOP_N_RANKS:
+        n_recovered = sum(ranks < i)
+        n = len(ranks)
+        print(f"The Top-{i:<2d} recovery rate is: {n_recovered/n:.3f} ({n_recovered}/{n})")

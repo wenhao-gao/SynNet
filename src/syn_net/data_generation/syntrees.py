@@ -75,8 +75,9 @@ class SynTreeGenerator:
         self.IDX_RXNS = np.arange(len(self.rxns))
         self.processes = processes
         self.verbose = verbose
-        if verbose:
-            logger.setLevel(logging.DEBUG)
+        if not verbose:
+            logger.setLevel('CRITICAL') # dont show error msgs
+
 
         # Time intensive tasks
         self._init_rxns_with_reactants()

@@ -11,7 +11,8 @@ from pytorch_lightning.callbacks.model_checkpoint import ModelCheckpoint
 from pytorch_lightning.callbacks.progress import TQDMProgressBar
 
 from syn_net.models.common import get_args, xy_to_dataloader
-from syn_net.models.mlp import MLP, cosine_distance
+from syn_net.models.mlp import MLP
+from syn_net.encoding.distances import cosine_distance
 from syn_net.MolEmbedder import MolEmbedder
 
 logger = logging.getLogger(__name__)

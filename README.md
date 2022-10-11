@@ -64,14 +64,6 @@ source activate synnet
 pip install -e .
 ```
 
-### Unit tests
-
-To check that everything has been set-up correctly, you can run the unit tests. If starting in the main directory, you can run the unit tests as follows:
-
-```python
-python -m unittest
-```
-
 ### Data
 
 SynNet relies on two datasources:

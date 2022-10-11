@@ -81,7 +81,7 @@ if __name__ == "__main__":
     }
     output_dim = OUTPUT_DIMS[args.rxn_template]
 
-    ckpt_path = args.ckpt_file # TODO: Unify for all networks
+    ckpt_path = args.ckpt_file  # TODO: Unify for all networks
     mlp = MLP(
         input_dim=input_dim,
         output_dim=output_dim,
@@ -125,9 +125,8 @@ if __name__ == "__main__":
         callbacks=[checkpoint_callback, tqdm_callback],
         logger=[tb_logger, csv_logger],
         fast_dev_run=args.fast_dev_run,
-
     )
 
     logger.info(f"Start training")
-    trainer.fit(mlp, train_dataloader, valid_dataloader,ckpt_path=ckpt_path)
+    trainer.fit(mlp, train_dataloader, valid_dataloader, ckpt_path=ckpt_path)
     logger.info(f"Training completed.")

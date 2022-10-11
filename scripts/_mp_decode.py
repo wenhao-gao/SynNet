@@ -5,9 +5,9 @@ TODO: Used in `scripts/optimize_ga.py`, refactor.
 import numpy as np
 import pandas as pd
 
-from syn_net.utils.data_utils import ReactionSet
-from syn_net.utils.predict_utils import synthetic_tree_decoder, tanimoto_similarity
-from syn_net.models.mlp import load_mlp_from_ckpt
+from synnet.utils.data_utils import ReactionSet
+from synnet.utils.predict_utils import synthetic_tree_decoder, tanimoto_similarity
+from synnet.models.mlp import load_mlp_from_ckpt
 
 # define some constants (here, for the Hartenfeller-Button test set)
 nbits = 4096

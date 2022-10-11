@@ -8,8 +8,8 @@ import numpy as np
 from rdkit import Chem, RDLogger
 from tqdm import tqdm
 
-from syn_net.config import MAX_PROCESSES
-from syn_net.utils.data_utils import SyntheticTree, SyntheticTreeSet
+from synnet.config import MAX_PROCESSES
+from synnet.utils.data_utils import SyntheticTree, SyntheticTreeSet
 
 logger = logging.getLogger(__name__)
 
@@ -88,7 +88,7 @@ if __name__ == "__main__":
     logger.info(f"Successfully loaded '{args.input_file}' with {len(syntree_collection)} syntrees.")
 
     # Filter trees
-    # TODO: Move to src/syn_net/data_generation/filters.py ?
+    # TODO: Move to src/synnet/data_generation/filters.py ?
     valid_root_mol_filter = ValidRootMolFilter()
     interesting_mol_filter = OracleFilter(threshold=0.5, rng=np.random.default_rng())
 

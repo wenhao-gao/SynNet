@@ -4,8 +4,8 @@ import json
 import logging
 from pathlib import Path
 
-from syn_net.config import MAX_PROCESSES
-from syn_net.utils.data_utils import SyntheticTreeSet
+from synnet.config import MAX_PROCESSES
+from synnet.utils.data_utils import SyntheticTreeSet
 
 logger = logging.getLogger(__name__)
 

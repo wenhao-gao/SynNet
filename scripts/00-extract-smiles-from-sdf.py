@@ -4,7 +4,7 @@ import json
 import logging
 from pathlib import Path
 
-from syn_net.utils.prep_utils import Sdf2SmilesExtractor
+from synnet.utils.prep_utils import Sdf2SmilesExtractor
 
 logger = logging.getLogger(__name__)
 

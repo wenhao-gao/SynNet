@@ -7,11 +7,11 @@ import unittest
 import numpy as np
 import pandas as pd
 
-from syn_net.utils.predict_utils import (
+from synnet.utils.predict_utils import (
     synthetic_tree_decoder_greedy_search,
     mol_fp,
 )
-from syn_net.utils.data_utils import SyntheticTreeSet, ReactionSet
+from synnet.utils.data_utils import SyntheticTreeSet, ReactionSet
 from syn_net.models.chkpt_loader import load_modules_from_checkpoint
 
 TEST_DIR = Path(__file__).parent

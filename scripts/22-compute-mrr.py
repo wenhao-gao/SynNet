@@ -7,11 +7,11 @@ import logging
 import numpy as np
 from tqdm import tqdm
 
-from syn_net.config import MAX_PROCESSES
-from syn_net.encoding.distances import ce_distance, cosine_distance
-from syn_net.models.common import xy_to_dataloader
-from syn_net.models.mlp import load_mlp_from_ckpt
-from syn_net.MolEmbedder import MolEmbedder
+from synnet.config import MAX_PROCESSES
+from synnet.encoding.distances import ce_distance, cosine_distance
+from synnet.models.common import xy_to_dataloader
+from synnet.models.mlp import load_mlp_from_ckpt
+from synnet.MolEmbedder import MolEmbedder
 
 logger = logging.getLogger(__name__)
 

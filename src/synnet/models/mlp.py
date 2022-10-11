@@ -9,7 +9,7 @@ import torch
 import torch.nn.functional as F
 from torch import nn
 
-from syn_net.MolEmbedder import MolEmbedder
+from synnet.MolEmbedder import MolEmbedder
 
 logger = logging.getLogger(__name__)
 

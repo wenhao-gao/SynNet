@@ -8,7 +8,7 @@ import numpy as np
 import pandas as pd
 from tdc import Evaluator
 
-from syn_net.config import MAX_PROCESSES
+from synnet.config import MAX_PROCESSES
 
 logger = logging.getLogger(__name__)
 

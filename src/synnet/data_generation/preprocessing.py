@@ -2,8 +2,8 @@ from pathlib import Path
 
 from tqdm import tqdm
 
-from syn_net.config import MAX_PROCESSES
-from syn_net.utils.data_utils import Reaction
+from synnet.config import MAX_PROCESSES
+from synnet.utils.data_utils import Reaction
 
 
 class BuildingBlockFilter:

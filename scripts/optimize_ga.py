@@ -12,8 +12,8 @@ import pandas as pd
 from tdc import Oracle
 
 import scripts._mp_decode as decode
-from syn_net.utils.ga_utils import crossover, mutation
-from syn_net.utils.predict_utils import mol_fp
+from synnet.utils.ga_utils import crossover, mutation
+from synnet.utils.predict_utils import mol_fp
 
 
 def dock_drd3(smi):

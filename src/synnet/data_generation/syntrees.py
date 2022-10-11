@@ -8,11 +8,11 @@ from rdkit import Chem
 from scipy import sparse
 from tqdm import tqdm
 
-from syn_net.config import MAX_PROCESSES
+from synnet.config import MAX_PROCESSES
 
 logger = logging.getLogger(__name__)
 
-from syn_net.utils.data_utils import Reaction, SyntheticTree
+from synnet.utils.data_utils import Reaction, SyntheticTree
 
 
 class NoReactantAvailableError(Exception):

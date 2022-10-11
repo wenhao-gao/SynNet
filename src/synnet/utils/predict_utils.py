@@ -11,10 +11,10 @@ import torch
 from rdkit import Chem
 from sklearn.neighbors import BallTree
 
-from syn_net.encoding.distances import cosine_distance, tanimoto_similarity
-from syn_net.encoding.fingerprints import mol_fp
-from syn_net.encoding.utils import one_hot_encoder
-from syn_net.utils.data_utils import Reaction, SyntheticTree
+from synnet.encoding.distances import cosine_distance, tanimoto_similarity
+from synnet.encoding.fingerprints import mol_fp
+from synnet.encoding.utils import one_hot_encoder
+from synnet.utils.data_utils import Reaction, SyntheticTree
 
 # create a random seed for NumPy
 np.random.seed(6)

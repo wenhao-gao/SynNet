@@ -1,9 +1,9 @@
 from pathlib import Path
 from typing import Union
 
-from syn_net.utils.data_utils import NodeChemical, NodeRxn, SyntheticTree
-from syn_net.visualize.drawers import MolDrawer
-from syn_net.visualize.writers import subgraph
+from synnet.utils.data_utils import NodeChemical, NodeRxn, SyntheticTree
+from synnet.visualize.drawers import MolDrawer
+from synnet.visualize.writers import subgraph
 
 
 class SynTreeVisualizer:
@@ -154,9 +154,9 @@ def demo():
     st = SyntheticTree()
     st.read(data)
 
-    from syn_net.visualize.drawers import MolDrawer
-    from syn_net.visualize.visualizer import SynTreeVisualizer
-    from syn_net.visualize.writers import SynTreeWriter
+    from synnet.visualize.drawers import MolDrawer
+    from synnet.visualize.visualizer import SynTreeVisualizer
+    from synnet.visualize.writers import SynTreeWriter
 
     outpath = Path("./figures/syntrees/generation/st")
     outpath.mkdir(parents=True, exist_ok=True)

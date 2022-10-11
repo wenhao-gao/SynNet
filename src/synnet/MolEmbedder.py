@@ -5,7 +5,7 @@ from typing import Callable, Union
 import numpy as np
 from sklearn.neighbors import BallTree
 
-from syn_net.config import MAX_PROCESSES
+from synnet.config import MAX_PROCESSES
 
 logger = logging.getLogger(__name__)
 

@@ -10,8 +10,8 @@ from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 from pytorch_lightning.callbacks.model_checkpoint import ModelCheckpoint
 from pytorch_lightning.callbacks.progress import TQDMProgressBar
 
-from syn_net.models.common import get_args, xy_to_dataloader
-from syn_net.models.mlp import MLP
+from synnet.models.common import get_args, xy_to_dataloader
+from synnet.models.mlp import MLP
 
 logger = logging.getLogger(__name__)
 MODEL_ID = Path(__file__).stem

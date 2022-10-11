@@ -9,10 +9,10 @@ import json
 import logging
 from functools import partial
 
-from syn_net.config import MAX_PROCESSES
-from syn_net.data_generation.preprocessing import BuildingBlockFileHandler
-from syn_net.encoding.fingerprints import mol_fp
-from syn_net.MolEmbedder import MolEmbedder
+from synnet.config import MAX_PROCESSES
+from synnet.data_generation.preprocessing import BuildingBlockFileHandler
+from synnet.encoding.fingerprints import mol_fp
+from synnet.MolEmbedder import MolEmbedder
 
 logger = logging.getLogger(__file__)
 

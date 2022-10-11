@@ -1,6 +1,6 @@
 import numpy as np
 
-from syn_net.encoding.fingerprints import mol_fp
+from synnet.encoding.fingerprints import mol_fp
 
 
 def cosine_distance(v1, v2):

@@ -4,7 +4,7 @@ import json
 import logging
 from pathlib import Path
 
-from syn_net.utils.prep_utils import split_data_into_Xy
+from synnet.utils.prep_utils import split_data_into_Xy
 
 logger = logging.getLogger(__file__)
 

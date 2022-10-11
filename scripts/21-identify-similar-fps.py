@@ -12,11 +12,11 @@ import pandas as pd
 from rdkit import Chem, DataStructs
 from rdkit.Chem import AllChem
 
-from syn_net.utils.data_utils import SyntheticTreeSet
+from synnet.utils.data_utils import SyntheticTreeSet
 
 logger = logging.getLogger(__file__)
 
-from syn_net.config import MAX_PROCESSES
+from synnet.config import MAX_PROCESSES
 
 
 def get_args():

@@ -10,8 +10,8 @@ from pytorch_lightning import loggers as pl_loggers
 from scipy import sparse
 import torch
 
-from syn_net.models.mlp import MLP, load_array
-from syn_net.MolEmbedder import MolEmbedder
+from synnet.models.mlp import MLP, load_array
+from synnet.MolEmbedder import MolEmbedder
 
 
 TEST_DIR = Path(__file__).parent

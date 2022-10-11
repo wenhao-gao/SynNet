@@ -10,10 +10,10 @@ from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 from pytorch_lightning.callbacks.model_checkpoint import ModelCheckpoint
 from pytorch_lightning.callbacks.progress import TQDMProgressBar
 
-from syn_net.models.common import get_args, xy_to_dataloader
-from syn_net.models.mlp import MLP
-from syn_net.encoding.distances import cosine_distance
-from syn_net.MolEmbedder import MolEmbedder
+from synnet.models.common import get_args, xy_to_dataloader
+from synnet.models.mlp import MLP
+from synnet.encoding.distances import cosine_distance
+from synnet.MolEmbedder import MolEmbedder
 
 logger = logging.getLogger(__name__)
 MODEL_ID = Path(__file__).stem

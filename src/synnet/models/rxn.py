@@ -1,4 +1,5 @@
-"""Reactant2 network (for predicting 2nd reactant).
+"""
+Reaction network.
 """
 import json
 import logging
@@ -10,22 +11,12 @@ from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 from pytorch_lightning.callbacks.model_checkpoint import ModelCheckpoint
 from pytorch_lightning.callbacks.progress import TQDMProgressBar
 
-from syn_net.models.common import get_args, xy_to_dataloader
-from syn_net.models.mlp import MLP
-from syn_net.encoding.distances import cosine_distance
-from syn_net.MolEmbedder import MolEmbedder
+from synnet.config import CHECKPOINTS_DIR
+from synnet.models.common import get_args, xy_to_dataloader
+from synnet.models.mlp import MLP
 
 logger = logging.getLogger(__name__)
 MODEL_ID = Path(__file__).stem
-
-
-def _fetch_molembedder():
-    file = args.mol_embedder_file
-    logger.info(f"Try to load precomputed MolEmbedder from {file}.")
-    molembedder = MolEmbedder().load_precomputed(file).init_balltree(metric=cosine_distance)
-    logger.info(f"Loaded MolEmbedder from {file}.")
-    return molembedder
-
 
 if __name__ == "__main__":
     logger.info("Start.")
@@ -42,6 +33,7 @@ if __name__ == "__main__":
         X_file=Path(args.data_dir) / f"X_{MODEL_ID}_{dataset}.npz",
         y_file=Path(args.data_dir) / f"y_{MODEL_ID}_{dataset}.npz",
         n=None if not args.debug else 128,
+        task="classification",
         batch_size=args.batch_size,
         num_workers=args.ncpu,
         shuffle=True if dataset == "train" else False,
@@ -52,42 +44,57 @@ if __name__ == "__main__":
         X_file=Path(args.data_dir) / f"X_{MODEL_ID}_{dataset}.npz",
         y_file=Path(args.data_dir) / f"y_{MODEL_ID}_{dataset}.npz",
         n=None if not args.debug else 128,
+        task="classification",
         batch_size=args.batch_size,
         num_workers=args.ncpu,
         shuffle=True if dataset == "train" else False,
     )
-
     logger.info(f"Set up dataloaders.")
-
-    # Fetch Molembedder and init BallTree
-    molembedder = None  # _fetch_molembedder()
 
     INPUT_DIMS = {
         "fp": {
-            "hb": int(4 * args.nbits + 91),
-            "gin": int(4 * args.nbits + 4700),
+            "hb": int(4 * args.nbits),
+            "gin": int(4 * args.nbits),
         },
         "gin": {
-            "hb": int(3 * args.nbits + args.out_dim + 91),
-            "gin": int(3 * args.nbits + args.out_dim + 4700),
+            "hb": int(3 * args.nbits + args.out_dim),
+            "gin": int(3 * args.nbits + args.out_dim),
         },
     }  # somewhat constant...
-    input_dims = INPUT_DIMS[args.featurize][args.rxn_template]
+    input_dim = INPUT_DIMS[args.featurize][args.rxn_template]
 
+    HIDDEN_DIMS = {
+        "fp": {
+            "hb": 3000,
+            "gin": 4500,
+        },
+        "gin": {
+            "hb": 3000,
+            "gin": 3000,
+        },
+    }
+    hidden_dim = HIDDEN_DIMS[args.featurize][args.rxn_template]
+
+    OUTPUT_DIMS = {
+        "hb": 91,
+        "gin": 4700,
+    }
+    output_dim = OUTPUT_DIMS[args.rxn_template]
+
+    ckpt_path = args.ckpt_file  # TODO: Unify for all networks
     mlp = MLP(
-        input_dim=input_dims,
-        output_dim=args.out_dim,
-        hidden_dim=3000,
+        input_dim=input_dim,
+        output_dim=output_dim,
+        hidden_dim=hidden_dim,
         num_layers=5,
         dropout=0.5,
         num_dropout_layers=1,
-        task="regression",
-        loss="mse",
-        valid_loss="mse",
+        task="classification",
+        loss="cross_entropy",
+        valid_loss="accuracy",
         optimizer="adam",
         learning_rate=3e-4,
         val_freq=10,
-        molembedder=molembedder,
         ncpu=args.ncpu,
     )
 
@@ -98,6 +105,8 @@ if __name__ == "__main__":
     tb_logger = pl_loggers.TensorBoardLogger(save_dir, name="")
     csv_logger = pl_loggers.CSVLogger(tb_logger.log_dir, name="", version="")
     logger.info(f"Log dir set to: {tb_logger.log_dir}")
+
+    tb_logger = pl_loggers.TensorBoardLogger(save_dir, name="")
 
     checkpoint_callback = ModelCheckpoint(
         monitor="val_loss",
@@ -119,5 +128,5 @@ if __name__ == "__main__":
     )
 
     logger.info(f"Start training")
-    trainer.fit(mlp, train_dataloader, valid_dataloader)
+    trainer.fit(mlp, train_dataloader, valid_dataloader, ckpt_path=ckpt_path)
     logger.info(f"Training completed.")

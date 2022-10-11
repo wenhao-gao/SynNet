@@ -4,7 +4,7 @@ templates used for unit testing.
 """
 import pandas as pd
 from tqdm import tqdm
-from syn_net.utils.data_utils import *
+from synnet.utils.data_utils import *
 
 
 if __name__ == '__main__':

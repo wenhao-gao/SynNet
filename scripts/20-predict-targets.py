@@ -10,13 +10,13 @@ from typing import Tuple, Union
 import numpy as np
 import pandas as pd
 
-from syn_net.config import DATA_PREPROCESS_DIR, DATA_RESULT_DIR, MAX_PROCESSES
-from syn_net.data_generation.preprocessing import BuildingBlockFileHandler
-from syn_net.encoding.distances import cosine_distance
-from syn_net.models.mlp import load_mlp_from_ckpt
-from syn_net.MolEmbedder import MolEmbedder
-from syn_net.utils.data_utils import ReactionSet, SyntheticTree, SyntheticTreeSet
-from syn_net.utils.predict_utils import mol_fp, synthetic_tree_decoder_greedy_search
+from synnet.config import DATA_PREPROCESS_DIR, DATA_RESULT_DIR, MAX_PROCESSES
+from synnet.data_generation.preprocessing import BuildingBlockFileHandler
+from synnet.encoding.distances import cosine_distance
+from synnet.models.mlp import load_mlp_from_ckpt
+from synnet.MolEmbedder import MolEmbedder
+from synnet.utils.data_utils import ReactionSet, SyntheticTree, SyntheticTreeSet
+from synnet.utils.predict_utils import mol_fp, synthetic_tree_decoder_greedy_search
 
 logger = logging.getLogger(__name__)
 

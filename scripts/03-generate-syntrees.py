@@ -8,13 +8,13 @@ from pathlib import Path
 from rdkit import RDLogger
 from tqdm import tqdm
 
-from syn_net.config import MAX_PROCESSES
-from syn_net.data_generation.preprocessing import (
+from synnet.config import MAX_PROCESSES
+from synnet.data_generation.preprocessing import (
     BuildingBlockFileHandler,
     ReactionTemplateFileHandler,
 )
-from syn_net.data_generation.syntrees import SynTreeGenerator, wraps_syntreegenerator_generate
-from syn_net.utils.data_utils import SyntheticTree, SyntheticTreeSet
+from synnet.data_generation.syntrees import SynTreeGenerator, wraps_syntreegenerator_generate
+from synnet.utils.data_utils import SyntheticTree, SyntheticTreeSet
 
 logger = logging.getLogger(__name__)
 from typing import Tuple, Union

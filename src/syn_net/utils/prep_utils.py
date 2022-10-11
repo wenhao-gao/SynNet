@@ -83,20 +83,8 @@ def split_data_into_Xy(
 
     # Delete all data where tree was ended (i.e. tree expansion did not trigger reaction)
     # TODO: Look into simpler slicing with boolean indices, perhabs consider CSR for row slicing
-    states = sparse.csc_matrix(
-        states.A[
-            (steps[:, 0].A != 3).reshape(
-                -1,
-            )
-        ]
-    )
-    steps = sparse.csc_matrix(
-        steps.A[
-            (steps[:, 0].A != 3).reshape(
-                -1,
-            )
-        ]
-    )
+    states = sparse.csc_matrix(states.A[(steps[:, 0].A != 3).squeeze()])
+    steps = sparse.csc_matrix(steps.A[(steps[:, 0].A != 3).squeeze()])
 
     # ... reaction data
     # X: [state, z_reactant_1]
@@ -107,20 +95,8 @@ def split_data_into_Xy(
     sparse.save_npz(output_dir / f"y_rxn_{dataset_type}.npz", y)
     logger.info(f'  saved data for "Reaction" to {output_dir}')
 
-    states = sparse.csc_matrix(
-        states.A[
-            (steps[:, 0].A != 2).reshape(
-                -1,
-            )
-        ]
-    )
-    steps = sparse.csc_matrix(
-        steps.A[
-            (steps[:, 0].A != 2).reshape(
-                -1,
-            )
-        ]
-    )
+    states = sparse.csc_matrix(states.A[(steps[:, 0].A != 2).squeeze()])
+    steps = sparse.csc_matrix(steps.A[(steps[:, 0].A != 2).squeeze()])
 
     enc = OneHotEncoder(handle_unknown="ignore")
     enc.fit([[i] for i in range(num_rxn)])
@@ -140,20 +116,8 @@ def split_data_into_Xy(
     sparse.save_npz(output_dir / f"y_rt2_{dataset_type}.npz", y)
     logger.info(f'  saved data for "Reactant 2" to {output_dir}')
 
-    states = sparse.csc_matrix(
-        states.A[
-            (steps[:, 0].A != 1).reshape(
-                -1,
-            )
-        ]
-    )
-    steps = sparse.csc_matrix(
-        steps.A[
-            (steps[:, 0].A != 1).reshape(
-                -1,
-            )
-        ]
-    )
+    states = sparse.csc_matrix(states.A[(steps[:, 0].A != 1).squeeze()])
+    steps = sparse.csc_matrix(steps.A[(steps[:, 0].A != 1).squeeze()])
 
     # ... reactant 1 data
     # X: [z_state]

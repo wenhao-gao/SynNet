@@ -79,7 +79,7 @@ if __name__ == "__main__":
     logger.info(f"Total number of building blocks {len(bblocks):d}")
     logger.info(f"Matched number of building blocks {len(bblocks_filtered):d}")
     logger.info(
-        f"{len(bblocks_filtered)/len(bblocks):.2%} of building blocks applicable for the reaction template."
+        f"{len(bblocks_filtered)/len(bblocks):.2%} of building blocks applicable for the reaction templates."
     )
 
     logger.info("Completed.")

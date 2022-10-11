@@ -67,8 +67,8 @@ def split_data_into_Xy(
     output_dir.mkdir(exist_ok=True, parents=True)
 
     # Load data # TODO: separate functionality?
-    states = sparse.load_npz(states_file)
-    steps = sparse.load_npz(steps_file)
+    states = sparse.load_npz(states_file)  # (n,3*4096)
+    steps = sparse.load_npz(steps_file)  # (n,1+256+91+256+4096)
 
     # Extract data for each network...
 
@@ -81,49 +81,49 @@ def split_data_into_Xy(
     sparse.save_npz(output_dir / f"y_act_{dataset_type}.npz", y)
     logger.info(f'  saved data for "Action" to {output_dir}')
 
-    # Delete all data where tree was ended (i.e. tree expansion did not trigger reaction)
-    # TODO: Look into simpler slicing with boolean indices, perhabs consider CSR for row slicing
-    states = sparse.csc_matrix(states.A[(steps[:, 0].A != 3).squeeze()])
-    steps = sparse.csc_matrix(steps.A[(steps[:, 0].A != 3).squeeze()])
-
     # ... reaction data
     # X: [state, z_reactant_1]
     # y: [reaction_id] (int)
-    X = sparse.hstack([states, steps[:, (2 * out_dim + 2) :]])
-    y = steps[:, out_dim + 1]
+    # but: delete all steps where we *end* syntrees, as that will not be followed by a reaction
+    actions = steps[:, 0].A  # (n,1) as array to allow boolean
+    isActionEnd = (actions == 3).squeeze()  # (n,)
+    states = states[~isActionEnd]
+    steps = steps[~isActionEnd]
+    X = sparse.hstack([states, steps[:, (2 * out_dim + 2) :]])  # (n,4*4096)
+    y = steps[:, out_dim + 1]  # (n,1)
     sparse.save_npz(output_dir / f"X_rxn_{dataset_type}.npz", X)
     sparse.save_npz(output_dir / f"y_rxn_{dataset_type}.npz", y)
     logger.info(f'  saved data for "Reaction" to {output_dir}')
 
-    states = sparse.csc_matrix(states.A[(steps[:, 0].A != 2).squeeze()])
-    steps = sparse.csc_matrix(steps.A[(steps[:, 0].A != 2).squeeze()])
-
-    enc = OneHotEncoder(handle_unknown="ignore")
-    enc.fit([[i] for i in range(num_rxn)])
-
     # ... reactant 2 data
-    # X: [z_state, z_reactant_1, reaction_id]
-    # y: [z'_reactant_2]
-    X = sparse.hstack(
-        [
-            states,
-            steps[:, (2 * out_dim + 2) :],
-            sparse.csc_matrix(enc.transform(steps[:, out_dim + 1].A.reshape((-1, 1))).toarray()),
-        ]
-    )
-    y = steps[:, (out_dim + 2) : (2 * out_dim + 2)]
+    # X: [state,z_mol1,OneHotEnc(rxn_id)]
+    # y: [z_mol2]
+    # but: delete all steps where we *merge* syntrees, as in that case we already have reactant1+2
+    actions = steps[:, 0].A  # (n',1) as array to allow boolean
+    isActionMerge = (actions == 2).squeeze()  # (n',)
+    steps = steps[~isActionMerge]
+    states = states[~isActionMerge]
+    z_mol1 = steps[:, (2 * out_dim + 2) :]
+    rxn_ids = steps[:, (1 + out_dim)]
+    z_rxn_id = OneHotEncoder().fit(np.arange(num_rxn)[:, None]).transform(rxn_ids.A)
+    X = sparse.hstack((states, z_mol1, z_rxn_id))  # (n,3*4096+4096+91)
+    y = steps[:, (2 + out_dim) : (2 * out_dim + 2)]
     sparse.save_npz(output_dir / f"X_rt2_{dataset_type}.npz", X)
     sparse.save_npz(output_dir / f"y_rt2_{dataset_type}.npz", y)
     logger.info(f'  saved data for "Reactant 2" to {output_dir}')
 
-    states = sparse.csc_matrix(states.A[(steps[:, 0].A != 1).squeeze()])
-    steps = sparse.csc_matrix(steps.A[(steps[:, 0].A != 1).squeeze()])
-
     # ... reactant 1 data
     # X: [z_state]
     # y: [z'_reactant_1]
+    # but: delete all steps where we expand syntrees, as in that case we already have a reactant1
+    actions = steps[:, 0].A  # (n',1) as array to allow boolean
+    isActionExpand = (actions == 1).squeeze()  # (n',)
+    steps = steps[~isActionExpand]
+    states = states[~isActionExpand]
+    zprime_mol1 = steps[:, 1 : (out_dim + 1)]
+
     X = states
-    y = steps[:, 1 : (out_dim + 1)]
+    y = zprime_mol1
     sparse.save_npz(output_dir / f"X_rt1_{dataset_type}.npz", X)
     sparse.save_npz(output_dir / f"y_rt1_{dataset_type}.npz", y)
     logger.info(f'  saved data for "Reactant 1" to {output_dir}')

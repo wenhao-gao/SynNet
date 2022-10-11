@@ -20,7 +20,8 @@ dependencies:
   - pip
   - pip:
     - setuptools==59.5.0 # https://github.com/pytorch/pytorch/issues/69894
-#    - dgllife # only needed fro gin, will force scikit-learn < 1.0
+#    - dgllife # only needed for gin, will force scikit-learn < 1.0
     - pathos
     - rich
     - pyyaml
+    - fcd_torch # for evaluators in pytdc

@@ -1,10 +1,9 @@
 """
 This file contains a function to decode a single synthetic tree.
-TODO: Ussed in `scripts/optimize_ga.py`, refactor.
+TODO: Used in `scripts/optimize_ga.py`, refactor.
 """
 import numpy as np
 import pandas as pd
-from dgllife.model import load_pretrained
 
 from syn_net.utils.data_utils import ReactionSet
 from syn_net.utils.predict_utils import synthetic_tree_decoder, tanimoto_similarity
@@ -18,11 +17,23 @@ featurize = "fp"
 param_dir = "hb_fp_2_4096_256"
 ncpu = 16
 
-# define model to use for molecular embedding
-model_type = "gin_supervised_contextpred"
-device = "cpu"
-mol_embedder = load_pretrained(model_type).to(device)
-mol_embedder.eval()
+def _fetch_gin_molembedder():
+    from dgllife.model import load_pretrained
+    # define model to use for molecular embedding
+    model_type = "gin_supervised_contextpred"
+    device = "cpu"
+    mol_embedder = load_pretrained(model_type).to(device)
+    return mol_embedder.eval()
+
+def _fetch_molembedder(featurize:str):
+    """Fetch molembedder."""
+    if featurize=="fp":
+        return None # not in use
+    else:
+        raise NotImplementedError
+        return _fetch_gin_molembedder()
+
+mol_embedder = _fetch_molembedder(featurize)
 
 # load the purchasable building block embeddings
 bb_emb = np.load("/pool001/whgao/data/synth_net/st_hb/enamine_us_emb_fp_256.npy")

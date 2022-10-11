@@ -227,6 +227,8 @@ def synthetic_tree_decoder(
     kdtree = mol_embedder  # TODO: dont mis-use this arg
 
     # Start iteration
+    # TODO: tree decoder can exceed this an still return a tree, but action is not equal to 3
+    # Raise error instead like in syntree generation?
     for i in range(max_step):
         # Encode current state
         state = tree.get_state()  # a list

@@ -1,11 +1,14 @@
 """Common methods and params shared by all models.
 """
 
+from pathlib import Path
 from typing import Union
 
 import numpy as np
 import torch
 from scipy import sparse
+
+from synnet.models.mlp import MLP
 
 
 def get_args():
@@ -70,6 +73,84 @@ def xy_to_dataloader(
         torch.Tensor(y),
     )
     return torch.utils.data.DataLoader(dataset, **kwargs)
+
+
+def load_mlp_from_ckpt(ckpt_file: str):
+    """Load a model from a checkpoint for inference."""
+    try:
+        model = MLP.load_from_checkpoint(ckpt_file)
+    except TypeError:
+        model = _load_mlp_from_iclr_ckpt(ckpt_file)
+    return model.eval()
+
+
+def find_best_model_ckpt(path: str) -> Union[Path, None]:
+    """Find checkpoint with lowest val_loss.
+
+    Poor man's regex:
+    somepath/act/ckpts.epoch=70-val_loss=0.03.ckpt
+                                         ^^^^--extract this as float
+    """
+    ckpts = Path(path).rglob("*.ckpt")
+    best_model_ckpt = None
+    lowest_loss = 10_000  # ~ math.inf
+    for file in ckpts:
+        stem = file.stem
+        val_loss = float(stem.split("val_loss=")[-1])
+        if val_loss < lowest_loss:
+            best_model_ckpt = file
+            lowest_loss = val_loss
+    return best_model_ckpt
+
+
+def _load_mlp_from_iclr_ckpt(ckpt_file: str):
+    """Load a model from a checkpoint for inference.
+    Info: hparams were not saved, so we specify the ones needed for inference again."""
+    model = Path(ckpt_file).parent.name  # assume "<dirs>/<model>/<file>.ckpt"
+    if model == "act":
+        model = MLP.load_from_checkpoint(
+            ckpt_file,
+            input_dim=3 * 4096,
+            output_dim=4,
+            hidden_dim=1000,
+            num_layers=5,
+            task="classification",
+            dropout=0.5,
+        )
+    elif model == "rt1":
+        model = MLP.load_from_checkpoint(
+            ckpt_file,
+            input_dim=3 * 4096,
+            output_dim=256,
+            hidden_dim=1200,
+            num_layers=5,
+            task="regression",
+            dropout=0.5,
+        )
+    elif model == "rxn":
+        model = MLP.load_from_checkpoint(
+            ckpt_file,
+            input_dim=4 * 4096,
+            output_dim=91,
+            hidden_dim=3000,
+            num_layers=5,
+            task="classification",
+            dropout=0.5,
+        )
+    elif model == "rt2":
+        model = MLP.load_from_checkpoint(
+            ckpt_file,
+            input_dim=4 * 4096 + 91,
+            output_dim=256,
+            hidden_dim=3000,
+            num_layers=5,
+            task="regression",
+            dropout=0.5,
+        )
+
+    else:
+        raise ValueError
+    return model.eval()
 
 
 if __name__ == "__main__":

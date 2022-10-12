@@ -3,6 +3,8 @@
 data/
 figures/syntrees/
 results/
+checkpoints/
+oracle/
 logs/
 tmp/
 .dev/

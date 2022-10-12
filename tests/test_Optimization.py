@@ -3,7 +3,7 @@ Unit tests for the genetic algorithm for molecular optimization.
 """
 import unittest
 import numpy as np
-from syn_net.utils.ga_utils import crossover, mutation, fitness_sum
+from synnet.utils.ga_utils import crossover, mutation, fitness_sum
 
 
 class TestOptimization(unittest.TestCase):

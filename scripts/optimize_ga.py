@@ -1,17 +1,83 @@
 """
 Generates synthetic trees where the root molecule optimizes for a specific objective
-based on Therapeutic Data Commons (TDC) oracle functions. Uses a genetic algorithm
-to optimize embeddings before decoding.
-"""
-from syn_net.utils.ga_utils import crossover, mutation
+based on Therapeutics Data Commons (TDC) oracle functions.
+Uses a genetic algorithm to optimize embeddings before decoding.
+"""  # TODO: Refactor/Consolidate with generic inference script
+import json
 import multiprocessing as mp
+import time
+from pathlib import Path
+
 import numpy as np
 import pandas as pd
-import time
-import json
-import scripts._mp_decode as decode
-from syn_net.utils.predict_utils import mol_fp
 from tdc import Oracle
+
+from synnet.config import MAX_PROCESSES
+from synnet.data_generation.preprocessing import BuildingBlockFileHandler
+from synnet.encoding.distances import cosine_distance
+from synnet.models.common import find_best_model_ckpt, load_mlp_from_ckpt
+from synnet.MolEmbedder import MolEmbedder
+from synnet.utils.data_utils import ReactionSet
+from synnet.utils.ga_utils import crossover, mutation
+from synnet.utils.predict_utils import mol_fp, synthetic_tree_decoder, tanimoto_similarity
+
+
+def _fetch_gin_molembedder():
+    from dgllife.model import load_pretrained
+
+    # define model to use for molecular embedding
+    model_type = "gin_supervised_contextpred"
+    device = "cpu"
+    mol_embedder = load_pretrained(model_type).to(device)
+    return mol_embedder.eval()
+
+
+def _fetch_molembedder(featurize: str):
+    """Fetch molembedder."""
+    if featurize == "fp":
+        return None  # not in use
+    else:
+        raise NotImplementedError
+        return _fetch_gin_molembedder()
+
+
+def func(emb):
+    """
+    Generates the synthetic tree for the input molecular embedding.
+
+    Args:
+        emb (np.ndarray): Molecular embedding to decode.
+
+    Returns:
+        str: SMILES for the final chemical node in the tree.
+        SyntheticTree: The generated synthetic tree.
+    """
+    emb = emb.reshape((1, -1))
+    try:
+        tree, action = synthetic_tree_decoder(
+            z_target=emb,
+            building_blocks=building_blocks,
+            bb_dict=bb_dict,
+            reaction_templates=rxns,
+            mol_embedder=bblocks_molembedder.kdtree,  # TODO: fix this, currently misused,
+            action_net=act_net,
+            reactant1_net=rt1_net,
+            rxn_net=rxn_net,
+            reactant2_net=rt2_net,
+            bb_emb=bb_emb,
+            rxn_template=rxn_template,
+            n_bits=nbits,
+            max_step=15,
+        )
+    except Exception as e:
+        print(e)
+        action = -1
+    if action != 3:
+        return None, None
+    else:
+        scores = np.array(tanimoto_similarity(emb, [node.smiles for node in tree.chemicals]))
+        max_score_idx = np.where(scores == np.max(scores))[0][0]
+        return tree.chemicals[max_score_idx].smiles, tree
 
 
 def dock_drd3(smi):
@@ -25,15 +91,16 @@ def dock_drd3(smi):
         float: Predicted docking score against the DRD3 target.
     """
     # define the oracle function from the TDC
-    _drd3 = Oracle(name = 'drd3_docking')
+    _drd3 = Oracle(name="drd3_docking")
 
     if smi is None:
         return 0.0
     else:
         try:
-            return - _drd3(smi)
+            return -_drd3(smi)
         except:
             return 0.0
+
 
 def dock_7l11(smi):
     """
@@ -46,12 +113,12 @@ def dock_7l11(smi):
         float: Predicted docking score against the 7L11 target.
     """
     # define the oracle function from the TDC
-    _7l11 = Oracle(name = '7l11_docking')
+    _7l11 = Oracle(name="7l11_docking")
     if smi is None:
         return 0.0
     else:
         try:
-            return - _7l11(smi)
+            return -_7l11(smi)
         except:
             return 0.0
 
@@ -77,36 +144,36 @@ def fitness(embs, _pool, obj):
         trees (list): Contains the synthetic trees generated from the input
             embeddings.
     """
-    results = _pool.map(decode.func, embs)
-    smiles  = [r[0] for r in results]
-    trees   = [r[1] for r in results]
+    results = _pool.map(func, embs)
+    smiles = [r[0] for r in results]
+    trees = [r[1] for r in results]
 
-    if obj == 'qed':
+    if obj == "qed":
         # define the oracle function from the TDC
-        qed   = Oracle(name = 'QED')
+        qed = Oracle(name="QED")
         scores = [qed(smi) for smi in smiles]
-    elif obj == 'logp':
+    elif obj == "logp":
         # define the oracle function from the TDC
-        logp  = Oracle(name = 'LogP')
+        logp = Oracle(name="LogP")
         scores = [logp(smi) for smi in smiles]
-    elif obj == 'jnk':
+    elif obj == "jnk":
         # define the oracle function from the TDC
-        jnk   = Oracle(name = 'JNK3')
+        jnk = Oracle(name="JNK3")
         scores = [jnk(smi) if smi is not None else 0.0 for smi in smiles]
-    elif obj == 'gsk':
+    elif obj == "gsk":
         # define the oracle function from the TDC
-        gsk   = Oracle(name = 'GSK3B')
+        gsk = Oracle(name="GSK3B")
         scores = [gsk(smi) if smi is not None else 0.0 for smi in smiles]
-    elif obj == 'drd2':
+    elif obj == "drd2":
         # define the oracle function from the TDC
-        drd2  = Oracle(name = 'DRD2')
+        drd2 = Oracle(name="DRD2")
         scores = [drd2(smi) if smi is not None else 0.0 for smi in smiles]
-    elif obj == '7l11':
+    elif obj == "7l11":
         scores = [dock_7l11(smi) for smi in smiles]
-    elif obj == 'drd3':
+    elif obj == "drd3":
         scores = [dock_drd3(smi) for smi in smiles]
     else:
-        raise ValueError('Objective function not implemneted')
+        raise ValueError("Objective function not implemneted")
     return scores, smiles, trees
 
 
@@ -122,10 +189,11 @@ def distribution_schedule(n, total):
     Returns:
         str: Describes a type of probability distribution.
     """
-    if n < 4 * total/5:
-        return 'linear'
+    if n < 4 * total / 5:
+        return "linear"
     else:
-        return 'softmax_linear'
+        return "softmax_linear"
+
 
 def num_mut_per_ele_scheduler(n, total):
     """
@@ -145,6 +213,7 @@ def num_mut_per_ele_scheduler(n, total):
     #     return 512
     return 24
 
+
 def mut_probability_scheduler(n, total):
     """
     Determines the probability of mutating a vector, based on the number of elapsed
@@ -157,42 +226,77 @@ def mut_probability_scheduler(n, total):
     Returns:
         float: The probability of mutation.
     """
-    if n < total/2:
+    if n < total / 2:
         return 0.5
     else:
         return 0.5
 
-if __name__ == '__main__':
 
+def get_args():
     import argparse
+
     parser = argparse.ArgumentParser()
-    parser.add_argument("-i", "--input_file", type=str, default=None,
-                        help="A file contains the starting mating pool.")
-    parser.add_argument("--objective", type=str, default="qed",
-                        help="Objective function to optimize")
-    parser.add_argument("--radius", type=int, default=2,
-                        help="Radius for Morgan fingerprint.")
-    parser.add_argument("--nbits", type=int, default=4096,
-                        help="Number of Bits for Morgan fingerprint.")
-    parser.add_argument("--num_population", type=int, default=100,
-                        help="Number of parents sets to keep.")
-    parser.add_argument("--num_offspring", type=int, default=300,
-                        help="Number of offsprings to generate each iteration.")
-    parser.add_argument("--num_gen", type=int, default=30,
-                        help="Number of generations to proceed.")
-    parser.add_argument("--ncpu", type=int, default=16,
-                        help="Number of cpus")
-    parser.add_argument("--mut_probability", type=float, default=0.5,
-                        help="Probability to mutate for one offspring.")
-    parser.add_argument("--num_mut_per_ele", type=int, default=1,
-                        help="Number of bits to mutate in one fingerprint.")
-    parser.add_argument('--restart', action='store_true')
-    parser.add_argument("--seed", type=int, default=1,
-                        help="Random seed.")
-    args = parser.parse_args()
+    # File I/O
+    parser.add_argument(
+        "--building-blocks-file",
+        type=str,
+        help="Input file with SMILES strings (First row `SMILES`, then one per line).",
+    )
+    parser.add_argument(
+        "--rxns-collection-file",
+        type=str,
+        help="Input file for the collection of reactions matched with building-blocks.",
+    )
+    parser.add_argument(
+        "--embeddings-knn-file",
+        type=str,
+        help="Input file for the pre-computed embeddings (*.npy).",
+    )
+    parser.add_argument(
+        "--ckpt-dir", type=str, help="Directory with checkpoints for {act,rt1,rxn,rt2}-model."
+    )
+    parser.add_argument(
+        "--input-file",
+        type=str,
+        default=None,
+        help="A file contains the starting mating pool.",
+    )
+    parser.add_argument(
+        "--objective", type=str, default="qed", help="Objective function to optimize"
+    )
+    parser.add_argument("--radius", type=int, default=2, help="Radius for Morgan fingerprint.")
+    parser.add_argument(
+        "--nbits", type=int, default=4096, help="Number of Bits for Morgan fingerprint."
+    )
+    parser.add_argument(
+        "--num_population", type=int, default=100, help="Number of parents sets to keep."
+    )
+    parser.add_argument(
+        "--num_offspring",
+        type=int,
+        default=300,
+        help="Number of offsprings to generate each iteration.",
+    )
+    parser.add_argument("--num_gen", type=int, default=30, help="Number of generations to proceed.")
+    parser.add_argument("--ncpu", type=int, default=MAX_PROCESSES, help="Number of cpus")
+    parser.add_argument(
+        "--mut_probability",
+        type=float,
+        default=0.5,
+        help="Probability to mutate for one offspring.",
+    )
+    parser.add_argument(
+        "--num_mut_per_ele",
+        type=int,
+        default=1,
+        help="Number of bits to mutate in one fingerprint.",
+    )
+    parser.add_argument("--restart", action="store_true")
+    parser.add_argument("--seed", type=int, default=1, help="Random seed.")
+    return parser.parse_args()
 
-    np.random.seed(args.seed)
 
+def fetch_population(args) -> np.ndarray:
     if args.restart:
         population = np.load(args.input_file)
         print(f"Starting with {len(population)} fps from {args.input_file}")
@@ -202,41 +306,79 @@ if __name__ == '__main__':
             print(f"Starting with {args.num_population} fps with {args.nbits} bits")
         else:
             starting_smiles = pd.read_csv(args.input_file).sample(args.num_population)
-            starting_smiles = starting_smiles['smiles'].tolist()
-            population = np.array(
-                [mol_fp(smi, args.radius, args.nbits) for smi in starting_smiles]
-            )
+            starting_smiles = starting_smiles["smiles"].tolist()
+            population = np.array([mol_fp(smi, args.radius, args.nbits) for smi in starting_smiles])
             print(f"Starting with {len(starting_smiles)} fps from {args.input_file}")
+    return population
 
+
+if __name__ == "__main__":
+
+    args = get_args()
+    np.random.seed(args.seed)
+
+    # define some constants (here, for the Hartenfeller-Button test set)
+    nbits = 4096
+    out_dim = 256
+    rxn_template = "hb"
+    featurize = "fp"
+    param_dir = "hb_fp_2_4096_256"
+
+    # Load data
+    mol_embedder = _fetch_molembedder(featurize)
+
+    # load the purchasable building block embeddings
+    bblocks_molembedder = (
+        MolEmbedder().load_precomputed(args.embeddings_knn_file).init_balltree(cosine_distance)
+    )
+    bb_emb = bblocks_molembedder.get_embeddings()
+
+    # load the purchasable building block SMILES to a dictionary
+    building_blocks = BuildingBlockFileHandler().load(args.building_blocks_file)
+    # A dict is used as lookup table for 2nd reactant during inference:
+    bb_dict = {block: i for i, block in enumerate(building_blocks)}
+
+    # load the reaction templates as a ReactionSet object
+    rxns = ReactionSet().load(args.rxns_collection_file).rxns
+
+    # load the pre-trained modules
+    path = Path(args.ckpt_dir)
+    ckpt_files = [find_best_model_ckpt(path / model) for model in "act rt1 rxn rt2".split()]
+    act_net, rt1_net, rxn_net, rt2_net = [load_mlp_from_ckpt(file) for file in ckpt_files]
+
+    # Get initial population
+    population = fetch_population(args)
+
+    # Evaluation initial population
     with mp.Pool(processes=args.ncpu) as pool:
-        scores, mols, trees = fitness(embs=population,
-                                      _pool=pool,
-                                      obj=args.objective)
-    scores     = np.array(scores)
-    score_x    = np.argsort(scores)
+        scores, mols, trees = fitness(embs=population, _pool=pool, obj=args.objective)
+
+    scores = np.array(scores)
+    score_x = np.argsort(scores)
     population = population[score_x[::-1]]
-    mols       = [mols[i] for i in score_x[::-1]]
-    scores     = scores[score_x[::-1]]
+    mols = [mols[i] for i in score_x[::-1]]
+    scores = scores[score_x[::-1]]
     print(f"Initial: {scores.mean():.3f} +/- {scores.std():.3f}")
     print(f"Scores: {scores}")
     print(f"Top-3 Smiles: {mols[:3]}")
 
+    # Genetic Algorithm: loop over generations
     recent_scores = []
-
     for n in range(args.num_gen):
-
         t = time.time()
 
-        dist_            = distribution_schedule(n, args.num_gen)
+        dist_ = distribution_schedule(n, args.num_gen)
         num_mut_per_ele_ = num_mut_per_ele_scheduler(n, args.num_gen)
         mut_probability_ = mut_probability_scheduler(n, args.num_gen)
 
-        offspring = crossover(parents=population,
-                              offspring_size=args.num_offspring,
-                              distribution=dist_)
-        offspring = mutation(offspring_crossover=offspring,
-                             num_mut_per_ele=num_mut_per_ele_,
-                             mut_probability=mut_probability_)
+        offspring = crossover(
+            parents=population, offspring_size=args.num_offspring, distribution=dist_
+        )
+        offspring = mutation(
+            offspring_crossover=offspring,
+            num_mut_per_ele=num_mut_per_ele_,
+            mut_probability=mut_probability_,
+        )
         new_population = np.unique(np.concatenate([population, offspring], axis=0), axis=0)
         with mp.Pool(processes=args.ncpu) as pool:
             new_scores, new_mols, trees = fitness(new_population, pool, args.objective)
@@ -272,28 +414,33 @@ if __name__ == '__main__':
         if len(recent_scores) > 10:
             del recent_scores[0]
 
-        np.save('population_' + args.objective + '_' + str(n+1) + '.npy', population)
+        np.save("population_" + args.objective + "_" + str(n + 1) + ".npy", population)
 
-        data = {'objective': args.objective,
-                'top1'     : np.mean(scores[:1]),
-                'top10'    : np.mean(scores[:10]),
-                'top100'   : np.mean(scores[:100]),
-                'smiles'   : mols,
-                'scores'   : scores.tolist()}
-        with open('opt_' + args.objective + '.json', 'w') as f:
+        data = {
+            "objective": args.objective,
+            "top1": np.mean(scores[:1]),
+            "top10": np.mean(scores[:10]),
+            "top100": np.mean(scores[:100]),
+            "smiles": mols,
+            "scores": scores.tolist(),
+        }
+        with open("opt_" + args.objective + ".json", "w") as f:
             json.dump(data, f)
 
         if n > 30 and recent_scores[-1] - recent_scores[0] < 0.01:
             print("Early Stop!")
             break
 
-    data = {'objective': args.objective,
-            'top1'     : np.mean(scores[:1]),
-            'top10'    : np.mean(scores[:10]),
-            'top100'   : np.mean(scores[:100]),
-            'smiles'   : mols,
-            'scores'   : scores.tolist()}
-    with open('opt_' + args.objective + '.json', 'w') as f:
+    # Save results
+    data = {
+        "objective": args.objective,
+        "top1": np.mean(scores[:1]),
+        "top10": np.mean(scores[:10]),
+        "top100": np.mean(scores[:100]),
+        "smiles": mols,
+        "scores": scores.tolist(),
+    }
+    with open("opt_" + args.objective + ".json", "w") as f:
         json.dump(data, f)
 
-    np.save('population_' + args.objective + '.npy', population)
+    np.save("population_" + args.objective + ".npy", population)

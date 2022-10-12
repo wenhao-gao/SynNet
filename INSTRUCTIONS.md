@@ -2,13 +2,13 @@
 
 This documents outlines the process to train SynNet from scratch step-by-step.
 
-> :warning: It is still a WIP to match the filenames of the scripts to the instructions here and to simplify the dependency on parameters/filenames.
+> :warning: It is still a WIP.
 
 You can use any set of reaction templates and building blocks, but we will illustrate the process with the *Hartenfeller-Button* reaction templates and *Enamine building blocks*.
 
 *Note*: This project depends on a lot of exact filenames.
 For example, one script will save to file, the next will read that file for further processing.
-It is not a perfect approach - we are open to feedback - and advise to revise the parameters defined in each script.
+It is not a perfect approach - we are open to feedback.
 
 Let's start.
 
@@ -20,7 +20,8 @@ Let's start.
 
     ```shell
     python scripts/00-extract-smiles-from-sdf.py \
-        --input-file="data/assets/building-blocks/enamine-us.sdf"
+        --input-file="data/assets/building-blocks/enamine-us.sdf" \
+        --output-file="data/assets/building-blocks/enamine-us-smiles.csv.gz"
     ```
 
 1. Filter building blocks.
@@ -49,8 +50,9 @@ Let's start.
 
     ```bash
     python scripts/02-compute-embeddings.py \
-        --building-blocks-file "data/pre-process/building-blocks/enamine-us-smiles.csv.gz" \
-        --output-file "data/pre-process/embeddings/hb-enamine-embeddings.npy"
+        --building-blocks-file "data/pre-process/building-blocks-rxns/bblocks-enamine-us.csv.gz" \
+        --output-file "data/pre-process/embeddings/hb-enamine-embeddings.npy" \
+        --featurization-fct "fp_256"
     ```
 
 3. Generate *synthetic trees*
@@ -61,10 +63,10 @@ Let's start.
     ```bash
     # Generate synthetic trees
     python scripts/03-generate-syntrees.py \
-        --building-blocks-file "data/pre-process/building-blocks/enamine-us-smiles.csv.gz" \
-        --rxn-templates-file   "data/assets/reaction-templates/hb.txt" \
-        --output-file          "data/pre-process/synthetic-trees.json.gz" \
-        --number-syntrees 600000
+        --building-blocks-file "data/pre-process/building-blocks-rxns/bblocks-enamine-us.csv.gz" \
+        --rxn-templates-file "data/assets/reaction-templates/hb.txt" \
+        --output-file "data/pre-process/syntrees/synthetic-trees.json.gz" \
+        --number-syntrees "600000"
     ```
 
     In a second step, we filter out some synthetic trees to make the data pharmaceutically more interesting.
@@ -73,13 +75,14 @@ Let's start.
     ```bash
     # Filter
     python scripts/04-filter-syntrees.py \
-        --input-file  "data/pre-process/synthetic-trees.json.gz" \
-        --output-file "data/pre-process/synthetic-trees-filtered.json.gz"
+        --input-file "data/pre-process/syntrees/synthetic-trees.json.gz" \
+        --output-file "data/pre-process/syntrees/synthetic-trees-filtered.json.gz" \
+        --verbose
     ```
 
     Each *synthetic tree* is serializable and so we save all trees in a compressed `.json` file.
 
-4. Split *synthetic trees* into train,valid,test-data
+5. Split *synthetic trees* into train,valid,test-data
 
     We load the `.json`-file with all *synthetic trees* and
     straightforward split it into three files: `{train,test,valid}.json`.
@@ -87,11 +90,11 @@ Let's start.
 
     ```bash
     python scripts/05-split-syntrees.py \
-        --input-file "data/pre-process/syntrees/synthetic-trees-filtered.json.gz" \
-        --output-dir "data/pre-process/syntrees/"
+            --input-file "data/pre-process/syntrees/synthetic-trees-filtered.json.gz" \
+            --output-dir "data/pre-process/syntrees/" --verbose
     ```
 
-5. Featurization
+6. Featurization
 
    We featurize each *synthetic tree*.
    That is, we break down each tree to each iteration step ("Add", "Expand", "Extend", "End") and featurize it.
@@ -100,8 +103,8 @@ Let's start.
 
     ```bash
     python scripts/06-featurize-syntrees.py \
-        --input-dir "data/pre-process/syntrees/"
-        --output-dir "data/featurized" --verbose
+        --input-dir "data/pre-process/syntrees/" \
+        --output-dir "data/featurized/" --verbose
     ```
 
     This script will load the `{train,valid,test}` data, featurize it, and save it in
@@ -111,7 +114,7 @@ Let's start.
     The encoders for the molecules must be provided in the script.
     A short text summary of the encoders will be saved as well.
 
-6. Split features
+7. Split features
 
     Up to this point, we worked with a (featurized) *synthetic tree* as a whole,
     now we split it up to into "consumable" input/output data for each of the four networks.
@@ -125,12 +128,12 @@ Let's start.
     This will create 24 new files (3 splits, 4 networks, X + y).
     All new files will be saved in `<input-dir>/Xy`.
 
-7. Train the networks
+8. Train the networks
 
-    Finally, we can train each of the four networks in `src/syn_net/models/` separately:
+    Finally, we can train each of the four networks in `src/synnet/models/` separately. For example:
 
     ```bash
-    python src/syn_net/models/act.py
+    python src/synnet/models/act.py
     ```
 
 After training a new model, you can then use the trained model to make predictions and construct synthetic trees for a list given set of molecules.
@@ -148,7 +151,7 @@ To visualize trees, there is a hacky script that represents *Synthetic Trees* as
 To demo it:
 
 ```bash
-python src/syn_net/visualize/visualizer.py
+python src/synnet/visualize/visualizer.py
 ```
 
 Still to be implemented: i) target molecule, ii) "end" action
@@ -156,7 +159,3 @@ Still to be implemented: i) target molecule, ii) "end" action
 To render the markdown file incl. the diagram directly in VS Code, install the extension [vscode-markdown-mermaid](https://github.com/mjbvz/vscode-markdown-mermaid) and use the built-in markdown preview.
 
 *Info*: If the images of the molecules do not load, edit + save the markdown file anywhere. For example add and delete a character with the preview open. Not sure why this happens.
-
-### Mean reciprocal rank
-
-To be added.

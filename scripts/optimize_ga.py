@@ -1,34 +1,29 @@
 """
 Generates synthetic trees where the root molecule optimizes for a specific objective
-based on Therapeutic Data Commons (TDC) oracle functions. Uses a genetic algorithm
-to optimize embeddings before decoding.
-"""
+based on Therapeutics Data Commons (TDC) oracle functions.
+Uses a genetic algorithm to optimize embeddings before decoding.
+""" # TODO: Refactor/Consolidate with generic inference script
 import json
 import multiprocessing as mp
 import time
-
+from pathlib import Path
 import numpy as np
 import pandas as pd
 from tdc import Oracle
-
+from synnet.config import MAX_PROCESSES
+from synnet.encoding.distances import cosine_distance
+from synnet.MolEmbedder import MolEmbedder
 from synnet.utils.ga_utils import crossover, mutation
 from synnet.utils.predict_utils import mol_fp
-
+from pathlib import Path
+from synnet.data_generation.preprocessing import BuildingBlockFileHandler
 
 import numpy as np
 import pandas as pd
 
 from synnet.utils.data_utils import ReactionSet
 from synnet.utils.predict_utils import synthetic_tree_decoder, tanimoto_similarity
-from synnet.models.mlp import load_mlp_from_ckpt
-
-# define some constants (here, for the Hartenfeller-Button test set)
-nbits = 4096
-out_dim = 256
-rxn_template = "hb"
-featurize = "fp"
-param_dir = "hb_fp_2_4096_256"
-ncpu = 16
+from synnet.models.common import load_mlp_from_ckpt, find_best_model_ckpt
 
 def _fetch_gin_molembedder():
     from dgllife.model import load_pretrained
@@ -45,41 +40,6 @@ def _fetch_molembedder(featurize:str):
     else:
         raise NotImplementedError
         return _fetch_gin_molembedder()
-
-mol_embedder = _fetch_molembedder(featurize)
-
-# load the purchasable building block embeddings
-bb_emb = np.load("/pool001/whgao/data/synth_net/st_hb/enamine_us_emb_fp_256.npy")
-
-# define path to the reaction templates and purchasable building blocks
-path_to_reaction_file = (
-    f"/pool001/whgao/data/synth_net/st_{rxn_template}/reactions_{rxn_template}.json.gz"
-)
-path_to_building_blocks = (
-    f"/pool001/whgao/data/synth_net/st_{rxn_template}/enamine_us_matched.csv.gz"
-)
-
-# define paths to pretrained modules
-param_path = f"/home/whgao/synth_net/synth_net/params/{param_dir}/"
-act_path = f"{param_path}act.ckpt"
-rt1_path = f"{param_path}rt1.ckpt"
-rxn_path = f"{param_path}rxn.ckpt"
-rt2_path = f"{param_path}rt2.ckpt"
-
-# load the purchasable building block SMILES to a dictionary
-building_blocks = pd.read_csv(path_to_building_blocks, compression="gzip")["SMILES"].tolist()
-bb_dict = {building_blocks[i]: i for i in range(len(building_blocks))}
-
-# load the reaction templates as a ReactionSet object
-rxn_set = ReactionSet().load(path_to_reaction_file)
-rxns = rxn_set.rxns
-
-# load the pre-trained modules
-act_net = load_mlp_from_ckpt(act_path)
-rt1_net = load_mlp_from_ckpt(rt1_path)
-rxn_net = load_mlp_from_ckpt(rxn_path)
-rt2_net = load_mlp_from_ckpt(rt2_path)
-
 
 def func(emb):
     """
@@ -99,7 +59,7 @@ def func(emb):
             building_blocks=building_blocks,
             bb_dict=bb_dict,
             reaction_templates=rxns,
-            mol_embedder=mol_embedder,
+            mol_embedder=bblocks_molembedder.kdtree,  # TODO: fix this, currently misused,
             action_net=act_net,
             reactant1_net=rt1_net,
             rxn_net=rxn_net,
@@ -271,15 +231,31 @@ def mut_probability_scheduler(n, total):
     else:
         return 0.5
 
-
-if __name__ == "__main__":
-
+def get_args():
     import argparse
 
     parser = argparse.ArgumentParser()
+    # File I/O
     parser.add_argument(
-        "-i",
-        "--input_file",
+        "--building-blocks-file",
+        type=str,
+        help="Input file with SMILES strings (First row `SMILES`, then one per line).",
+    )
+    parser.add_argument(
+        "--rxns-collection-file",
+        type=str,
+        help="Input file for the collection of reactions matched with building-blocks.",
+    )
+    parser.add_argument(
+        "--embeddings-knn-file",
+        type=str,
+        help="Input file for the pre-computed embeddings (*.npy).",
+    )
+    parser.add_argument(
+        "--ckpt-dir", type=str, help="Directory with checkpoints for {act,rt1,rxn,rt2}-model."
+    )
+    parser.add_argument(
+        "--input-file",
         type=str,
         default=None,
         help="A file contains the starting mating pool.",
@@ -301,7 +277,7 @@ if __name__ == "__main__":
         help="Number of offsprings to generate each iteration.",
     )
     parser.add_argument("--num_gen", type=int, default=30, help="Number of generations to proceed.")
-    parser.add_argument("--ncpu", type=int, default=16, help="Number of cpus")
+    parser.add_argument("--ncpu", type=int, default=MAX_PROCESSES, help="Number of cpus")
     parser.add_argument(
         "--mut_probability",
         type=float,
@@ -316,10 +292,9 @@ if __name__ == "__main__":
     )
     parser.add_argument("--restart", action="store_true")
     parser.add_argument("--seed", type=int, default=1, help="Random seed.")
-    args = parser.parse_args()
+    return parser.parse_args()
 
-    np.random.seed(args.seed)
-
+def fetch_population(args) -> np.ndarray:
     if args.restart:
         population = np.load(args.input_file)
         print(f"Starting with {len(population)} fps from {args.input_file}")
@@ -332,9 +307,49 @@ if __name__ == "__main__":
             starting_smiles = starting_smiles["smiles"].tolist()
             population = np.array([mol_fp(smi, args.radius, args.nbits) for smi in starting_smiles])
             print(f"Starting with {len(starting_smiles)} fps from {args.input_file}")
+    return population
 
+if __name__ == "__main__":
+
+    args = get_args()
+    np.random.seed(args.seed)
+
+    # define some constants (here, for the Hartenfeller-Button test set)
+    nbits = 4096
+    out_dim = 256
+    rxn_template = "hb"
+    featurize = "fp"
+    param_dir = "hb_fp_2_4096_256"
+
+    # Load data
+    mol_embedder = _fetch_molembedder(featurize)
+
+    # load the purchasable building block embeddings
+    bblocks_molembedder = (
+        MolEmbedder().load_precomputed(args.embeddings_knn_file).init_balltree(cosine_distance)
+    )
+    bb_emb = bblocks_molembedder.get_embeddings()
+
+    # load the purchasable building block SMILES to a dictionary
+    building_blocks = BuildingBlockFileHandler().load(args.building_blocks_file)
+    # A dict is used as lookup table for 2nd reactant during inference:
+    bb_dict = {block: i for i, block in enumerate(building_blocks)}
+
+    # load the reaction templates as a ReactionSet object
+    rxns = ReactionSet().load(args.rxns_collection_file).rxns
+
+    # load the pre-trained modules
+    path = Path(args.ckpt_dir)
+    ckpt_files = [find_best_model_ckpt(path / model) for model in "act rt1 rxn rt2".split()]
+    act_net, rt1_net, rxn_net, rt2_net =  [load_mlp_from_ckpt(file) for file in ckpt_files]
+
+    # Get initial population
+    population = fetch_population(args)
+
+    # Evaluation initial population
     with mp.Pool(processes=args.ncpu) as pool:
         scores, mols, trees = fitness(embs=population, _pool=pool, obj=args.objective)
+
     scores = np.array(scores)
     score_x = np.argsort(scores)
     population = population[score_x[::-1]]
@@ -344,10 +359,9 @@ if __name__ == "__main__":
     print(f"Scores: {scores}")
     print(f"Top-3 Smiles: {mols[:3]}")
 
+    # Genetic Algorithm: loop over generations
     recent_scores = []
-
     for n in range(args.num_gen):
-
         t = time.time()
 
         dist_ = distribution_schedule(n, args.num_gen)
@@ -414,6 +428,7 @@ if __name__ == "__main__":
             print("Early Stop!")
             break
 
+    # Save results
     data = {
         "objective": args.objective,
         "top1": np.mean(scores[:1]),

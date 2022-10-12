@@ -2,6 +2,7 @@
 Multi-layer perceptron (MLP) class.
 """
 import logging
+from pathlib import Path
 
 import numpy as np
 import pytorch_lightning as pl
@@ -131,10 +132,65 @@ def nn_search_list(y, kdtree):
     ind = kdtree.query(y, k=1, return_distance=False)  # (n_samples, 1)
     return ind
 
+
 def load_mlp_from_ckpt(ckpt_file: str):
     """Load a model from a checkpoint for inference."""
-    model = MLP.load_from_checkpoint(ckpt_file)
+    try:
+        model = MLP.load_from_checkpoint(ckpt_file)
+    except TypeError:
+        model = _load_mlp_from_iclr_ckpt(ckpt_file)
     return model.eval()
+
+
+def _load_mlp_from_iclr_ckpt(ckpt_file: str):
+    """Load a model from a checkpoint for inference.
+    Info: hparams were not saved, so we specify the ones needed for inference again."""
+    model = Path(ckpt_file).parent.name  # assume "<dirs>/<model>/<file>.ckpt"
+    if model == "act":
+        model = MLP.load_from_checkpoint(
+            ckpt_file,
+            input_dim=3*4096,
+            output_dim=4,
+            hidden_dim=1000,
+            num_layers=5,
+            task="classification",
+            dropout=0.5,
+        )
+    elif model == "rt1":
+        model = MLP.load_from_checkpoint(
+            ckpt_file,
+            input_dim=3 * 4096,
+            output_dim=256,
+            hidden_dim=1200,
+            num_layers=5,
+            task="regression",
+            dropout=0.5,
+        )
+    elif model == "rxn":
+        model = MLP.load_from_checkpoint(
+            ckpt_file,
+            input_dim=4 * 4096,
+            output_dim=91,
+            hidden_dim=3000,
+            num_layers=5,
+            task="classification",
+            dropout=0.5,
+        )
+    elif model == "rt2":
+        model = MLP.load_from_checkpoint(
+            ckpt_file,
+            input_dim=4 * 4096 + 91,
+            output_dim=256,
+            hidden_dim=3000,
+            num_layers=5,
+            task="regression",
+            dropout=0.5,
+        )
+
+    else:
+        raise ValueError
+    return model.eval()
+
 
 if __name__ == "__main__":
     pass

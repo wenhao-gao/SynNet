@@ -5,7 +5,7 @@ import json
 import logging
 import multiprocessing as mp
 from pathlib import Path
-from typing import Tuple, Union
+from typing import Tuple
 
 import numpy as np
 import pandas as pd
@@ -13,7 +13,7 @@ import pandas as pd
 from synnet.config import DATA_PREPROCESS_DIR, DATA_RESULT_DIR, MAX_PROCESSES
 from synnet.data_generation.preprocessing import BuildingBlockFileHandler
 from synnet.encoding.distances import cosine_distance
-from synnet.models.common import load_mlp_from_ckpt, find_best_model_ckpt
+from synnet.models.common import find_best_model_ckpt, load_mlp_from_ckpt
 from synnet.MolEmbedder import MolEmbedder
 from synnet.utils.data_utils import ReactionSet, SyntheticTree, SyntheticTreeSet
 from synnet.utils.predict_utils import mol_fp, synthetic_tree_decoder_greedy_search
@@ -47,6 +47,7 @@ def _fetch_data(name: str) -> list[str]:
     else:  # Hopefully got a filename instead
         smiles = _fetch_data_from_file(name)
     return smiles
+
 
 def wrapper_decoder(smiles: str) -> Tuple[str, float, SyntheticTree]:
     """Generate a synthetic tree for the input molecular embedding."""
@@ -156,7 +157,7 @@ if __name__ == "__main__":
     logger.info("Start loading models from checkpoints...")
     path = Path(args.ckpt_dir)
     ckpt_files = [find_best_model_ckpt(path / model) for model in "act rt1 rxn rt2".split()]
-    act_net, rt1_net, rxn_net, rt2_net =  [load_mlp_from_ckpt(file) for file in ckpt_files]
+    act_net, rt1_net, rxn_net, rt2_net = [load_mlp_from_ckpt(file) for file in ckpt_files]
     logger.info("...loading models completed.")
 
     # Decode queries, i.e. the target molecules.
@@ -172,9 +173,9 @@ if __name__ == "__main__":
     # Print some results from the prediction
     # Note: If a syntree cannot be decoded within `max_depth` steps (15),
     #       we will count it as unsuccessful. The similarity will be 0.
-    decoded = [smi for smi, _, _ in results ]
-    similarities = [sim for _, sim, _ in results ]
-    trees = [tree for _, _, tree in results ]
+    decoded = [smi for smi, _, _ in results]
+    similarities = [sim for _, sim, _ in results]
+    trees = [tree for _, _, tree in results]
 
     recovery_rate = (np.asfarray(similarities) == 1.0).sum() / len(similarities)
     avg_similarity = np.mean(similarities)

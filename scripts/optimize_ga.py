@@ -2,44 +2,44 @@
 Generates synthetic trees where the root molecule optimizes for a specific objective
 based on Therapeutics Data Commons (TDC) oracle functions.
 Uses a genetic algorithm to optimize embeddings before decoding.
-""" # TODO: Refactor/Consolidate with generic inference script
+"""  # TODO: Refactor/Consolidate with generic inference script
 import json
 import multiprocessing as mp
 import time
 from pathlib import Path
+
 import numpy as np
 import pandas as pd
 from tdc import Oracle
+
 from synnet.config import MAX_PROCESSES
-from synnet.encoding.distances import cosine_distance
-from synnet.MolEmbedder import MolEmbedder
-from synnet.utils.ga_utils import crossover, mutation
-from synnet.utils.predict_utils import mol_fp
-from pathlib import Path
 from synnet.data_generation.preprocessing import BuildingBlockFileHandler
-
-import numpy as np
-import pandas as pd
-
+from synnet.encoding.distances import cosine_distance
+from synnet.models.common import find_best_model_ckpt, load_mlp_from_ckpt
+from synnet.MolEmbedder import MolEmbedder
 from synnet.utils.data_utils import ReactionSet
-from synnet.utils.predict_utils import synthetic_tree_decoder, tanimoto_similarity
-from synnet.models.common import load_mlp_from_ckpt, find_best_model_ckpt
+from synnet.utils.ga_utils import crossover, mutation
+from synnet.utils.predict_utils import mol_fp, synthetic_tree_decoder, tanimoto_similarity
+
 
 def _fetch_gin_molembedder():
     from dgllife.model import load_pretrained
+
     # define model to use for molecular embedding
     model_type = "gin_supervised_contextpred"
     device = "cpu"
     mol_embedder = load_pretrained(model_type).to(device)
     return mol_embedder.eval()
 
-def _fetch_molembedder(featurize:str):
+
+def _fetch_molembedder(featurize: str):
     """Fetch molembedder."""
-    if featurize=="fp":
-        return None # not in use
+    if featurize == "fp":
+        return None  # not in use
     else:
         raise NotImplementedError
         return _fetch_gin_molembedder()
+
 
 def func(emb):
     """
@@ -231,6 +231,7 @@ def mut_probability_scheduler(n, total):
     else:
         return 0.5
 
+
 def get_args():
     import argparse
 
@@ -294,6 +295,7 @@ def get_args():
     parser.add_argument("--seed", type=int, default=1, help="Random seed.")
     return parser.parse_args()
 
+
 def fetch_population(args) -> np.ndarray:
     if args.restart:
         population = np.load(args.input_file)
@@ -308,6 +310,7 @@ def fetch_population(args) -> np.ndarray:
             population = np.array([mol_fp(smi, args.radius, args.nbits) for smi in starting_smiles])
             print(f"Starting with {len(starting_smiles)} fps from {args.input_file}")
     return population
+
 
 if __name__ == "__main__":
 
@@ -341,7 +344,7 @@ if __name__ == "__main__":
     # load the pre-trained modules
     path = Path(args.ckpt_dir)
     ckpt_files = [find_best_model_ckpt(path / model) for model in "act rt1 rxn rt2".split()]
-    act_net, rt1_net, rxn_net, rt2_net =  [load_mlp_from_ckpt(file) for file in ckpt_files]
+    act_net, rt1_net, rxn_net, rt2_net = [load_mlp_from_ckpt(file) for file in ckpt_files]
 
     # Get initial population
     population = fetch_population(args)

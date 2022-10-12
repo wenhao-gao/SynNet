@@ -76,8 +76,7 @@ class SynTreeGenerator:
         self.processes = processes
         self.verbose = verbose
         if not verbose:
-            logger.setLevel('CRITICAL') # dont show error msgs
-
+            logger.setLevel("CRITICAL")  # dont show error msgs
 
         # Time intensive tasks
         self._init_rxns_with_reactants()

@@ -113,6 +113,13 @@ def split_data_into_Xy( *,
     states = states[~isActionExpand]
     zprime_mol1 = steps[:, 1 : (d_knn_emb + 1)]
 
+    # Order invariance:
+    # If this step has a bi-molecular reaction, present the 2nd molecule to the rt1 network.
+    zprime_mol2 = steps[:, 1 + d_knn_emb + 1:-d_emb]
+    has2ndReactant = np.asarray(zprime_mol2.sum(1)>0).squeeze()
+    X_with_reactant_2 = states[has2ndReactant]
+    y_with_reactant_2= zprime_mol2[has2ndReactant]
+    data["rt1_augmented"] = {"X" : X_with_reactant_2, "y": y_with_reactant_2}
 
     X = states
     y = zprime_mol1

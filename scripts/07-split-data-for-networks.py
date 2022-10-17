@@ -67,7 +67,7 @@ if __name__ == "__main__":
             print_datashapes()
 
         # Save
-        for MODEL_ID in "act rt1 rxn rt2".split():
+        for MODEL_ID in "act rt1 rxn rt2".split() + ["rt1_augmented"]:
             X = data[MODEL_ID]["X"]
             y = data[MODEL_ID]["y"]
             sparse.save_npz(output_dir / f"X_{MODEL_ID}_{datasplit}.npz", X)

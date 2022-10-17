@@ -49,37 +49,32 @@ def _fetch_gin_pretrained_model(model_name: str):
     return model
 
 
-def split_data_into_Xy(
-    dataset_type: str,
-    steps_file: str,
-    states_file: str,
-    output_dir: Path,
+def split_data_into_Xy( *,
+    steps: sparse.csc_matrix,
+    states: sparse.csc_matrix,
     num_rxn: int,
-    out_dim: int,
-) -> None:
+    d_knn_emb: int,
+) -> dict[str,dict[str,sparse.csc_matrix]]:
     """Split the featurized data into X,y-chunks for the {act,rt1,rxn,rt2}-networks.
 
     Args:
         num_rxn (int): Number of reactions in the dataset.
         out_dim (int): Size of the output feature vectors (used in kNN-search for rt1,rt2)
     """
-    output_dir = Path(output_dir)
-    output_dir.mkdir(exist_ok=True, parents=True)
-
-    # Load data # TODO: separate functionality?
-    states = sparse.load_npz(states_file)  # (n,3*4096)
-    steps = sparse.load_npz(steps_file)  # (n,1+256+91+256+4096)
+    # Deduce dimensionality (TODO: find more elegant way)
+    d_act_emb = 1 # {0,1,2,3}
+    d_rxn_emb = 1 # {0, ..., number of reaction ids}
+    d_emb = steps.shape[1]-d_act_emb-d_knn_emb-d_rxn_emb-d_knn_emb
 
     # Extract data for each network...
+    data = dict()
 
     # ... action data
     # X: [z_state]
     # y: [action id] (int)
     X = states
     y = steps[:, 0]
-    sparse.save_npz(output_dir / f"X_act_{dataset_type}.npz", X)
-    sparse.save_npz(output_dir / f"y_act_{dataset_type}.npz", y)
-    logger.info(f'  saved data for "Action" to {output_dir}')
+    data["act"] = {"X" : X, "y": y}
 
     # ... reaction data
     # X: [state, z_reactant_1]
@@ -89,11 +84,9 @@ def split_data_into_Xy(
     isActionEnd = (actions == 3).squeeze()  # (n,)
     states = states[~isActionEnd]
     steps = steps[~isActionEnd]
-    X = sparse.hstack([states, steps[:, (2 * out_dim + 2) :]])  # (n,4*4096)
-    y = steps[:, out_dim + 1]  # (n,1)
-    sparse.save_npz(output_dir / f"X_rxn_{dataset_type}.npz", X)
-    sparse.save_npz(output_dir / f"y_rxn_{dataset_type}.npz", y)
-    logger.info(f'  saved data for "Reaction" to {output_dir}')
+    X = sparse.hstack([states, steps[:, (2 * d_knn_emb + 2) :]])  # (n,4*4096)
+    y = steps[:, d_knn_emb + 1]  # (n,1)
+    data["rxn"] = {"X" : X, "y": y}
 
     # ... reactant 2 data
     # X: [state,z_mol1,OneHotEnc(rxn_id)]
@@ -103,14 +96,12 @@ def split_data_into_Xy(
     isActionMerge = (actions == 2).squeeze()  # (n',)
     steps = steps[~isActionMerge]
     states = states[~isActionMerge]
-    z_mol1 = steps[:, (2 * out_dim + 2) :]
-    rxn_ids = steps[:, (1 + out_dim)]
+    z_mol1 = steps[:, (2 * d_knn_emb + 2) :]
+    rxn_ids = steps[:, (1 + d_knn_emb)]
     z_rxn_id = OneHotEncoder().fit(np.arange(num_rxn)[:, None]).transform(rxn_ids.A)
     X = sparse.hstack((states, z_mol1, z_rxn_id))  # (n,3*4096+4096+91)
-    y = steps[:, (2 + out_dim) : (2 * out_dim + 2)]
-    sparse.save_npz(output_dir / f"X_rt2_{dataset_type}.npz", X)
-    sparse.save_npz(output_dir / f"y_rt2_{dataset_type}.npz", y)
-    logger.info(f'  saved data for "Reactant 2" to {output_dir}')
+    y = steps[:, (2 + d_knn_emb) : (2 * d_knn_emb + 2)]
+    data["rt2"] = {"X" : X, "y": y}
 
     # ... reactant 1 data
     # X: [z_state]
@@ -120,15 +111,13 @@ def split_data_into_Xy(
     isActionExpand = (actions == 1).squeeze()  # (n',)
     steps = steps[~isActionExpand]
     states = states[~isActionExpand]
-    zprime_mol1 = steps[:, 1 : (out_dim + 1)]
+    zprime_mol1 = steps[:, 1 : (d_knn_emb + 1)]
+
 
     X = states
     y = zprime_mol1
-    sparse.save_npz(output_dir / f"X_rt1_{dataset_type}.npz", X)
-    sparse.save_npz(output_dir / f"y_rt1_{dataset_type}.npz", y)
-    logger.info(f'  saved data for "Reactant 1" to {output_dir}')
-
-    return None
+    data["rt1"] = {"X" : X, "y": y}
+    return data
 
 
 class Sdf2SmilesExtractor:

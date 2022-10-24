@@ -9,6 +9,7 @@ from typing import Tuple
 
 import numpy as np
 import pandas as pd
+from tqdm import tqdm
 
 from synnet.config import DATA_PREPROCESS_DIR, DATA_RESULT_DIR, MAX_PROCESSES
 from synnet.data_generation.preprocessing import BuildingBlockFileHandler
@@ -167,7 +168,7 @@ if __name__ == "__main__":
     else:
         with mp.Pool(processes=args.ncpu) as pool:
             logger.info(f"Starting MP with ncpu={args.ncpu}")
-            results = pool.map(wrapper_decoder, targets)
+            results = list(tqdm(pool.imap(wrapper_decoder, targets), total=len(targets)))
     logger.info("Finished decoding.")
 
     # Print some results from the prediction

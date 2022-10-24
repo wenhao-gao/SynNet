@@ -9,6 +9,7 @@ from typing import Tuple
 
 import numpy as np
 import pandas as pd
+from rdkit import RDLogger
 from tqdm import tqdm
 
 from synnet.config import DATA_PREPROCESS_DIR, DATA_RESULT_DIR, MAX_PROCESSES
@@ -128,6 +129,9 @@ if __name__ == "__main__":
     # Parse input args
     args = get_args()
     logger.info(f"Arguments: {json.dumps(vars(args),indent=2)}")
+
+    if not args.verbose:
+        RDLogger.DisableLog("rdApp.*")
 
     # Load data ...
     logger.info("Start loading data...")

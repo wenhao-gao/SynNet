@@ -80,6 +80,8 @@ class MLP(pl.LightningModule):
             loss = F.l1_loss(y_hat, y)
         elif self.loss == "huber":
             loss = F.huber_loss(y_hat, y)
+        elif self.loss == "cosine_distance":
+            loss = 1-F.cosine_similarity(y,y_hat).mean()
         else:
             raise ValueError("Unsupported loss function '%s'" % self.loss)
         self.log(f"train_loss", loss, on_step=False, on_epoch=True, prog_bar=True, logger=True)
@@ -114,6 +116,8 @@ class MLP(pl.LightningModule):
             loss = F.l1_loss(y_hat, y)
         elif self.valid_loss == "huber":
             loss = F.huber_loss(y_hat, y)
+        elif self.valid_loss == "cosine_distance":
+            loss = 1-F.cosine_similarity(y,y_hat).mean()
         else:
             raise ValueError("Unsupported loss function '%s'" % self.valid_loss)
         self.log("val_loss", loss, on_step=False, on_epoch=True, prog_bar=True, logger=True)

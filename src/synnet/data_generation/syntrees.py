@@ -197,13 +197,13 @@ class SynTreeGenerator:
             canEnd = True  # TODO: When syntree has reached max depth, only allow to end it.
         elif nTrees == 2:
             canExpand = True
-            canMerge = any(self._get_rxn_mask(tuple(state)))
+            canMerge = any(self._get_rxn_mask(tuple(state),raise_exc=False))
         else:
             raise ValueError
 
         return np.array((canAdd, canExpand, canMerge, canEnd), dtype=bool)
 
-    def _get_rxn_mask(self, reactants: tuple[str, str]) -> list[bool]:
+    def _get_rxn_mask(self, reactants: tuple[str, str],raise_exc=True) -> list[bool]:
         """Get a mask of possible reactions for the two reactants."""
         masks = [self._find_rxn_candidates(r, raise_exc=False) for r in reactants]
         # TODO: We do not check if the two reactants are 1st and 2nd reactants in a given reaction.
@@ -211,7 +211,7 @@ class SynTreeGenerator:
         #       and then the reaction is not possible, although the mask returns true.
         #       Alternative: Run the reaction and check if the product is valid.
         mask = [rxn1 and rxn2 for rxn1, rxn2 in zip(*masks)]
-        if not any(mask):
+        if raise_exc and not any(mask):
             raise NoBiReactionAvailableError(f"No reaction available for {reactants}.")
         return mask
 

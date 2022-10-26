@@ -2,7 +2,7 @@
 Multi-layer perceptron (MLP) class.
 """
 import logging
-from pathlib import Path
+from typing import Optional
 
 import numpy as np
 import pytorch_lightning as pl
@@ -22,20 +22,22 @@ class MLP(pl.LightningModule):
 
     def __init__(
         self,
+        *,
         input_dim: int,
         output_dim: int,
         hidden_dim: int,
         num_layers: int,
         dropout: float,
-        num_dropout_layers: int = 1,
-        task: str = "classification",
-        loss: str = "cross_entropy",
-        valid_loss: str = "accuracy",
-        optimizer: str = "adam",
-        learning_rate: float = 1e-4,
-        val_freq: int = 10,
-        ncpu: int = 16,
-        molembedder: MolEmbedder = None,
+        num_dropout_layers: int,
+        task: str,
+        loss: str,
+        valid_loss: str,
+        optimizer: str,
+        learning_rate: float,
+        val_freq: int,
+        ncpu: Optional[int] = None,
+        molembedder: Optional[MolEmbedder] = None,  # for knn-accuracy
+        **kwargs,
     ):
         if not loss in self.TRAIN_LOSSES:
             raise ValueError(f"Unsupported loss function {loss}")
@@ -48,36 +50,41 @@ class MLP(pl.LightningModule):
 
         super().__init__()
         self.save_hyperparameters(ignore="molembedder")
+
         self.loss = loss
         self.valid_loss = valid_loss
         self.optimizer = optimizer
         self.learning_rate = learning_rate
-        self.ncpu = ncpu
+        self.ncpu = ncpu  # unused
         self.val_freq = val_freq
         self.molembedder = molembedder
 
+        # Create modules
         modules = []
         modules.append(nn.Linear(input_dim, hidden_dim))
         modules.append(nn.BatchNorm1d(hidden_dim))
         modules.append(nn.ReLU())
 
-        for i in range(num_layers - 2):
+        for i in range(num_layers - 2):  # "-2" for first & last layer
             modules.append(nn.Linear(hidden_dim, hidden_dim))
             modules.append(nn.BatchNorm1d(hidden_dim))
             modules.append(nn.ReLU())
+            # Add dropout?
             if i > num_layers - 3 - num_dropout_layers:
                 modules.append(nn.Dropout(dropout))
 
         modules.append(nn.Linear(hidden_dim, output_dim))
 
         self.layers = nn.Sequential(*modules)
+        return None
 
     def forward(self, x):
         """Forward step for inference only."""
         y_hat = self.layers(x)
-        if (
-            self.hparams.task == "classification"
-        ):  # during training, `cross_entropy` loss expects raw logits
+
+        # During training, `cross_entropy` loss expects raw logits.
+        # We add the softmax here so that mlp.forward(X) can be used for inference.
+        if self.hparams.task == "classification":
             y_hat = F.softmax(y_hat, dim=-1)
         return y_hat
 
@@ -94,6 +101,7 @@ class MLP(pl.LightningModule):
         elif self.loss == "huber":
             loss = F.huber_loss(y_hat, y)
         elif self.loss == "cosine_distance":
+            loss = 1 - F.cosine_similarity(y, y_hat).mean()
 
         self.log(f"train_loss", loss, on_step=False, on_epoch=True, prog_bar=True, logger=True)
         return loss
@@ -128,6 +136,7 @@ class MLP(pl.LightningModule):
         elif self.valid_loss == "huber":
             loss = F.huber_loss(y_hat, y)
         elif self.valid_loss == "cosine_distance":
+            loss = 1 - F.cosine_similarity(y, y_hat).mean()
 
         self.log("val_loss", loss, on_step=False, on_epoch=True, prog_bar=True, logger=True)
 

@@ -25,3 +25,4 @@ dependencies:
     - rich
     - pyyaml
     - fcd_torch # for evaluators in pytdc
+    - wandb

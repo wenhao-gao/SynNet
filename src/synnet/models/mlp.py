@@ -16,6 +16,10 @@ logger = logging.getLogger(__name__)
 
 
 class MLP(pl.LightningModule):
+    TRAIN_LOSSES = "cross_entropy mse l1 huber cosine_distance".split()
+    VALID_LOSSES = TRAIN_LOSSES + "accuracy nn_accuracy".split()
+    OPTIMIZERS = "sgd adam".lower().split()
+
     def __init__(
         self,
         input_dim: int,
@@ -33,6 +37,15 @@ class MLP(pl.LightningModule):
         ncpu: int = 16,
         molembedder: MolEmbedder = None,
     ):
+        if not loss in self.TRAIN_LOSSES:
+            raise ValueError(f"Unsupported loss function {loss}")
+        if not valid_loss in self.VALID_LOSSES:
+            raise ValueError(f"Unsupported loss function {valid_loss}")
+        if not optimizer in self.OPTIMIZERS:
+            raise ValueError(f"Unsupported optimizer {optimizer}")
+        if num_dropout_layers > num_layers - 2:
+            raise Warning("Requested more dropout layers than there are linear layers.")
+
         super().__init__()
         self.save_hyperparameters(ignore="molembedder")
         self.loss = loss
@@ -81,9 +94,7 @@ class MLP(pl.LightningModule):
         elif self.loss == "huber":
             loss = F.huber_loss(y_hat, y)
         elif self.loss == "cosine_distance":
-            loss = 1-F.cosine_similarity(y,y_hat).mean()
-        else:
-            raise ValueError("Unsupported loss function '%s'" % self.loss)
+
         self.log(f"train_loss", loss, on_step=False, on_epoch=True, prog_bar=True, logger=True)
         return loss
 
@@ -117,9 +128,7 @@ class MLP(pl.LightningModule):
         elif self.valid_loss == "huber":
             loss = F.huber_loss(y_hat, y)
         elif self.valid_loss == "cosine_distance":
-            loss = 1-F.cosine_similarity(y,y_hat).mean()
-        else:
-            raise ValueError("Unsupported loss function '%s'" % self.valid_loss)
+
         self.log("val_loss", loss, on_step=False, on_epoch=True, prog_bar=True, logger=True)
 
     def configure_optimizers(self):

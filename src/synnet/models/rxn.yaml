@@ -1,0 +1,26 @@
+name: null # as displayed in wandb.ai
+project: "synnet" # as displayed in wandb.ai
+description: "default config"
+group: "rxn"
+result_dir: "tmp/rxn"
+data:
+  Xtrain_file: "data/featurized/Xy/X_rxn_train.npz"
+  ytrain_file: "data/featurized/Xy/y_rxn_train.npz"
+  Xvalid_file: "data/featurized/Xy/X_rxn_valid.npz"
+  yvalid_file: "data/featurized/Xy/y_rxn_valid.npz"
+  aug-fraction: null
+parameters:
+  task: classification
+  batch_size: 64
+  input_dim: 16384 # 4*4096
+  output_dim: 91 # hartenfeller-burton
+  hidden_dim: 3000
+  num_layers: 5
+  num_dropout_layers: 1
+  dropout: 0.5
+  optimizer: adam
+  learning_rate: 0.00003
+  max_epochs: 601
+  loss: cross_entropy
+  valid_loss: accuracy
+  val_freq: 10 # epoch

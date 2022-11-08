@@ -1,5 +1,4 @@
-"""
-Reaction network.
+"""Reaction network.
 """
 import json
 import logging
@@ -11,8 +10,7 @@ from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 from pytorch_lightning.callbacks.model_checkpoint import ModelCheckpoint
 from pytorch_lightning.callbacks.progress import TQDMProgressBar
 
-from synnet.config import CHECKPOINTS_DIR
-from synnet.models.common import get_args, xy_to_dataloader
+from synnet.models.common import get_args, load_config_file, xy_to_dataloader
 from synnet.models.mlp import MLP
 
 logger = logging.getLogger(__name__)
@@ -25,108 +23,79 @@ if __name__ == "__main__":
     args = get_args()
     logger.info(f"Arguments: {json.dumps(vars(args),indent=2)}")
 
+    # Load config
+    if args.config_file is None:
+        setattr(args, "config_file", __file__.replace(".py", ".yaml"))
+    config = load_config_file(args.config_file)
+    logger.info(f"Config: {json.dumps(config,indent=2)}")
+
     pl.seed_everything(0)
 
     # Set up dataloaders
-    dataset = "train"
     train_dataloader = xy_to_dataloader(
-        X_file=Path(args.data_dir) / f"X_{MODEL_ID}_{dataset}.npz",
-        y_file=Path(args.data_dir) / f"y_{MODEL_ID}_{dataset}.npz",
-        n=None if not args.debug else 128,
-        task="classification",
-        batch_size=args.batch_size,
+        X_file=Path(config["data"]["Xtrain_file"]),
+        y_file=Path(config["data"]["ytrain_file"]),
+        batch_size=config["parameters"]["batch_size"],
+        task=config["parameters"]["task"],
         num_workers=args.ncpu,
-        shuffle=True if dataset == "train" else False,
+        n=None if not args.debug else 250,
+        shuffle=True,
     )
 
-    dataset = "valid"
     valid_dataloader = xy_to_dataloader(
-        X_file=Path(args.data_dir) / f"X_{MODEL_ID}_{dataset}.npz",
-        y_file=Path(args.data_dir) / f"y_{MODEL_ID}_{dataset}.npz",
-        n=None if not args.debug else 128,
-        task="classification",
-        batch_size=args.batch_size,
+        X_file=Path(config["data"]["Xvalid_file"]),
+        y_file=Path(config["data"]["yvalid_file"]),
+        batch_size=config["parameters"]["batch_size"],
+        task=config["parameters"]["task"],
         num_workers=args.ncpu,
-        shuffle=True if dataset == "train" else False,
+        n=None if not args.debug else 250,
+        shuffle=False,
     )
+
     logger.info(f"Set up dataloaders.")
 
-    INPUT_DIMS = {
-        "fp": {
-            "hb": int(4 * args.nbits),
-            "gin": int(4 * args.nbits),
-        },
-        "gin": {
-            "hb": int(3 * args.nbits + args.out_dim),
-            "gin": int(3 * args.nbits + args.out_dim),
-        },
-    }  # somewhat constant...
-    input_dim = INPUT_DIMS[args.featurize][args.rxn_template]
+    # Fetch Molembedder and init BallTree
+    molembedder = None  # _fetch_molembedder()
 
-    HIDDEN_DIMS = {
-        "fp": {
-            "hb": 3000,
-            "gin": 4500,
-        },
-        "gin": {
-            "hb": 3000,
-            "gin": 3000,
-        },
-    }
-    hidden_dim = HIDDEN_DIMS[args.featurize][args.rxn_template]
-
-    OUTPUT_DIMS = {
-        "hb": 91,
-        "gin": 4700,
-    }
-    output_dim = OUTPUT_DIMS[args.rxn_template]
-
-    ckpt_path = args.ckpt_file  # TODO: Unify for all networks
-    mlp = MLP(
-        input_dim=input_dim,
-        output_dim=output_dim,
-        hidden_dim=hidden_dim,
-        num_layers=5,
-        dropout=0.5,
-        num_dropout_layers=1,
-        task="classification",
-        loss="cross_entropy",
-        valid_loss="accuracy",
-        optimizer="adam",
-        learning_rate=3e-4,
-        val_freq=10,
-        ncpu=args.ncpu,
-    )
+    mlp = MLP(**config["parameters"])
 
     # Set up Trainer
-    save_dir = Path("results/logs/") / MODEL_ID
-    save_dir.mkdir(exist_ok=True, parents=True)
+    result_dir = Path(config["result_dir"])
+    result_dir.mkdir(exist_ok=True, parents=True)
 
-    tb_logger = pl_loggers.TensorBoardLogger(save_dir, name="")
-    csv_logger = pl_loggers.CSVLogger(tb_logger.log_dir, name="", version="")
-    logger.info(f"Log dir set to: {tb_logger.log_dir}")
-
-    tb_logger = pl_loggers.TensorBoardLogger(save_dir, name="")
+    csv_logger = pl_loggers.CSVLogger(result_dir, name="")
+    log_dir = csv_logger.log_dir
+    logger.info(f"Log dir set to: {log_dir}")
+    logger.info(f"Result dir dir set to: {result_dir}")
 
     checkpoint_callback = ModelCheckpoint(
         monitor="val_loss",
-        dirpath=tb_logger.log_dir,
+        dirpath=log_dir,
         filename="ckpts.{epoch}-{val_loss:.2f}",
         save_weights_only=False,
     )
     earlystop_callback = EarlyStopping(monitor="val_loss", patience=3)
-    tqdm_callback = TQDMProgressBar(refresh_rate=int(len(train_dataloader) * 0.05))
+    tqdm_callback = TQDMProgressBar(refresh_rate=max(1, int(len(train_dataloader) * 0.05)))
 
-    max_epochs = args.epoch if not args.debug else 100
+    wandb_logger = pl_loggers.WandbLogger(
+        name=config["name"],
+        project=config["project"],
+        group=config["group"] + ("-debug" if args.debug else ""),
+    )
+
     # Create trainer
     trainer = pl.Trainer(
-        gpus=[0],
-        max_epochs=max_epochs,
-        callbacks=[checkpoint_callback, tqdm_callback],
-        logger=[tb_logger, csv_logger],
+        accelerator="gpu",
+        devices=[0],
+        max_epochs=config["parameters"]["max_epochs"] if not args.debug else 11,
+        callbacks=[
+            checkpoint_callback,
+            tqdm_callback,
+        ],
+        logger=[csv_logger, wandb_logger],
         fast_dev_run=args.fast_dev_run,
     )
 
     logger.info(f"Start training")
-    trainer.fit(mlp, train_dataloader, valid_dataloader, ckpt_path=ckpt_path)
+    trainer.fit(mlp, train_dataloader, valid_dataloader)
     logger.info(f"Training completed.")

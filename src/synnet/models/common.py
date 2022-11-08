@@ -1,47 +1,52 @@
 """Common methods and params shared by all models.
 """
 
+import logging
 from pathlib import Path
 from typing import Union
 
 import numpy as np
 import torch
+import yaml
 from scipy import sparse
 
+from synnet.encoding.distances import cosine_distance
 from synnet.models.mlp import MLP
+from synnet.MolEmbedder import MolEmbedder
+
+MAX_PROCESSES = 16
+
+logger = logging.getLogger(__name__)
 
 
 def get_args():
     import argparse
 
     parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "--data-dir", type=str, default="data/featurized/Xy", help="Directory with X,y data."
-    )
-    parser.add_argument(
-        "-f", "--featurize", type=str, default="fp", help="Choose from ['fp', 'gin']"
-    )
-    parser.add_argument(
-        "-r", "--rxn_template", type=str, default="hb", help="Choose from ['hb', 'pis']"
-    )
-    parser.add_argument("--radius", type=int, default=2, help="Radius for Morgan fingerprint.")
-    parser.add_argument(
-        "--nbits", type=int, default=4096, help="Number of Bits for Morgan fingerprint."
-    )
-    parser.add_argument("--out_dim", type=int, default=256, help="Output dimension.")
-    parser.add_argument("--ncpu", type=int, default=16, help="Number of cpus")
-    parser.add_argument("--batch_size", type=int, default=64, help="Batch size")
-    parser.add_argument("--epoch", type=int, default=2000, help="Maximum number of epoches.")
+
+    parser.add_argument("--config-file", type=str)
+    parser.add_argument("--ncpu", type=int, default=MAX_PROCESSES)
     parser.add_argument(
         "--ckpt-file",
         type=str,
         default=None,
         help="Checkpoint file. If provided, load and resume training.",
     )
-    parser.add_argument("-v", "--version", type=int, default=1, help="Version")
+    parser.add_argument("--wandb-sweep", default=False, action="store_true")
     parser.add_argument("--debug", default=False, action="store_true")
     parser.add_argument("--fast-dev-run", default=False, action="store_true")
+
     return parser.parse_args()
+
+
+def load_config_file(file: str) -> dict[str, Union[str, int]]:
+    """Load config, incl hyperparameters"""
+    file = Path(file)
+    if not file.suffix == ".yaml":
+        raise NotImplementedError(f"Can only read config from yaml file, not {file}.")
+    with open(file, "r") as f:
+        config = yaml.safe_load(f)
+    return config
 
 
 def xy_to_dataloader(
@@ -72,7 +77,16 @@ def xy_to_dataloader(
         torch.Tensor(X),
         torch.Tensor(y),
     )
+    logger.info(f"Loaded {X_file}, {X.shape=}")
+    logger.info(f"Loaded {y_file}, {y.shape=}")
     return torch.utils.data.DataLoader(dataset, **kwargs)
+
+
+def _fetch_molembedder(file: str):
+    logger.info(f"Try to load precomputed MolEmbedder from {file}.")
+    molembedder = MolEmbedder().load_precomputed(file).init_balltree(metric=cosine_distance)
+    logger.info(f"Loaded MolEmbedder from {file}.")
+    return molembedder
 
 
 def load_mlp_from_ckpt(ckpt_file: str):
@@ -151,6 +165,10 @@ def _load_mlp_from_iclr_ckpt(ckpt_file: str):
     else:
         raise ValueError
     return model.eval()
+
+
+def asdict(obj) -> dict:
+    return {k: v for k, v in obj.__dict__.items() if not k.startswith("__")}
 
 
 if __name__ == "__main__":

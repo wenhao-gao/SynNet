@@ -88,7 +88,7 @@ if __name__ == "__main__":
     # Filter trees
     # TODO: Move to src/synnet/data_generation/filters.py ?
     valid_root_mol_filter = ValidRootMolFilter()
-    interesting_mol_filter = OracleFilter(threshold=0.5, rng=np.random.default_rng())
+    interesting_mol_filter = OracleFilter(threshold=0.5, rng=np.random.default_rng(42))
 
     logger.info(f"Start filtering syntrees...")
     syntrees = []

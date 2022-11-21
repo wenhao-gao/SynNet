@@ -50,6 +50,7 @@ def get_args():
     # Processing
     parser.add_argument("--ncpu", type=int, default=MAX_PROCESSES, help="Number of cpus")
     parser.add_argument("--verbose", default=False, action="store_true")
+    parser.add_argument("--debug", default=False, action="store_true")
     return parser.parse_args()
 
 
@@ -93,6 +94,11 @@ if __name__ == "__main__":
     # Parse input args
     args = get_args()
     logger.info(f"Arguments: {json.dumps(vars(args),indent=2)}")
+
+    if args.debug:
+        st_logger = logging.getLogger("synnet.data_generation.syntrees")
+        st_logger.setLevel("DEBUG")
+        RDLogger.EnableLog("rdApp.*")
 
     # Load assets
     bblocks = BuildingBlockFileHandler().load(args.building_blocks_file)

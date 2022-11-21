@@ -12,7 +12,8 @@ dependencies:
   # - dglteam::dgl-cuda11.1 # only needed for gin
   - pytdc
   - scikit-learn>=1.1.*
-  - ipykernel=6.15.*
+  - numba
+  - ipykernel
   - nb_conda_kernels
   - black=22.6.*
   - black-jupyter=22.6.*

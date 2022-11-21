@@ -1,8 +1,10 @@
+import numba
 import numpy as np
 
 from synnet.encoding.fingerprints import mol_fp
 
 
+@numba.njit()
 def cosine_distance(v1, v2):
     """Compute the cosine distance between two 1d-vectors.
 
@@ -29,6 +31,7 @@ def ce_distance(y, y_pred, eps=1e-15):
     return -np.sum((y * np.log(y_pred) + (1 - y) * np.log(1 - y_pred)))
 
 
+@numba.njit()
 def _tanimoto_similarity(fp1: np.ndarray, fp2: np.ndarray):
     """
     Returns the Tanimoto similarity between two molecular fingerprints.

@@ -60,13 +60,11 @@ def get_args():
     parser.add_argument(
         "--input-file",
         type=str,
-        default="data/pre-process/synthetic-trees.json.gz",
         help="Input file for the filtered generated synthetic trees (*.json.gz)",
     )
     parser.add_argument(
         "--output-file",
         type=str,
-        default="data/pre-process/synthetic-trees-filtered.json.gz",
         help="Output file for the filtered generated synthetic trees (*.json.gz)",
     )
 

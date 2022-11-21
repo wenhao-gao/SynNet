@@ -19,7 +19,7 @@ from synnet.models.common import find_best_model_ckpt, load_mlp_from_ckpt
 from synnet.MolEmbedder import MolEmbedder
 from synnet.utils.data_utils import ReactionSet
 from synnet.utils.ga_utils import crossover, mutation
-from synnet.utils.predict_utils import mol_fp, synthetic_tree_decoder, tanimoto_similarity
+from synnet.utils.predict_utils import fp_embedding, synthetic_tree_decoder, tanimoto_similarity
 
 
 def _fetch_gin_molembedder():
@@ -307,7 +307,7 @@ def fetch_population(args) -> np.ndarray:
         else:
             starting_smiles = pd.read_csv(args.input_file).sample(args.num_population)
             starting_smiles = starting_smiles["smiles"].tolist()
-            population = np.array([mol_fp(smi, args.radius, args.nbits) for smi in starting_smiles])
+            population = np.array([fp_embedding(smi, args.radius, args.nbits) for smi in starting_smiles])
             print(f"Starting with {len(starting_smiles)} fps from {args.input_file}")
     return population
 

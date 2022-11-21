@@ -38,6 +38,7 @@ class MolEmbedder:
         else:
             embeddings = self._compute_mp(building_blocks)
         logger.info(f"Computed embeddings.")
+        embeddings = np.atleast_2d(embeddings)
         self.embeddings = embeddings
         return self
 
@@ -45,7 +46,7 @@ class MolEmbedder:
         if self.embeddings is None:
             raise ValueError("Must have computed embeddings to save.")
 
-        embeddings = np.asarray(self.embeddings)  # assume at least 2d
+        embeddings = np.atleast_2d(self.embeddings)  # (n,d)
         np.save(file, embeddings)
         logger.info(f"Successfully saved data (shape={embeddings.shape}) to {file} .")
         return self

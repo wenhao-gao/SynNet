@@ -12,7 +12,7 @@ from rdkit import Chem
 from sklearn.neighbors import BallTree
 
 from synnet.encoding.distances import cosine_distance, tanimoto_similarity
-from synnet.encoding.fingerprints import mol_fp
+from synnet.encoding.fingerprints import fp_embedding
 from synnet.encoding.utils import one_hot_encoder
 from synnet.utils.data_utils import Reaction, SyntheticTree
 
@@ -232,7 +232,7 @@ def synthetic_tree_decoder(
     for i in range(max_step):
         # Encode current state
         state = tree.get_state()  # a list
-        z_state = set_embedding(z_target, state, nbits=n_bits, _mol_embedding=mol_fp)
+        z_state = set_embedding(z_target, state, nbits=n_bits, _mol_embedding=fp_embedding)
 
         # Predict action type, masked selection
         # Action: (Add: 0, Expand: 1, Merge: 2, End: 3)
@@ -263,7 +263,7 @@ def synthetic_tree_decoder(
         else:
             raise ValueError(f"Unexpected action {act}.")
 
-        z_mol1 = mol_fp(mol1)
+        z_mol1 = fp_embedding(mol1)
         z_mol1 = np.atleast_2d(z_mol1)  # (1,4096)
 
         # Select reaction

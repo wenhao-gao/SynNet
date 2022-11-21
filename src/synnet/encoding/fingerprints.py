@@ -4,29 +4,6 @@ from rdkit.Chem import AllChem, DataStructs
 
 
 ## Morgan fingerprints
-def mol_fp(smi, _radius=2, _nBits=4096) -> np.ndarray:  # dtype=int64
-    """
-    Computes the Morgan fingerprint for the input SMILES.
-
-    Args:
-        smi (str): SMILES for molecule to compute fingerprint for.
-        _radius (int, optional): Fingerprint radius to use. Defaults to 2.
-        _nBits (int, optional): Length of fingerprint. Defaults to 1024.
-
-    Returns:
-        features (np.ndarray): For valid SMILES, this is the fingerprint.
-            Otherwise, if the input SMILES is bad, this will be a zero vector.
-    """
-    if smi is None:
-        return np.zeros(_nBits)
-    else:
-        mol = Chem.MolFromSmiles(smi)
-        features_vec = Chem.AllChem.GetMorganFingerprintAsBitVect(mol, _radius, _nBits)
-        return np.array(
-            features_vec
-        )  # TODO: much slower compared to `DataStructs.ConvertToNumpyArray` (20x?) so deprecates
-
-
 def fp_embedding(smi, _radius=2, _nBits=4096) -> list[float]:
     """
     General function for building variable-size & -radius Morgan fingerprints.
@@ -46,7 +23,7 @@ def fp_embedding(smi, _radius=2, _nBits=4096) -> list[float]:
         features_vec = AllChem.GetMorganFingerprintAsBitVect(mol, _radius, _nBits)
         features = np.zeros((1,))
         DataStructs.ConvertToNumpyArray(features_vec, features)
-        return features.reshape((-1,)).tolist()
+        return features.reshape((-1,))
 
 
 def fp_4096(smi):

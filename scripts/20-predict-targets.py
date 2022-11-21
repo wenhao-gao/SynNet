@@ -18,7 +18,7 @@ from synnet.encoding.distances import cosine_distance
 from synnet.models.common import find_best_model_ckpt, load_mlp_from_ckpt
 from synnet.MolEmbedder import MolEmbedder
 from synnet.utils.data_utils import ReactionSet, SyntheticTree, SyntheticTreeSet
-from synnet.utils.predict_utils import mol_fp, synthetic_tree_decoder_greedy_search
+from synnet.encoding.fingerprints import fp_embedding
 
 logger = logging.getLogger(__name__)
 
@@ -53,8 +53,9 @@ def _fetch_data(name: str) -> list[str]:
 
 def wrapper_decoder(smiles: str) -> Tuple[str, float, SyntheticTree]:
     """Generate a synthetic tree for the input molecular embedding."""
-    emb = mol_fp(smiles)
+
     try:
+        emb = np.atleast_2d(fp_embedding(smiles))
         smi, similarity, tree, action = synthetic_tree_decoder_greedy_search(
             z_target=emb,
             building_blocks=bblocks,

@@ -21,7 +21,6 @@ from typing import Tuple, Union
 
 RDLogger.DisableLog("rdApp.*")
 
-
 def get_args():
     import argparse
 
@@ -30,13 +29,11 @@ def get_args():
     parser.add_argument(
         "--building-blocks-file",
         type=str,
-        default="data/pre-process/building-blocks/enamine-us-smiles.csv.gz",  # TODO: change
         help="Input file with SMILES strings (First row `SMILES`, then one per line).",
     )
     parser.add_argument(
         "--rxn-templates-file",
         type=str,
-        default="data/assets/reaction-templates/hb.txt",  # TODO: change
         help="Input file with reaction templates as SMARTS(No header, one per line).",
     )
     parser.add_argument(

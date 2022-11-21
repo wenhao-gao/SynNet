@@ -24,9 +24,8 @@ logger = logging.getLogger(__name__)
 
 
 def _fetch_data_chembl(name: str) -> list[str]:
-    raise NotImplementedError
-    df = pd.read_csv(f"{DATA_DIR}/chembl_20k.csv")
-    smis_query = df.smiles.to_list()
+    df = pd.read_csv(name,sep="\t")
+    smis_query = df["smiles"].to_list()
     return smis_query
 
 

@@ -3,7 +3,7 @@
 
 import logging
 from pathlib import Path
-from typing import Union
+from typing import Optional, Union
 
 import numpy as np
 import torch
@@ -14,33 +14,22 @@ from synnet.encoding.distances import cosine_distance
 from synnet.models.mlp import MLP
 from synnet.MolEmbedder import MolEmbedder
 
-MAX_PROCESSES = 16
-
-logger = logging.getLogger(__name__)
+logger = logging.getLogger(__file__)
 
 
-def get_args():
-    import argparse
+def init_save_dir(path: str, suffix: str = "") -> Path:
+    """Creates folder with timestamp: `$path/<timestamp>$suffix`."""
+    from datetime import datetime
 
-    parser = argparse.ArgumentParser()
+    now = datetime.now().strftime("%Y_%m_%d-%H%M%S")
+    save_dir = Path(path) / (now + suffix)
 
-    parser.add_argument("--config-file", type=str)
-    parser.add_argument("--ncpu", type=int, default=MAX_PROCESSES)
-    parser.add_argument(
-        "--ckpt-file",
-        type=str,
-        default=None,
-        help="Checkpoint file. If provided, load and resume training.",
-    )
-    parser.add_argument("--wandb-sweep", default=False, action="store_true")
-    parser.add_argument("--debug", default=False, action="store_true")
-    parser.add_argument("--fast-dev-run", default=False, action="store_true")
-
-    return parser.parse_args()
+    save_dir.mkdir(exist_ok=True, parents=True)
+    return save_dir
 
 
 def load_config_file(file: str) -> dict[str, Union[str, int]]:
-    """Load config, incl hyperparameters"""
+    """Load a `*.yaml`-config file."""
     file = Path(file)
     if not file.suffix == ".yaml":
         raise NotImplementedError(f"Can only read config from yaml file, not {file}.")
@@ -50,7 +39,11 @@ def load_config_file(file: str) -> dict[str, Union[str, int]]:
 
 
 def xy_to_dataloader(
-    X_file: str, y_file: str, task: str = "regression", n: Union[int, float] = 1.0, **kwargs
+    X_file: str,
+    y_file: str,
+    task: str,
+    n: Union[int, float] = 1.0,
+    **kwargs,
 ):
     """Loads featurized X,y `*.npz`-data into a `DataLoader`"""
     X = sparse.load_npz(X_file)
@@ -80,6 +73,18 @@ def xy_to_dataloader(
     logger.info(f"Loaded {X_file}, {X.shape=}")
     logger.info(f"Loaded {y_file}, {y.shape=}")
     return torch.utils.data.DataLoader(dataset, **kwargs)
+
+
+def _compute_class_weights_from_dataloader(dataloader, as_tensor: bool = False):
+    from sklearn.utils.class_weight import compute_class_weight
+
+    y: torch.Tensor = dataloader.dataset.tensors[-1]
+    classes = y.unique().numpy()
+    y = y.numpy()
+    class_weight = compute_class_weight(class_weight="balanced", classes=classes, y=y)
+    if as_tensor:
+        class_weight = torch.from_numpy(class_weight)
+    return class_weight
 
 
 def _fetch_molembedder(file: str):
@@ -172,8 +177,4 @@ def asdict(obj) -> dict:
 
 
 if __name__ == "__main__":
-    import json
-
-    args = get_args()
-    print("Default Arguments are:")
-    print(json.dumps(args.__dict__, indent=2))
+    pass

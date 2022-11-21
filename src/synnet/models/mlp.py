@@ -37,6 +37,7 @@ class MLP(pl.LightningModule):
         val_freq: int,
         ncpu: Optional[int] = None,
         molembedder: Optional[MolEmbedder] = None,  # for knn-accuracy
+        class_weights: Optional[np.ndarray] = None,
         **kwargs,
     ):
         if not loss in self.TRAIN_LOSSES:
@@ -47,6 +48,8 @@ class MLP(pl.LightningModule):
             raise ValueError(f"Unsupported optimizer {optimizer}")
         if num_dropout_layers > num_layers - 2:
             raise Warning("Requested more dropout layers than there are linear layers.")
+        if class_weights is not None and task == "regression":
+            raise Warning(f"Provided argument `{class_weights=}` for a regression task")
 
         super().__init__()
         self.save_hyperparameters(ignore="molembedder")
@@ -58,6 +61,7 @@ class MLP(pl.LightningModule):
         self.ncpu = ncpu  # unused
         self.val_freq = val_freq
         self.molembedder = molembedder
+        self.class_weights = class_weights
 
         # Create modules
         modules = []
@@ -93,7 +97,12 @@ class MLP(pl.LightningModule):
         x, y = batch
         y_hat = self.layers(x)
         if self.loss == "cross_entropy":
-            loss = F.cross_entropy(y_hat, y.long())
+            weights = (
+                torch.tensor(self.class_weights, device=self.device, dtype=y_hat.dtype)
+                if self.class_weights is not None
+                else None
+            )
+            loss = F.cross_entropy(y_hat, y.long(), weight=weights)
         elif self.loss == "mse":
             loss = F.mse_loss(y_hat, y)
         elif self.loss == "l1":
@@ -108,13 +117,15 @@ class MLP(pl.LightningModule):
 
     def validation_step(self, batch, batch_idx):
         """The complete validation loop."""
-        if self.trainer.current_epoch % self.val_freq != 0:
-            return None
-
         x, y = batch
         y_hat = self.layers(x)
         if self.valid_loss == "cross_entropy":
-            loss = F.cross_entropy(y_hat, y.long())
+            weights = (
+                torch.tensor(self.class_weights, device=self.device, dtype=y_hat.dtype)
+                if self.class_weights is not None
+                else None
+            )
+            loss = F.cross_entropy(y_hat, y.long(), weight=weights)
         elif self.valid_loss == "accuracy":
             y_hat = torch.argmax(y_hat, axis=1)
             accuracy = (y_hat == y).sum() / len(y)

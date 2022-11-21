@@ -13,6 +13,7 @@ import itertools
 import json
 from typing import Any, Optional, Set, Tuple, Union
 
+import datamol as dm
 from rdkit import Chem
 from rdkit.Chem import AllChem, Draw, rdChemReactions
 from tqdm import tqdm
@@ -53,7 +54,7 @@ class Reaction:
             self.reference = reference
 
             # compute a few additional attributes
-            self.rxn = self.__init_reaction(self.smirks)
+            self.rxn = dm.reactions.rxn_from_smarts(self.smirks)
 
             # Extract number of ...
             self.num_reactant = self.rxn.GetNumReactantTemplates()
@@ -73,12 +74,6 @@ class Reaction:
             self.agent_template = agents
         else:
             self.smirks = None
-
-    def __init_reaction(self, smirks: str) -> Chem.rdChemReactions.ChemicalReaction:
-        """Initializes a reaction by converting the SMARTS-pattern to an `rdkit` object."""
-        rxn = AllChem.ReactionFromSmarts(smirks)
-        rdChemReactions.ChemicalReaction.Initialize(rxn)
-        return rxn
 
     def load(
         self,
@@ -108,23 +103,14 @@ class Reaction:
         self.rxnname = rxnname
         self.smiles = smiles
         self.reference = reference
-        self.rxn = self.__init_reaction(self.smirks)
+        self.rxn = dm.reactions.rxn_from_smarts(self.smirks)
         return self
 
     @functools.lru_cache(maxsize=20)
     def get_mol(self, smi: Union[str, Chem.Mol]) -> Chem.Mol:
-        """
-        A internal function that returns an `RDKit.Chem.Mol` object.
-
-        Args:
-            smi (str or RDKit.Chem.Mol): The query molecule, as either a SMILES
-                string or an `RDKit.Chem.Mol` object.
-
-        Returns:
-            RDKit.Chem.Mol
-        """
+        """Convert smiles to  `RDKit.Chem.Mol`."""
         if isinstance(smi, str):
-            return Chem.MolFromSmiles(smi)
+            return dm.to_mol(smi)
         elif isinstance(smi, Chem.Mol):
             return smi
         else:
@@ -152,18 +138,18 @@ class Reaction:
 
     def is_reactant(self, smi: Union[str, Chem.Mol]) -> bool:
         """Checks if `smi` is a reactant of this reaction."""
-        smi = self.get_mol(smi)
-        return self.rxn.IsMoleculeReactant(smi)
+        mol = self.get_mol(smi)
+        return self.rxn.IsMoleculeReactant(mol)
 
     def is_agent(self, smi: Union[str, Chem.Mol]) -> bool:
         """Checks if `smi` is an agent of this reaction."""
-        smi = self.get_mol(smi)
-        return self.rxn.IsMoleculeAgent(smi)
+        mol = self.get_mol(smi)
+        return self.rxn.IsMoleculeAgent(mol)
 
     def is_product(self, smi):
         """Checks if `smi` is a product of this reaction."""
-        smi = self.get_mol(smi)
-        return self.rxn.IsMoleculeProduct(smi)
+        mol = self.get_mol(smi)
+        return self.rxn.IsMoleculeProduct(mol)
 
     def is_reactant_first(self, smi: Union[str, Chem.Mol]) -> bool:
         """Check if `smi` is the first reactant in this reaction"""

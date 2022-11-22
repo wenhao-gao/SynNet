@@ -1,5 +1,7 @@
+from functools import partial
 from pathlib import Path
 
+from pathos import multiprocessing as mp
 from tqdm import tqdm
 
 from synnet.config import MAX_PROCESSES
@@ -9,11 +11,8 @@ from synnet.utils.data_utils import Reaction
 class BuildingBlockFilter:
     """Filter building blocks."""
 
-    building_blocks: list[str]
-    building_blocks_filtered: list[str]
-    rxn_templates: list[str]
-    rxns: list[Reaction]
-    rxns_initialised: bool
+    building_blocks_filtered: list[str] = []
+    rxns_initialised: bool = False
 
     def __init__(
         self,
@@ -31,27 +30,21 @@ class BuildingBlockFilter:
         # Init other stuff
         self.processes = processes
         self.verbose = verbose
-        self.rxns_initialised = False
 
     def _match_mp(self):
-        from functools import partial
-
-        from pathos import multiprocessing as mp
-
-        def __match(bblocks: list[str], _rxn: Reaction):
+        def __match(_rxn: Reaction, *, bblocks: list[str]) -> Reaction:
             return _rxn.set_available_reactants(bblocks)
 
-        func = partial(__match, self.building_blocks)
+        func = partial(__match, bblocks=self.building_blocks)
         with mp.Pool(processes=self.processes) as pool:
             self.rxns = pool.map(func, self.rxns)
         return self
 
-    def _init_rxns_with_reactants(self):
-        """Initializes a `Reaction` with a list of possible reactants.
+    def _filter_bblocks_for_rxns(self):
+        """Initializes a `Reaction` with a list of possible reactants."""
 
-        Info: This can take a while for lots of possible reactants."""
-        self.rxns = tqdm(self.rxns) if self.verbose else self.rxns
         if self.processes == 1:
+            self.rxns = tqdm(self.rxns) if self.verbose else self.rxns
             self.rxns = [rxn.set_available_reactants(self.building_blocks) for rxn in self.rxns]
         else:
             self._match_mp()
@@ -62,7 +55,8 @@ class BuildingBlockFilter:
     def filter(self):
         """Filters out building blocks which do not match a reaction template."""
         if not self.rxns_initialised:
-            self = self._init_rxns_with_reactants()
+            self._filter_bblocks_for_rxns()
+
         matched_bblocks = {x for rxn in self.rxns for x in rxn.get_available_reactants}
         self.building_blocks_filtered = list(matched_bblocks)
         return self

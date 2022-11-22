@@ -322,7 +322,7 @@ class SynTreeGenerator:
                 break
 
         if syntree.depth == max_depth and not action == "end":
-            raise MaxDepthError(f"Maximum depth {max_depth} exceeded.")
+            raise MaxDepthError(f"Maximum depth {max_depth} exceeded ({syntree.actions=}).")
         logger.debug(f"🙌 SynTree completed.")
         return syntree
 

@@ -15,7 +15,7 @@ from typing import Any, Optional, Set, Tuple, Union
 
 import datamol as dm
 from rdkit import Chem
-from rdkit.Chem import AllChem, Draw, rdChemReactions
+from rdkit.Chem import AllChem, Draw
 from tqdm import tqdm
 
 
@@ -713,7 +713,7 @@ class SyntheticTree:
 class SyntheticTreeSet:
     """Represents a collection of synthetic trees, for saving and loading purposes."""
 
-    sts: List[SyntheticTree]
+    sts: list[SyntheticTree]
 
     def __init__(self, sts: Optional[list[SyntheticTree]] = None):
         self.sts = sts if sts is not None else []

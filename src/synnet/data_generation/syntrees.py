@@ -205,10 +205,14 @@ class SynTreeGenerator:
         nTrees = len(state)
         if nTrees == 0:  # base case
             canAdd = True
+        elif nTrees == 1 and (syntree.depth == self.max_depth - 1):
+            logger.debug(f"  Only allow action=end, {syntree.depth=} and {(self.max_depth - 1)=}")
+            # syntree is 1 update apart from its max depth, only allow to end it.
+            canEnd = True
         elif nTrees == 1:
             canAdd = True
             canExpand = True
-            canEnd = True  # TODO: When syntree has reached max depth, only allow to end it.
+            canEnd = True
         elif nTrees == 2:
             canExpand = True  # TODO: do not expand when we're 2 steps away from max depth?
             canMerge = any(self._get_rxn_mask(tuple(state), raise_exc=False))

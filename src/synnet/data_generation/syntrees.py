@@ -172,16 +172,16 @@ class SynTreeGenerator:
             # That is, for a reaction A + B -> C,
             #   - determine if we have "A" or "B"
             #   - then sample "B" (or "A")
-            idx = 1 if rxn.is_reactant_first(reactant_1) else 0
-            available_reactants = rxn.available_reactants[idx]
-            nPossibleReactants = len(available_reactants)
-            if nPossibleReactants == 0:
+            reactant_2_order = 1 if rxn.is_reactant_first(reactant_1) else 0
+            available_reactants = rxn.available_reactants[reactant_2_order]
+            nAvailableReactants = len(available_reactants)
+            if nAvailableReactants == 0:
                 raise NoReactantAvailableError(
-                    f"Unable to find reactant {idx+1} for bimolecular reaction (ID: {idx_rxn}) and reactant {reactant_1}."
+                    f"No reactant available for bimolecular reaction (ID: {idx_rxn}). Present reactant: {reactant_1}. Missing reactant {'second' if reactant_2_order==1 else 'first'} reactant."
                 )
                 # TODO: 2 bi-molecular rxn templates have no matching bblock
             # TODO: use numpy array to avoid type conversion or stick to sampling idx?
-            idx = self.rng.choice(nPossibleReactants)
+            idx = self.rng.choice(nAvailableReactants)
             reactant_2 = available_reactants[idx]
             logger.debug(f"    Sampled second reactant: {reactant_2}")
 

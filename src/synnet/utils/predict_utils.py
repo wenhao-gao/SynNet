@@ -36,7 +36,16 @@ def can_react(state, rxns: list[Reaction]) -> Tuple[int, list[bool]]:
     """
     mol1 = state.pop()
     mol2 = state.pop()
-    reaction_mask = [int(rxn.run_reaction((mol1, mol2)) is not None) for rxn in rxns]
+    reaction_mask = []
+    for rxn in rxns:
+        try:
+            p = rxn.run_reaction((mol1, mol2))
+            is_valid_reaction = int(p is not None)
+        except Exception as e:
+            # run_reactions() raises ValueEror if rdkit.RunReaction() yields None
+            is_valid_reaction = 0
+        reaction_mask += [is_valid_reaction]
+
     return sum(reaction_mask), reaction_mask
 
 

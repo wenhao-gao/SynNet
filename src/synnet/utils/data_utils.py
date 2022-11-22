@@ -699,7 +699,7 @@ class SyntheticTree:
 
         else:
             raise ValueError("Check input")
-
+        self.depth = max([node.depth for node in self.reactions]) + 0.5
         return None
 
     @property

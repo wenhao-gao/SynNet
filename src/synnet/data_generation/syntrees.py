@@ -256,10 +256,10 @@ class SynTreeGenerator:
         self.max_depth = max_depth
         logger.debug(f"Starting synthetic tree generation with {max_depth=} ")
         syntree = SyntheticTree()
-        recent_mol = self._sample_molecule()  # root of the current tree
 
-        for i in range(max_depth):
-            logger.debug(f"Iteration {i}")
+        for i in range(max_depth+1):
+            logger.debug(f"Iteration {i} | {syntree.depth=}")
+            #                               ^ TODO: fix: depth restarts at 0 if 2nd syntree is added
 
             # State of syntree
             state = syntree.get_state()
@@ -274,13 +274,19 @@ class SynTreeGenerator:
             if action == "end":
                 r1, r2, p, idx_rxn = None, None, None, -1
             elif action == "expand":
-                for j in range(retries):
-                    logger.debug(f"    Try {j}")
+                # Expand this subtree: reaction, (reactant2), run it.
+                j = 0
+                p = None
+                while j < retries:
+                    logger.debug(f"   Try {j}")
+                    try:
                     r1, r2, p, idx_rxn = self._expand(recent_mol)
+                    except Exception as e:
+                        logger.warning(e)
                     if p is not None:
                         break
+                    j += 1
                 if p is None:
-                    # TODO: move to rxn.run_reaction?
                     raise NoReactionPossibleError(
                         f"Reaction (ID: {idx_rxn}) not possible with: {r1} + {r2}."
                     )

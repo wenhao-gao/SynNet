@@ -203,14 +203,30 @@ class SynTreeGenerator:
 
         return np.array((canAdd, canExpand, canMerge, canEnd), dtype=bool)
 
-    def _get_rxn_mask(self, reactants: tuple[str, str],raise_exc=True) -> list[bool]:
+    def _get_rxn_mask(self, reactants: tuple[str, str], raise_exc=True) -> list[bool]:
         """Get a mask of possible reactions for the two reactants."""
-        masks = [self._find_rxn_candidates(r, raise_exc=False) for r in reactants]
-        # TODO: We do not check if the two reactants are 1st and 2nd reactants in a given reaction.
-        #       It is possible that both are only applicable as 1st reactant,
-        #       and then the reaction is not possible, although the mask returns true.
-        #       Alternative: Run the reaction and check if the product is valid.
-        mask = [rxn1 and rxn2 for rxn1, rxn2 in zip(*masks)]
+        # First: Identify bi-molecular reactions
+        masks_bimol = [rxn.num_reactant == 2 for rxn in self.rxns]  # TODO: Cache?
+        # Second: Check if reactants match template in correct or reversed order, i.e.
+        #         check if (r1->position1 & r2->position2) "ordered"
+        #         or       (r1->position2 & r2->position1) "reversed"
+        r1, r2 = reactants
+        masks_r1 = [
+            (rxn.is_reactant_first(r1), rxn.is_reactant_second(r1)) if is_bi else (False, False)
+            for is_bi, rxn in zip(masks_bimol, self.rxns)
+        ]
+        masks_r2 = [
+            (rxn.is_reactant_first(r2), rxn.is_reactant_second(r2)) if is_bi else (False, False)
+            for is_bi, rxn in zip(masks_bimol, self.rxns)
+        ]
+
+        # Check if reactants match template the ordered or reversed way
+        arr = np.array((masks_r1, masks_r2))  # (nReactant, nReaction, first-second-position)
+        arr = arr.swapaxes(0, 1)  # view:         (nReaction, nReactant, first-second-position)
+        canReactOrdered = np.trace(arr, axis1=1, axis2=2) > 1  # (nReaction,)
+        canReactReversed = np.flip(arr, axis=1).trace(axis1=1, axis2=2) > 1  # (nReaction,)
+        mask = np.logical_or(canReactOrdered, canReactReversed).tolist()
+
         if raise_exc and not any(mask):
             raise NoBiReactionAvailableError(f"No reaction available for {reactants}.")
         return mask

@@ -402,7 +402,9 @@ class MorganFingerprintEncoder(Encoder):
         self.radius = radius
         self.nbits = nbits
 
-    def encode(self, smi: str) -> np.ndarray:
+    def encode(self, smi: str, allow_none: bool = True) -> np.ndarray:
+        if not allow_none and smi is None:
+            raise ValueError(f"SMILES ({smi=}) cannot be None if `{allow_none=}`.")
         if smi is None:
             fp = np.zeros((1, self.nbits))  # (1,d)
         else:

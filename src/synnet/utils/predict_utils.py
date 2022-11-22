@@ -94,14 +94,13 @@ def get_reaction_mask(smi: str, rxns: list[Reaction]):
         return None, None
 
     available_list = []
-    mol = rdkit.Chem.MolFromSmiles(smi)
     for i, rxn in enumerate(rxns):
         if reaction_mask[i] and rxn.num_reactant == 2:
             # Reaction applies and needs a 2nd reactant.
 
-            if rxn.is_reactant_first(mol):
+            if rxn.is_reactant_first(smi):
                 available_list.append(rxn.available_reactants[1])
-            elif rxn.is_reactant_second(mol):
+            elif rxn.is_reactant_second(smi):
                 available_list.append(rxn.available_reactants[0])
             else:
                 raise ValueError("Check the reactants")

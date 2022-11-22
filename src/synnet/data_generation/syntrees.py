@@ -147,10 +147,12 @@ class SynTreeGenerator:
             irxn_mask = self.IDX_RXNS[mask]
 
         idx = self.rng.choice(irxn_mask)
+        rxn = self.rxns[idx]
+
         logger.debug(
-            f"Sampled reaction with index: {idx} (nreactants: {self.rxns[idx].num_reactant})"
+            f"    Sampled {'uni' if rxn.num_reactant == 1 else 'bi'}-molecular reaction with id {idx:d}"
         )
-        return self.rxns[idx], idx
+        return rxn, idx
 
     def _expand(self, reactant_1: str) -> Tuple[str, str, str, np.int64]:
         """Expand a sub-tree from one molecule.

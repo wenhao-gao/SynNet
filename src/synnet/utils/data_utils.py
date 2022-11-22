@@ -166,7 +166,10 @@ class Reaction:
         return mol.HasSubstructMatch(pattern)
 
     def run_reaction(
-        self, reactants: Tuple[Union[str, Chem.Mol, None]], keep_main: bool = True
+        self,
+        reactants: Tuple[Union[str, Chem.Mol, None]],
+        keep_main: bool = True,
+        allow_to_fail: bool = False,
     ) -> Union[str, None]:
         """Run this reactions with reactants and return corresponding product.
 
@@ -183,29 +186,35 @@ class Reaction:
         if not len(reactants) in (1, 2):
             raise ValueError(f"Can only run reactions with 1 or 2 reactants, not {len(reactants)}.")
 
-        rxn = self.rxn  # TODO: investigate if this is necessary (if not, delete "delete rxn below")
-
         # Convert all reactants to `Chem.Mol`
-        r: Tuple = tuple(self.get_mol(smiles) for smiles in reactants if smiles is not None)
+        r = tuple(self.get_mol(smiles) for smiles in reactants if smiles is not None)
 
-        if self.num_reactant == 1:
-            if len(r) == 2:  # Provided two reactants for unimolecular reaction -> no rxn possible
-                return None
-            if not self.is_reactant(r[0]):
-                return None
-        elif self.num_reactant == 2:
+        # Validate reaction for these reactants
+        if self.num_reactant == 1 and len(r)==2:
+            # Provided two reactants for unimolecular reaction -> no rxn possible
+            raise AssertionError(
+                    f"Provided two reactants ({r=}) for this unimolecular reaction."
+                )
+        if self.num_reactant == 1 and not self.is_reactant(r[0]):
+            raise AssertionError(
+                    f"Reactant ({r[0]=}) is not a reactant for this unimolecular reaction."
+                )
+
+        if self.num_reactant == 2:
             # Match reactant order with reaction template
             if self.is_reactant_first(r[0]) and self.is_reactant_second(r[1]):
                 pass
             elif self.is_reactant_first(r[1]) and self.is_reactant_second(r[0]):
                 r = tuple(reversed(r))
             else:  # No reaction possible
-                return None
-        else:
-            raise ValueError("This reaction is neither uni- nor bi-molecular.")
+                # TODO: Fix: Can happen if both are 1st or 2nd reactant simultanouesly
+                raise AssertionError(
+                    f"Reactants ({reactants=}) do not match this bimolecular reaction."
+                )
+
 
         # Run reaction with rdkit magic
-        ps = rxn.RunReactants(r)
+        ps = self.rxn.RunReactants(r)
 
         # Filter for unique products (less magic)
         # Note: Use chain() to flatten the tuple of tuples
@@ -216,14 +225,18 @@ class Reaction:
             # TODO: Raise (custom) exception?
             raise ValueError("Reaction did not yield any products.")
 
-        del rxn
-
         if keep_main:
             uniqps = uniqps[:1]
         # >>> TODO: Always return list[str] (currently depends on "keep_main")
         uniqps = uniqps[0]
         # <<< ^ delete this line if resolved.
-        return uniqps
+
+        # Sanity check: Convert SMILES to `Chem.Mol`, then to SMILES again.
+        mol = dm.to_mol(uniqps)
+        smiles = dm.to_smiles(mol, isomeric=False, allow_to_fail=False)
+        if allow_to_fail and smiles is None:
+            raise ValueError(f"rdkit.RunReactants() produced invalid product: {uniqps}")
+        return smiles
 
     def _filter_reactants(
         self, smiles: list[str], verbose: bool = False

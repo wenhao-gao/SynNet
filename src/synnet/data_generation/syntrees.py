@@ -280,7 +280,7 @@ class SynTreeGenerator:
                 while j < retries:
                     logger.debug(f"   Try {j}")
                     try:
-                    r1, r2, p, idx_rxn = self._expand(recent_mol)
+                        r1, r2, p, idx_rxn = self._expand(recent_mol)
                     except Exception as e:
                         logger.warning(e)
                     if p is not None:

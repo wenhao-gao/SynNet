@@ -689,6 +689,13 @@ class SyntheticTree:
 
         return None
 
+    @property
+    def chemicals_as_smiles(self) -> list[str]:
+        return [node.smiles for node in self.chemicals]
+    @property
+    def leafs_as_smiles(self) -> list[str]:
+        return [node.smiles for node in self.chemicals if node.is_leaf]
+
 
 class SyntheticTreeSet:
     """Represents a collection of synthetic trees, for saving and loading purposes."""

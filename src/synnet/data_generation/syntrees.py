@@ -406,14 +406,14 @@ class MorganFingerprintEncoder(Encoder):
         if not allow_none and smi is None:
             raise ValueError(f"SMILES ({smi=}) cannot be None if `{allow_none=}`.")
         if smi is None:
-            fp = np.zeros((1, self.nbits))  # (1,d)
+            fp = np.zeros((1, self.nbits))  # (d)
         else:
             mol = Chem.MolFromSmiles(smi)  # TODO: sanity check mol here or use datmol?
             bv = Chem.AllChem.GetMorganFingerprintAsBitVect(mol, self.radius, self.nbits)
             fp = np.empty(self.nbits)
             Chem.DataStructs.ConvertToNumpyArray(bv, fp)
-            fp = fp[None, :]
-        return fp  # (1,d)
+            # fp = fp[None, :]
+        return fp  # (d,)
 
 
 class IdentityIntEncoder(Encoder):

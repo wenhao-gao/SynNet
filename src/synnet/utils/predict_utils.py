@@ -74,15 +74,7 @@ def get_action_mask(state: list, rxns: list[Reaction]) -> np.ndarray:
 
 
 def get_reaction_mask(smi: str, rxns: list[Reaction]):
-    """
-    Determines which reaction templates can apply to the input molecule.
-
-    Args:
-        smi (str): The SMILES string corresponding to the molecule in question.
-        rxns (list of Reaction objects): Contains available reaction templates.
-
-    Raises:
-        ValueError: There is an issue with the reactants in the reaction.
+    """Determine which reaction templates can apply to the input molecule.
 
     Returns:
         reaction_mask (list of ints, or None): The reaction template mask. Masks
@@ -98,12 +90,14 @@ def get_reaction_mask(smi: str, rxns: list[Reaction]):
     reaction_mask = [int(rxn.is_reactant(smi)) for rxn in rxns]
 
     if sum(reaction_mask) == 0:
+        # No reaction possible, no reaction template is matching the reactant `smi`
         return None, None
 
     available_list = []
     mol = rdkit.Chem.MolFromSmiles(smi)
     for i, rxn in enumerate(rxns):
         if reaction_mask[i] and rxn.num_reactant == 2:
+            # Reaction applies and needs a 2nd reactant.
 
             if rxn.is_reactant_first(mol):
                 available_list.append(rxn.available_reactants[1])
@@ -200,26 +194,23 @@ def synthetic_tree_decoder(
     Uses the Action, Reaction, Reactant1, and Reactant2 networks and a greedy search.
 
     Args:
-        z_target (np.ndarray): Embedding for the target molecule
-        building_blocks (list of str): Contains available building blocks
-        bb_dict (dict): Building block dictionary
-        reaction_templates (list of Reactions): Contains reaction templates
-        mol_embedder (dgllife.model.gnn.gin.GIN): GNN to use for obtaining
-            molecular embeddings
-        action_net (synth_net.models.mlp.MLP): The action network
-        reactant1_net (synth_net.models.mlp.MLP): The reactant1 network
-        rxn_net (synth_net.models.mlp.MLP): The reaction network
-        reactant2_net (synth_net.models.mlp.MLP): The reactant2 network
-        bb_emb (list): Contains purchasable building block embeddings.
-        rxn_template (str): Specifies the set of reaction templates to use.
-        n_bits (int): Length of fingerprint.
-        max_step (int, optional): Maximum number of steps to include in the
-            synthetic tree
+        z_target: Embedding for the target molecule
+        building_blocks: Contains available building blocks
+        bb_dict: building blocks as dict, mapping smiles-index
+        reaction_templates: Initialized reaction templates
+        mol_embedder:
+        action_net: The action network
+        reactant1_net: The reactant1 network
+        rxn_net: The reaction network
+        reactant2_net: The reactant2 network
+        bb_emb: building block embeddings
+        rxn_template: Specifies the set of reaction templates to use.
+        n_bits: Length of fingerprint.
+        max_step: Maximum number of steps to include in the synthetic tree
 
     Returns:
         tree (SyntheticTree): The final synthetic tree.
-        act (int): The final action (to know if the tree was "properly"
-            terminated).
+        act (int): The final action (to know if the tree was "properly" terminated).
     """
     # Initialization
     tree = SyntheticTree()
@@ -257,8 +248,7 @@ def synthetic_tree_decoder(
 
             _, idxs = kdtree.query(z_mol1, k=k)  # idxs.shape = (1,k)
             mol1 = building_blocks[idxs[0][k - 1]]
-        elif act == 1 or act == 2:
-            # Expand or Merge
+        elif act == 1 or act == 2:  # Expand or Merge
             mol1 = mol_recent
         else:
             raise ValueError(f"Unexpected action {act}.")

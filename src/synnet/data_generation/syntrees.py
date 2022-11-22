@@ -43,6 +43,13 @@ class NoReactionPossibleError(Exception):
         super().__init__(message)
 
 
+class NoMergeReactionPossibleError(Exception):
+    """Cannot merge because `rdkit` can not yield a valid reaction product."""
+
+    def __init__(self, message):
+        super().__init__(message)
+
+
 class MaxDepthError(Exception):
     """Synthetic Tree has exceeded its maximum depth."""
 
@@ -281,7 +288,7 @@ class SynTreeGenerator:
                 p = rxn.run_reaction((r1, r2))
                 if p is None:
                     # TODO: move to rxn.run_reaction?
-                    raise NoReactionPossibleError(
+                    raise NoMergeReactionPossibleError(
                         f"Reaction (ID: {idx_rxn}) not possible with: {r1} + {r2}."
                     )
             else:

@@ -398,15 +398,14 @@ class NodeRxn:
 
 
 class SyntheticTree:
-    """
-    A class representing a synthetic tree.
+    """Representation of a synthetic tree (syntree).
 
     Args:
         chemicals (list): A list of chemical nodes, in order of addition.
         reactions (list): A list of reaction nodes, in order of addition.
         actions (list): A list of actions, in order of addition.
         root (NodeChemical): The root node.
-        depth (int): The depth of the tree.
+        depth (int): Depth of the tree, actions "add" "expand" and "merge" increase depth by 1.
         rxn_id2type (dict): A dictionary that maps reaction indices to reaction
             type (uni- or bi-molecular).
     """
@@ -414,9 +413,9 @@ class SyntheticTree:
     def __init__(self, tree=None):
         self.chemicals: list[NodeChemical] = []
         self.reactions: list[NodeRxn] = []
-        self.root = None
+        self.root: NodeChemical = None
         self.depth: float = 0
-        self.actions = []
+        self.actions: list[int] = []
         self.rxn_id2type = None
 
         if tree is not None:
@@ -426,12 +425,7 @@ class SyntheticTree:
         return f"SynTree(depth={self.depth})"
 
     def read(self, data):
-        """
-        A function that loads a dictionary from synthetic tree data.
-
-        Args:
-            data (dict): A dictionary representing a synthetic tree.
-        """
+        """Initialize a this `SyntheticTree` from a dictionary."""
         self.root = NodeChemical(**data["root"])
         self.depth = data["depth"]
         self.actions = data["actions"]
@@ -446,12 +440,7 @@ class SyntheticTree:
             self.chemicals.append(r)
 
     def output_dict(self):
-        """
-        A function that exports dictionary-formatted synthetic tree data.
-
-        Returns:
-            data (dict): A dictionary representing a synthetic tree.
-        """
+        """Export this `SyntheticTree` to a dictionary."""
         return {
             "reactions": [r.__dict__ for r in self.reactions],
             "chemicals": [m.__dict__ for m in self.chemicals],
@@ -462,10 +451,8 @@ class SyntheticTree:
         }
 
     def _print(self):
-        """
-        A function that prints the contents of the synthetic tree.
-        """
-        print("===================SynTree====================")
+        """Print the contents of this `SyntheticTree`."""
+        print(f"============SynTree (depth={self.depth:>4.1f})==============")
         print("===============Stored Molecules===============")
         for node in self.chemicals:
             suffix = " (root mol)" if node.is_root else ""
@@ -477,16 +464,10 @@ class SyntheticTree:
         print(self.actions)
         print("==============================================")
 
-    def get_node_index(self, smi):
-        """
-        Returns the index of the node matching the input SMILES.
+    def get_node_index(self, smi: str) -> int:
+        """Return the index of the node matching the input SMILES.
 
-        Args:
-            smi (str): A SMILES string that represents the query molecule.
-
-        Returns:
-            index (int): Index of chemical node corresponding to the query
-                molecule. If the query moleucle is not in the tree, return None.
+        If the query moleucle is not in the tree, return None.
         """
         for node in self.chemicals:
             if smi == node.smiles:

@@ -316,7 +316,7 @@ class SynTreeGenerator:
             recent_mol = p
 
             # Update tree
-            syntree.update(act, rxn_id=int(idx_rxn), mol1=r1, mol2=r2, mol_product=p)
+            syntree.update(action=int(act), rxn_id=int(idx_rxn), mol1=r1, mol2=r2, mol_product=p)
             logger.debug(f"SynTree updated.")
             if action == "end":
                 break

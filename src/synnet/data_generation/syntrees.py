@@ -2,6 +2,7 @@
 """
 import logging
 from typing import Optional, Tuple, Union
+
 import numpy as np
 from rdkit import Chem
 from scipy import sparse
@@ -73,7 +74,7 @@ class SynTreeGenerator:
         rng=np.random.default_rng(),  # TODO: Think about this...
         processes: int = MAX_PROCESSES,
         verbose: bool = False,
-        debug: bool = False
+        debug: bool = False,
     ) -> None:
         self.building_blocks = building_blocks
         self.rxn_templates = rxn_templates
@@ -257,7 +258,7 @@ class SynTreeGenerator:
         logger.debug(f"Starting synthetic tree generation with {max_depth=} ")
         syntree = SyntheticTree()
 
-        for i in range(max_depth+1):
+        for i in range(max_depth + 1):
             logger.debug(f"Iteration {i} | {syntree.depth=}")
             #                               ^ TODO: fix: depth restarts at 0 if 2nd syntree is added
 

@@ -190,15 +190,13 @@ class Reaction:
         r = tuple(self.get_mol(smiles) for smiles in reactants if smiles is not None)
 
         # Validate reaction for these reactants
-        if self.num_reactant == 1 and len(r)==2:
+        if self.num_reactant == 1 and len(r) == 2:
             # Provided two reactants for unimolecular reaction -> no rxn possible
-            raise AssertionError(
-                    f"Provided two reactants ({r=}) for this unimolecular reaction."
-                )
+            raise AssertionError(f"Provided two reactants ({r=}) for this unimolecular reaction.")
         if self.num_reactant == 1 and not self.is_reactant(r[0]):
             raise AssertionError(
-                    f"Reactant ({r[0]=}) is not a reactant for this unimolecular reaction."
-                )
+                f"Reactant ({r[0]=}) is not a reactant for this unimolecular reaction."
+            )
 
         if self.num_reactant == 2:
             # Match reactant order with reaction template
@@ -211,7 +209,6 @@ class Reaction:
                 raise AssertionError(
                     f"Reactants ({reactants=}) do not match this bimolecular reaction."
                 )
-
 
         # Run reaction with rdkit magic
         ps = self.rxn.RunReactants(r)
@@ -686,6 +683,7 @@ class SyntheticTree:
     @property
     def chemicals_as_smiles(self) -> list[str]:
         return [node.smiles for node in self.chemicals]
+
     @property
     def leafs_as_smiles(self) -> list[str]:
         return [node.smiles for node in self.chemicals if node.is_leaf]

@@ -113,9 +113,9 @@ class SynTreeGenerator:
         """Initializes a `Reaction` with a list of possible reactants.
 
         Info: This can take a while for lots of possible reactants."""
-        self.rxns = tqdm(self.rxns) if self.verbose else self.rxns
         if self.processes == 1:
-            self.rxns = [rxn.set_available_reactants(self.building_blocks) for rxn in self.rxns]
+            rxns = tqdm(self.rxns) if self.verbose else self.rxns
+            self.rxns = [rxn.set_available_reactants(self.building_blocks) for rxn in rxns]
         else:
             self.__match_mp()
 

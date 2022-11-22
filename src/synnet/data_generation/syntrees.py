@@ -73,6 +73,7 @@ class SynTreeGenerator:
         rng=np.random.default_rng(),  # TODO: Think about this...
         processes: int = MAX_PROCESSES,
         verbose: bool = False,
+        debug: bool = False
     ) -> None:
         self.building_blocks = building_blocks
         self.rxn_templates = rxn_templates
@@ -83,6 +84,8 @@ class SynTreeGenerator:
         self.verbose = verbose
         if not verbose:
             logger.setLevel("CRITICAL")  # dont show error msgs
+        if debug:
+            logger.setLevel("DEBUG")
 
         # Time intensive tasks
         self._init_rxns_with_reactants()

@@ -21,17 +21,9 @@ from tqdm import tqdm
 
 # the definition of reaction classes below
 class Reaction:
-    """
-    This class models a chemical reaction based on a SMARTS transformation.
+    """A chemical reaction defined by a SMARTS pattern."""
 
-    Args:
-        template (str): SMARTS string representing a chemical reaction.
-        rxnname (str): The name of the reaction for downstream analysis.
-        smiles: (str): A reaction SMILES string that macthes the SMARTS pattern.
-        reference (str): Reference information for the reaction.
-    """
-
-    smirks: str  # SMARTS pattern
+    smirks: str
     rxn: Chem.rdChemReactions.ChemicalReaction
     num_reactant: int
     num_agent: int
@@ -41,72 +33,60 @@ class Reaction:
     agent_template: str
     available_reactants: Tuple[list[str], Optional[list[str]]]
     rxnname: str
-    smiles: Any
     reference: Any
 
-    def __init__(self, template=None, rxnname=None, smiles=None, reference=None):
+    def __init__(self, template: str, name: Optional[str] = None, reference: Optional[Any] = None):
+        """Initialize a `Reaction`.
 
-        if template is not None:
-            # define a few attributes based on the input
-            self.smirks = template.strip()
-            self.rxnname = rxnname
-            self.smiles = smiles
-            self.reference = reference
-
-            # compute a few additional attributes
-            self.rxn = dm.reactions.rxn_from_smarts(self.smirks)
-
-            # Extract number of ...
-            self.num_reactant = self.rxn.GetNumReactantTemplates()
-            if self.num_reactant not in (1, 2):
-                raise ValueError("Reaction is neither uni- nor bi-molecular.")
-            self.num_agent = self.rxn.GetNumAgentTemplates()
-            self.num_product = self.rxn.GetNumProductTemplates()
-
-            # Extract reactants, agents, products
-            reactants, agents, products = self.smirks.split(">")
-
-            if self.num_reactant == 1:
-                self.reactant_template = list((reactants,))
-            elif self.num_reactant == 2:
-                self.reactant_template = list(reactants.split("."))
-            else:
-                raise ValueError("This reaction is neither uni- nor bi-molecular.")
-            self.product_template = products
-            self.agent_template = agents
-        else:
-            self.smirks = None
-
-    def load(
-        self,
-        smirks,
-        num_reactant,
-        num_agent,
-        num_product,
-        reactant_template,
-        product_template,
-        agent_template,
-        available_reactants,
-        rxnname,
-        smiles,
-        reference,
-    ):
+        Args:
+            template: SMARTS string representing a chemical reaction.
+            name: The name of the reaction for downstream analysis.
+            reference: (placeholder)
         """
-        This function loads a set of elements and reconstructs a `Reaction` object.
-        """
-        self.smirks = smirks
-        self.num_reactant = num_reactant
-        self.num_agent = num_agent
-        self.num_product = num_product
-        self.reactant_template = list(reactant_template)
-        self.product_template = product_template
-        self.agent_template = agent_template
-        self.available_reactants = list(available_reactants)  # TODO: use Tuple[list,list] here
-        self.rxnname = rxnname
-        self.smiles = smiles
+        self.smirks = template.strip()  # SMARTS pattern
+        self.name = name
         self.reference = reference
+
+        # Initialize reaction
         self.rxn = dm.reactions.rxn_from_smarts(self.smirks)
-        return self
+
+        # Extract number of ...
+        self.num_reactant = self.rxn.GetNumReactantTemplates()
+        if self.num_reactant not in (1, 2):
+            raise ValueError("Reaction is neither uni- nor bi-molecular.")
+        self.num_agent = self.rxn.GetNumAgentTemplates()
+        self.num_product = self.rxn.GetNumProductTemplates()
+
+        # Extract reactants, agents, products
+        reactants, agents, products = self.smirks.split(">")
+
+        if self.num_reactant == 1:
+            self.reactant_template = list((reactants,))
+        elif self.num_reactant == 2:
+            self.reactant_template = list(reactants.split("."))
+
+        self.product_template = products
+        self.agent_template = agents
+
+    def __repr__(self) -> str:
+        return f"Reaction(smarts='{self.smirks}')"
+
+    @classmethod
+    def from_dict(cls, attrs: dict):
+        """Populate all attributes of the `Reaction` object from a dictionary."""
+        rxn = cls(attrs["smirks"])  # only arg without a default
+        for k, v in attrs.items():
+            rxn.__setattr__(k, v)
+        return rxn
+
+    def to_dict(self) -> dict():
+        """Returns serializable fields as new dictionary mapping.
+        *Excludes* Not-easily-serializable `self.rxn: rdkit.Chem.ChemicalReaction`."""
+        import copy
+
+        out = copy.deepcopy(self.__dict__)
+        _ = out.pop("rxn")
+        return out
 
     @functools.lru_cache(maxsize=20_000)
     def get_mol(self, smi: Union[str, Chem.Mol]) -> Chem.Mol:
@@ -118,25 +98,27 @@ class Reaction:
         else:
             raise TypeError(f"{type(smi)} not supported, only `str` or `rdkit.Chem.Mol`")
 
-    def visualize(self, name="./reaction1_highlight.o.png"):
-        """
-        A function that plots the chemical translation into a PNG figure.
-        One can use "from IPython.display import Image ; Image(name)" to see it
-        in a Python notebook.
+    def to_image(self, size: tuple[int, int] = (800, 300)) -> bytes:
+        """Returns a png image of the visual represenation for this chemical reaction.
 
-        Args:
-            name (str): The path to the figure.
+        Usage:
+            * In Jupyter:
 
-        Returns:
-            name (str): The path to the figure.
+                >>> from IPython.display import Image
+                >>> img = rxn.to_image()
+                >>> Image(img)
+
+            * save as image:
+
+                >>> img = rxn.to_image()
+                >>> pathlib.Path("out.png").write_bytes(img)
+
         """
         rxn = AllChem.ReactionFromSmarts(self.smirks)
-        d2d = Draw.MolDraw2DCairo(800, 300)
+        d2d = Draw.MolDraw2DCairo(*size)
         d2d.DrawReaction(rxn, highlightByReactant=True)
-        png = d2d.GetDrawingText()
-        open(name, "wb+").write(png)
-        del rxn
-        return name
+        image = d2d.GetDrawingText()
+        return image
 
     def is_reactant(self, smi: Union[str, Chem.Mol]) -> bool:
         """Checks if `smi` is a reactant of this reaction."""
@@ -238,40 +220,24 @@ class Reaction:
     def _filter_reactants(
         self, smiles: list[str], verbose: bool = False
     ) -> Tuple[list[str], list[str]]:
-        """
-        Filters reactants which do not match the reaction.
-
-        Args:
-            smiles: Possible reactants for this reaction.
-
-        Returns:
-            :lists of SMILES which match either the first
-                reactant, or, if applicable, the second reactant.
-
-        Raises:
-            ValueError: If `self` is not a uni- or bi-molecular reaction.
-        """
+        """Filters reactants which do not match the reaction."""
         smiles = tqdm(smiles) if verbose else smiles
 
         if self.num_reactant == 1:  # uni-molecular reaction
             reactants_1 = [smi for smi in smiles if self.is_reactant_first(smi)]
-            return (reactants_1,)
+            reactants = (reactants_1, [])
 
         elif self.num_reactant == 2:  # bi-molecular reaction
             reactants_1 = [smi for smi in smiles if self.is_reactant_first(smi)]
             reactants_2 = [smi for smi in smiles if self.is_reactant_second(smi)]
 
-            return (reactants_1, reactants_2)
-        else:
-            raise ValueError("This reaction is neither uni- nor bi-molecular.")
+            reactants = (reactants_1, reactants_2)
+
+        return reactants
 
     def set_available_reactants(self, building_blocks: list[str], verbose: bool = False):
-        """
-        Finds applicable reactants from a list of building blocks.
+        """Finds applicable reactants from a list of building blocks.
         Sets `self.available_reactants`.
-
-        Args:
-            building_blocks: Building blocks as SMILES strings.
         """
         self.available_reactants = self._filter_reactants(building_blocks, verbose=verbose)
         return self
@@ -279,15 +245,6 @@ class Reaction:
     @property
     def get_available_reactants(self) -> Set[str]:
         return {x for reactants in self.available_reactants for x in reactants}
-
-    def asdict(self) -> dict():
-        """Returns serializable fields as new dictionary mapping.
-        *Excludes* Not-easily-serializable `self.rxn: rdkit.Chem.ChemicalReaction`."""
-        import copy
-
-        out = copy.deepcopy(self.__dict__)  # TODO:
-        _ = out.pop("rxn")
-        return out
 
 
 class ReactionSet:

@@ -409,6 +409,9 @@ class SyntheticTree:
         if tree is not None:
             self.read(tree)
 
+    def __repr__(self) -> str:
+        return f"SynTree(depth={self.depth})"
+
     def read(self, data):
         """
         A function that loads a dictionary from synthetic tree data.
@@ -449,14 +452,17 @@ class SyntheticTree:
         """
         A function that prints the contents of the synthetic tree.
         """
+        print("===================SynTree====================")
         print("===============Stored Molecules===============")
         for node in self.chemicals:
-            print(node.smiles, node.is_root)
+            suffix = " (root mol)" if node.is_root else ""
+            print(node.smiles, suffix)
         print("===============Stored Reactions===============")
         for node in self.reactions:
-            print(node.rxn_id, node.rtype)
+            print(f"{node.rxn_id} ({'bi ' if node.rtype==2 else 'uni'})")
         print("===============Followed Actions===============")
         print(self.actions)
+        print("==============================================")
 
     def get_node_index(self, smi):
         """

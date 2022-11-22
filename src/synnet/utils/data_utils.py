@@ -253,37 +253,54 @@ class ReactionSet:
     def __init__(self, rxns: Optional[list[Reaction]] = None):
         self.rxns = rxns if rxns is not None else []
 
-    def load(self, file: str):
+    def __repr__(self) -> str:
+        return f"ReactionSet ({len(self.rxns)} reactions.)"
+
+    def __len__(self):
+        return len(self.rxns)
+
+    def __getitem__(self, index: int):
+        if self.rxns is None:
+            raise IndexError("No Reactions.")
+        return self.rxns[index]
+
+    @classmethod
+    def load(cls, file: str):
         """Load a collection of reactions from a `*.json.gz` file."""
         assert str(file).endswith(".json.gz"), f"Incompatible file extension for file {file}"
+        cls = ReactionSet()
+
         with gzip.open(file, "r") as f:
             data = json.loads(f.read().decode("utf-8"))
 
-        for r in data["reactions"]:
-            rxn = Reaction().load(
-                **r
-            )  # TODO: `load()` relies on postional args, hence we cannot load a reaction that has no `available_reactants` for extample (or no template)
-            self.rxns.append(rxn)
-        return self
+        for _rxn in data["reactions"]:
+            rxn = Reaction.from_dict(_rxn)
+            cls.rxns.append(rxn)
+        return cls
 
     def save(self, file: str) -> None:
         """Save a collection of reactions to a `*.json.gz` file."""
 
         assert str(file).endswith(".json.gz"), f"Incompatible file extension for file {file}"
 
-        r_list = {"reactions": [r.asdict() for r in self.rxns]}
+        rxns_as_json = {"reactions": [r.to_dict() for r in self.rxns]}
         with gzip.open(file, "w") as f:
-            f.write(json.dumps(r_list).encode("utf-8"))
+            f.write(json.dumps(rxns_as_json).encode("utf-8"))
 
-    def __len__(self):
-        return len(self.rxns)
-
-    def _print(self, x=3):
-        # For debugging
+    def _print(self, n: int = 3):
+        """Debugging-helper method to print `n` reactions as json"""
         for i, r in enumerate(self.rxns):
-            if i >= x:
+            if i >= n:
                 break
-            print(json.dumps(r.asdict(), indent=2))
+            print(json.dumps(r.to_dict(), indent=2))
+
+    @property
+    def num_unimolecular(self) -> int:
+        return sum([r.num_reactant == 1 for r in self])
+
+    @property
+    def num_bimolecular(self) -> int:
+        return sum([r.num_reactant == 2 for r in self])
 
 
 # the definition of classes for defining synthetic trees below

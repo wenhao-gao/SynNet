@@ -693,6 +693,8 @@ class SyntheticTree:
 class SyntheticTreeSet:
     """Represents a collection of synthetic trees, for saving and loading purposes."""
 
+    sts: List[SyntheticTree]
+
     def __init__(self, sts: Optional[list[SyntheticTree]] = None):
         self.sts = sts if sts is not None else []
 

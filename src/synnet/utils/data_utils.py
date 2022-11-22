@@ -108,7 +108,7 @@ class Reaction:
         self.rxn = dm.reactions.rxn_from_smarts(self.smirks)
         return self
 
-    @functools.lru_cache(maxsize=20)
+    @functools.lru_cache(maxsize=20_000)
     def get_mol(self, smi: Union[str, Chem.Mol]) -> Chem.Mol:
         """Convert smiles to  `RDKit.Chem.Mol`."""
         if isinstance(smi, str):

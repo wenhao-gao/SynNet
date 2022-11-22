@@ -68,8 +68,10 @@ class Reaction:
 
             if self.num_reactant == 1:
                 self.reactant_template = list((reactants,))
-            else:
+            elif self.num_reactant == 2:
                 self.reactant_template = list(reactants.split("."))
+            else:
+                raise ValueError("This reaction is neither uni- nor bi-molecular.")
             self.product_template = products
             self.agent_template = agents
         else:

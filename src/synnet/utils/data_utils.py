@@ -268,15 +268,12 @@ class ReactionSet:
     def load(cls, file: str):
         """Load a collection of reactions from a `*.json.gz` file."""
         assert str(file).endswith(".json.gz"), f"Incompatible file extension for file {file}"
-        collection = ReactionSet()
 
         with gzip.open(file, "r") as f:
             data = json.loads(f.read().decode("utf-8"))
 
-        for _rxn in data["reactions"]:
-            rxn = Reaction.from_dict(_rxn)
-            collection.rxns.append(rxn)
-        return collection
+        reactions = [Reaction.from_dict(_rxn) for _rxn in data["reactions"]]
+        return cls(reactions)
 
     def save(self, file: str) -> None:
         """Save a collection of reactions to a `*.json.gz` file."""
@@ -681,16 +678,13 @@ class SyntheticTreeSet:
     def load(cls, file: str):
         """Load a collection of synthetic trees from a `*.json.gz` file."""
         assert str(file).endswith(".json.gz"), f"Incompatible file extension for file {file}"
-        collection = SyntheticTreeSet()
 
         with gzip.open(file, "rt") as f:
             data = json.loads(f.read())
 
-        for _syntree in data["trees"]:
-            syntree = SyntheticTree.from_dict(_syntree)
-            collection.sts.append(syntree)
+        syntrees = [SyntheticTree.from_dict(_syntree) for _syntree in data["trees"]]
 
-        return collection
+        return cls(syntrees)
 
     def save(self, file: str) -> None:
         """Save a collection of synthetic trees to a `*.json.gz` file."""

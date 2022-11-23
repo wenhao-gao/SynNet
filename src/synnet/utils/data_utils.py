@@ -268,15 +268,15 @@ class ReactionSet:
     def load(cls, file: str):
         """Load a collection of reactions from a `*.json.gz` file."""
         assert str(file).endswith(".json.gz"), f"Incompatible file extension for file {file}"
-        cls = ReactionSet()
+        collection = ReactionSet()
 
         with gzip.open(file, "r") as f:
             data = json.loads(f.read().decode("utf-8"))
 
         for _rxn in data["reactions"]:
             rxn = Reaction.from_dict(_rxn)
-            cls.rxns.append(rxn)
-        return cls
+            collection.rxns.append(rxn)
+        return collection
 
     def save(self, file: str) -> None:
         """Save a collection of reactions to a `*.json.gz` file."""
@@ -381,36 +381,31 @@ class SyntheticTree:
             type (uni- or bi-molecular).
     """
 
-    def __init__(self, tree=None):
+    def __init__(self):
         self.chemicals: list[NodeChemical] = []
         self.reactions: list[NodeRxn] = []
-        self.root: NodeChemical = None
+        self.root: Union[NodeChemical,None] = None
         self.depth: float = 0
         self.actions: list[int] = []
-        self.rxn_id2type = None
-
-        if tree is not None:
-            self.read(tree)
+        self.rxn_id2type: dict = None
 
     def __repr__(self) -> str:
         return f"SynTree(depth={self.depth})"
 
-    def read(self, data):
-        """Initialize a this `SyntheticTree` from a dictionary."""
-        self.root = NodeChemical(**data["root"])
-        self.depth = data["depth"]
-        self.actions = data["actions"]
-        self.rxn_id2type = data["rxn_id2type"]
+    @classmethod
+    def from_dict(cls, attrs: dict):
+        """Initialize a `SyntheticTree` from a dictionary."""
+        syntree = cls()
+        syntree.root = NodeChemical(**attrs["root"])
+        syntree.depth = attrs["depth"]
+        syntree.actions = attrs["actions"]
+        syntree.rxn_id2type = attrs["rxn_id2type"]
 
-        for r_dict in data["reactions"]:
-            r = NodeRxn(**r_dict)
-            self.reactions.append(r)
+        syntree.reactions = [NodeRxn(**_rxn_dict) for _rxn_dict in attrs["reactions"]]
+        syntree.chemicals = [NodeChemical(**_chem_dict) for _chem_dict in attrs["chemicals"]]
+        return syntree
 
-        for m_dict in data["chemicals"]:
-            r = NodeChemical(**m_dict)
-            self.chemicals.append(r)
-
-    def output_dict(self):
+    def to_dict(self) -> dict:
         """Export this `SyntheticTree` to a dictionary."""
         return {
             "reactions": [r.__dict__ for r in self.reactions],
@@ -671,6 +666,9 @@ class SyntheticTreeSet:
     def __init__(self, sts: Optional[list[SyntheticTree]] = None):
         self.sts = sts if sts is not None else []
 
+    def __repr__(self) -> str:
+        return f"SyntheticTreeSet ({len(self.sts)} syntrees.)"
+
     def __len__(self):
         return len(self.sts)
 
@@ -679,26 +677,28 @@ class SyntheticTreeSet:
             raise IndexError("No Synthetic Trees.")
         return self.sts[index]
 
-    def load(self, file: str):
+    @classmethod
+    def load(cls, file: str):
         """Load a collection of synthetic trees from a `*.json.gz` file."""
         assert str(file).endswith(".json.gz"), f"Incompatible file extension for file {file}"
+        collection = SyntheticTreeSet()
 
         with gzip.open(file, "rt") as f:
             data = json.loads(f.read())
 
-        for st in data["trees"]:
-            st = SyntheticTree(st) if st is not None else None
-            self.sts.append(st)
+        for _syntree in data["trees"]:
+            syntree = SyntheticTree.from_dict(_syntree)
+            collection.sts.append(syntree)
 
-        return self
+        return collection
 
     def save(self, file: str) -> None:
         """Save a collection of synthetic trees to a `*.json.gz` file."""
         assert str(file).endswith(".json.gz"), f"Incompatible file extension for file {file}"
 
-        st_list = {"trees": [st.output_dict() for st in self.sts if st is not None]}
+        syntrees_as_json = {"trees": [st.output_dict() for st in self.sts if st is not None]}
         with gzip.open(file, "wt") as f:
-            f.write(json.dumps(st_list))
+            f.write(json.dumps(syntrees_as_json))
 
     def _print(self, x=3):
         """Helper function for debugging."""

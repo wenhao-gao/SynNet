@@ -14,17 +14,17 @@ from rdkit import RDLogger
 from synnet.config import DATA_PREPROCESS_DIR, DATA_RESULT_DIR, MAX_PROCESSES
 from synnet.data_generation.preprocessing import BuildingBlockFileHandler
 from synnet.encoding.distances import cosine_distance
+from synnet.encoding.fingerprints import fp_embedding
 from synnet.models.common import find_best_model_ckpt, load_mlp_from_ckpt
 from synnet.MolEmbedder import MolEmbedder
 from synnet.utils.data_utils import ReactionSet, SyntheticTree, SyntheticTreeSet
 from synnet.utils.predict_utils import synthetic_tree_decoder_greedy_search
-from synnet.encoding.fingerprints import fp_embedding
 
 logger = logging.getLogger(__name__)
 
 
 def _fetch_data_chembl(name: str) -> list[str]:
-    df = pd.read_csv(name,sep="\t")
+    df = pd.read_csv(name, sep="\t")
     smis_query = df["smiles"].to_list()
     return smis_query
 

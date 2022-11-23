@@ -381,7 +381,7 @@ class SyntheticTree:
     def __init__(self):
         self.chemicals: list[NodeChemical] = []
         self.reactions: list[NodeRxn] = []
-        self.root: Union[NodeChemical,None] = None
+        self.root: Union[NodeChemical, None] = None
         self.depth: float = 0
         self.actions: list[int] = []
         self.rxn_id2type: dict = None

@@ -307,7 +307,9 @@ def fetch_population(args) -> np.ndarray:
         else:
             starting_smiles = pd.read_csv(args.input_file).sample(args.num_population)
             starting_smiles = starting_smiles["smiles"].tolist()
-            population = np.array([fp_embedding(smi, args.radius, args.nbits) for smi in starting_smiles])
+            population = np.array(
+                [fp_embedding(smi, args.radius, args.nbits) for smi in starting_smiles]
+            )
             print(f"Starting with {len(starting_smiles)} fps from {args.input_file}")
     return population
 

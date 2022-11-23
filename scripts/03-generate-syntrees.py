@@ -21,6 +21,7 @@ from typing import Tuple, Union
 
 RDLogger.DisableLog("rdApp.*")
 
+
 def get_args():
     import argparse
 
@@ -128,7 +129,7 @@ if __name__ == "__main__":
     # Save synthetic trees on disk
     syntree_collection = SyntheticTreeSet(syntrees)
     syntree_collection = SyntheticTreeSet(
-        [st for st in syntree_collection if st is not None and st.depth>1]
+        [st for st in syntree_collection if st is not None and st.depth > 1]
     )
     syntree_collection.save(args.output_file)
 

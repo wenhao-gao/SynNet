@@ -302,7 +302,7 @@ class ReactionSet:
 
 
 # the definition of classes for defining synthetic trees below
-@dataclass(frozen=True)
+@dataclass
 class NodeChemical:
     """Represents a chemical node in a synthetic tree.
 
@@ -325,7 +325,7 @@ class NodeChemical:
     index: int = 0
 
 
-@dataclass(frozen=True)
+@dataclass
 class NodeRxn:
     """Represents a chemical reaction in a synthetic tree.
 

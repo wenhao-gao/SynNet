@@ -331,14 +331,12 @@ class NodeRxn:
 
 
     Args:
-        rxn_id (None or int): Index corresponding to reaction in a one-hot vector
-            of reaction templates.
-        rtype (None or int): Indicates if uni- (1) or bi-molecular (2) reaction.
-        parent (None or list):
-        child (None or list): Contains SMILES strings of reactants which lead to
-            the specified reaction.
-        depth (float):
-        index (int): Indicates the order of this reaction node in the tree.
+        rxn_id: Index to a reaction lookup table.
+        rtype: Indicator for uni (1) or bi-molecular (2) reaction.
+        parent:
+        child: Reactants for this reaction.
+        depth:
+        index: Order of this `NodeRxn` in a `SyntheticTree`.
     """
 
     rxn_id: Union[int, None] = (None,)

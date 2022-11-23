@@ -11,6 +11,7 @@ import functools
 import gzip
 import itertools
 import json
+from dataclasses import dataclass, field
 from typing import Any, Optional, Set, Tuple, Union
 
 import datamol as dm
@@ -301,6 +302,7 @@ class ReactionSet:
 
 
 # the definition of classes for defining synthetic trees below
+@dataclass(frozen=True)
 class NodeChemical:
     """Represents a chemical node in a synthetic tree.
 
@@ -314,25 +316,16 @@ class NodeChemical:
         index: Incremental index for all chemical nodes in the tree.
     """
 
-    def __init__(
-        self,
-        smiles: Union[str, None] = None,
-        parent: Union[int, None] = None,
-        child: Union[int, None] = None,
-        is_leaf: bool = False,
-        is_root: bool = False,
-        depth: float = 0,
-        index: int = 0,
-    ):
-        self.smiles = smiles
-        self.parent = parent
-        self.child = child
-        self.is_leaf = is_leaf
-        self.is_root = is_root
-        self.depth = depth
-        self.index = index
+    smiles: Union[str, None] = None
+    parent: Union[int, None] = None
+    child: Union[int, None] = None
+    is_leaf: bool = False
+    is_root: bool = False
+    depth: float = 0
+    index: int = 0
 
 
+@dataclass(frozen=True)
 class NodeRxn:
     """Represents a chemical reaction in a synthetic tree.
 
@@ -348,21 +341,12 @@ class NodeRxn:
         index (int): Indicates the order of this reaction node in the tree.
     """
 
-    def __init__(
-        self,
-        rxn_id: Union[int, None] = None,
-        rtype: Union[int, None] = None,
-        parent: Union[list, None] = [],
-        child: Union[list, None] = None,
-        depth: float = 0,
-        index: int = 0,
-    ):
-        self.rxn_id = rxn_id
-        self.rtype = rtype
-        self.parent = parent
-        self.child = child
-        self.depth = depth
-        self.index = index
+    rxn_id: Union[int, None] = (None,)
+    rtype: Union[int, None] = (None,)
+    parent: Union[list, None] = field(default_factory=list)
+    child: Union[list, None] = (None,)
+    depth: float = (0,)
+    index: int = (0,)
 
 
 class SyntheticTree:

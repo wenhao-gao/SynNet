@@ -1,12 +1,13 @@
 name: synnet
 channels:
   - pytorch
-  # - dglteam # only needed for gin
+  - nvidia
   - conda-forge
 dependencies:
   - python=3.9.*
-  - pytorch::torchvision
-  - pytorch::pytorch=1.9.*
+  - pytorch
+  - torchvision
+  - pytorch-cuda=11.7
   - pytorch-lightning
   - rdkit=2022.03.*
   - datamol

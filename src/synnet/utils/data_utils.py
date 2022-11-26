@@ -676,6 +676,14 @@ class SyntheticTreeSet:
         with gzip.open(file, "wt") as f:
             f.write(json.dumps(syntrees_as_json))
 
+    def split_by_depth(self) -> dict[int,list[SyntheticTree]]:
+        """Splits syntrees by depths and returns a copy."""
+        depths = sorted(list({st.depth for st in self}))
+        out = {int(depth): [] for depth in depths}  # TODO: Think of a better variable name
+        for st in self:
+            out[int(st.depth)] += [st]
+        return out
+
     def _print(self, x=3):
         """Helper function for debugging."""
         for i, r in enumerate(self.sts):

@@ -10,23 +10,22 @@ from typing import Tuple
 import numpy as np
 import pandas as pd
 from rdkit import RDLogger
-from tqdm import tqdm
 
 from synnet.config import DATA_PREPROCESS_DIR, DATA_RESULT_DIR, MAX_PROCESSES
 from synnet.data_generation.preprocessing import BuildingBlockFileHandler
 from synnet.encoding.distances import cosine_distance
+from synnet.encoding.fingerprints import fp_embedding
 from synnet.models.common import find_best_model_ckpt, load_mlp_from_ckpt
 from synnet.MolEmbedder import MolEmbedder
 from synnet.utils.data_utils import ReactionSet, SyntheticTree, SyntheticTreeSet
-from synnet.utils.predict_utils import mol_fp, synthetic_tree_decoder_greedy_search
+from synnet.utils.predict_utils import synthetic_tree_decoder_greedy_search
 
 logger = logging.getLogger(__name__)
 
 
 def _fetch_data_chembl(name: str) -> list[str]:
-    raise NotImplementedError
-    df = pd.read_csv(f"{DATA_DIR}/chembl_20k.csv")
-    smis_query = df.smiles.to_list()
+    df = pd.read_csv(name, sep="\t")
+    smis_query = df["smiles"].to_list()
     return smis_query
 
 
@@ -53,8 +52,9 @@ def _fetch_data(name: str) -> list[str]:
 
 def wrapper_decoder(smiles: str) -> Tuple[str, float, SyntheticTree]:
     """Generate a synthetic tree for the input molecular embedding."""
-    emb = mol_fp(smiles)
+
     try:
+        emb = np.atleast_2d(fp_embedding(smiles))
         smi, similarity, tree, action = synthetic_tree_decoder_greedy_search(
             z_target=emb,
             building_blocks=bblocks,
@@ -171,8 +171,8 @@ if __name__ == "__main__":
         results = [wrapper_decoder(smi) for smi in targets]
     else:
         with mp.Pool(processes=args.ncpu) as pool:
-            logger.info(f"Starting MP with ncpu={args.ncpu}")
-            results = list(tqdm(pool.imap(wrapper_decoder, targets), total=len(targets)))
+            results = pool.map(wrapper_decoder, targets)
+
     logger.info("Finished decoding.")
 
     # Print some results from the prediction

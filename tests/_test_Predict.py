@@ -9,7 +9,7 @@ import pandas as pd
 
 from synnet.utils.predict_utils import (
     synthetic_tree_decoder_greedy_search,
-    mol_fp,
+    fp_embedding,
 )
 from synnet.utils.data_utils import SyntheticTreeSet, ReactionSet
 from syn_net.models.chkpt_loader import load_modules_from_checkpoint
@@ -82,13 +82,13 @@ class TestPredict(unittest.TestCase):
         similarities = []
         trees = []
         for smi in smis_query:
-            emb = mol_fp(smi)
+            emb = np.atleast_2d(fp_embedding(smi))
             smi, similarity, tree, action = synthetic_tree_decoder_greedy_search(
                 z_target=emb,
                 building_blocks=building_blocks,
                 bb_dict=bb_dict,
                 reaction_templates=rxns,
-                mol_embedder=mol_fp,
+                mol_embedder=fp_embedding,
                 action_net=act_net,
                 reactant1_net=rt1_net,
                 rxn_net=rxn_net,

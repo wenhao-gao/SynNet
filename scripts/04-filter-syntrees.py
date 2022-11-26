@@ -3,6 +3,9 @@
 
 import json
 import logging
+import multiprocessing as mp
+from pathlib import Path
+from typing import Union
 
 import numpy as np
 from rdkit import Chem, RDLogger
@@ -60,13 +63,11 @@ def get_args():
     parser.add_argument(
         "--input-file",
         type=str,
-        default="data/pre-process/synthetic-trees.json.gz",
         help="Input file for the filtered generated synthetic trees (*.json.gz)",
     )
     parser.add_argument(
         "--output-file",
         type=str,
-        default="data/pre-process/synthetic-trees-filtered.json.gz",
         help="Output file for the filtered generated synthetic trees (*.json.gz)",
     )
 
@@ -74,6 +75,22 @@ def get_args():
     parser.add_argument("--ncpu", type=int, default=MAX_PROCESSES, help="Number of cpus")
     parser.add_argument("--verbose", default=False, action="store_true")
     return parser.parse_args()
+
+
+def filter_syntree(syntree: SyntheticTree) -> Union[SyntheticTree, int]:
+    """Apply filters to `syntree` and return it, if all filters are passed. Else, return error code."""
+    # Filter 1: Is root molecule valid?
+    keep_tree = valid_root_mol_filter.filter(syntree)
+    if not keep_tree:
+        return -1
+
+    # Filter 2: Is root molecule "pharmaceutically interesting?"
+    keep_tree = interesting_mol_filter.filter(syntree)
+    if not keep_tree:
+        return -2
+
+    # We passed all filters. This tree ascended to our dataset
+    return syntree
 
 
 if __name__ == "__main__":
@@ -90,31 +107,44 @@ if __name__ == "__main__":
     # Filter trees
     # TODO: Move to src/synnet/data_generation/filters.py ?
     valid_root_mol_filter = ValidRootMolFilter()
-    interesting_mol_filter = OracleFilter(threshold=0.5, rng=np.random.default_rng())
+    interesting_mol_filter = OracleFilter(threshold=0.5, rng=np.random.default_rng(42))
 
-    logger.info(f"Start filtering syntrees...")
-    syntrees = []
-    syntree_collection = [s for s in syntree_collection if s is not None]
-    syntree_collection = tqdm(syntree_collection) if args.verbose else syntree_collection
-    outcomes: dict[int, str] = dict()  # TODO: think about what metrics to track here
-    for i, st in enumerate(syntree_collection):
+    syntrees = [s for s in syntree_collection if s is not None]
 
-        # Filter 1: Is root molecule valid?
-        keep_tree = valid_root_mol_filter.filter(st)
-        if not keep_tree:
-            continue
+    logger.info(f"Start filtering {len(syntrees)} syntrees.")
 
-        # Filter 2: Is root molecule "pharmaceutically interesting?"
-        keep_tree = interesting_mol_filter.filter(st)
-        if not keep_tree:
-            continue
+    if args.ncpu == 1:
+        syntrees = tqdm(syntrees) if args.verbose else syntrees
+        results = [filter_syntree(syntree) for syntree in syntree_collection]
+    else:
+        with mp.Pool(processes=args.ncpu) as pool:
+            logger.info(f"Starting MP with ncpu={args.ncpu}")
+            results = pool.map(filter_syntree, syntrees)
 
-        # We passed all filters. This tree ascended to our dataset
-        syntrees.append(st)
+    logger.info("Finished decoding.")
+
+    # Handle results, most notably keep track of why we deleted the tree
+    outcomes: dict[str, int] = {
+        "invalid_root_mol": 0,
+        "not_interesting": 0,
+    }
+    syntrees_filtered = []
+    for res in results:
+        if res == -1:
+            outcomes["invalid_root_mol"] += 1
+        if res == -2:
+            outcomes["not_interesting"] += 1
+        else:
+            syntrees_filtered.append(res)
+
     logger.info(f"Successfully filtered syntrees.")
 
     # Save filtered synthetic trees on disk
-    SyntheticTreeSet(syntrees).save(args.output_file)
-    logger.info(f"Successfully saved '{args.output_file}' with {len(syntrees)} syntrees.")
+    SyntheticTreeSet(syntrees_filtered).save(args.output_file)
+    logger.info(f"Successfully saved '{args.output_file}' with {len(syntrees_filtered)} syntrees.")
+
+    summary_file = Path(args.output_file).parent / "filter-summary.txt"
+    summary_file.parent.mkdir(parents=True, exist_ok=True)
+    summary_file.write_text(json.dumps(outcomes, indent=2))
 
     logger.info(f"Completed.")

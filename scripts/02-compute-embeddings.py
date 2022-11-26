@@ -11,17 +11,17 @@ from functools import partial
 
 from synnet.config import MAX_PROCESSES
 from synnet.data_generation.preprocessing import BuildingBlockFileHandler
-from synnet.encoding.fingerprints import mol_fp
+from synnet.encoding.fingerprints import fp_embedding
 from synnet.MolEmbedder import MolEmbedder
 
 logger = logging.getLogger(__file__)
 
 FUNCTIONS = {
-    "fp_4096": partial(mol_fp, _radius=2, _nBits=4096),
-    "fp_2048": partial(mol_fp, _radius=2, _nBits=2048),
-    "fp_1024": partial(mol_fp, _radius=2, _nBits=1024),
-    "fp_512": partial(mol_fp, _radius=2, _nBits=512),
-    "fp_256": partial(mol_fp, _radius=2, _nBits=256),
+    "fp_4096": partial(fp_embedding, _radius=2, _nBits=4096),
+    "fp_2048": partial(fp_embedding, _radius=2, _nBits=2048),
+    "fp_1024": partial(fp_embedding, _radius=2, _nBits=1024),
+    "fp_512": partial(fp_embedding, _radius=2, _nBits=512),
+    "fp_256": partial(fp_embedding, _radius=2, _nBits=256),
 }  # TODO: think about refactor/merge with `MorganFingerprintEncoder`
 
 

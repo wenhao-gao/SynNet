@@ -11,26 +11,20 @@ import functools
 import gzip
 import itertools
 import json
+from dataclasses import dataclass, field
 from typing import Any, Optional, Set, Tuple, Union
 
+import datamol as dm
 from rdkit import Chem
-from rdkit.Chem import AllChem, Draw, rdChemReactions
+from rdkit.Chem import AllChem, Draw
 from tqdm import tqdm
 
 
 # the definition of reaction classes below
 class Reaction:
-    """
-    This class models a chemical reaction based on a SMARTS transformation.
+    """A chemical reaction defined by a SMARTS pattern."""
 
-    Args:
-        template (str): SMARTS string representing a chemical reaction.
-        rxnname (str): The name of the reaction for downstream analysis.
-        smiles: (str): A reaction SMILES string that macthes the SMARTS pattern.
-        reference (str): Reference information for the reaction.
-    """
-
-    smirks: str  # SMARTS pattern
+    smirks: str
     rxn: Chem.rdChemReactions.ChemicalReaction
     num_reactant: int
     num_agent: int
@@ -40,130 +34,107 @@ class Reaction:
     agent_template: str
     available_reactants: Tuple[list[str], Optional[list[str]]]
     rxnname: str
-    smiles: Any
     reference: Any
 
-    def __init__(self, template=None, rxnname=None, smiles=None, reference=None):
-
-        if template is not None:
-            # define a few attributes based on the input
-            self.smirks = template.strip()
-            self.rxnname = rxnname
-            self.smiles = smiles
-            self.reference = reference
-
-            # compute a few additional attributes
-            self.rxn = self.__init_reaction(self.smirks)
-
-            # Extract number of ...
-            self.num_reactant = self.rxn.GetNumReactantTemplates()
-            if self.num_reactant not in (1, 2):
-                raise ValueError("Reaction is neither uni- nor bi-molecular.")
-            self.num_agent = self.rxn.GetNumAgentTemplates()
-            self.num_product = self.rxn.GetNumProductTemplates()
-
-            # Extract reactants, agents, products
-            reactants, agents, products = self.smirks.split(">")
-
-            if self.num_reactant == 1:
-                self.reactant_template = list((reactants,))
-            else:
-                self.reactant_template = list(reactants.split("."))
-            self.product_template = products
-            self.agent_template = agents
-        else:
-            self.smirks = None
-
-    def __init_reaction(self, smirks: str) -> Chem.rdChemReactions.ChemicalReaction:
-        """Initializes a reaction by converting the SMARTS-pattern to an `rdkit` object."""
-        rxn = AllChem.ReactionFromSmarts(smirks)
-        rdChemReactions.ChemicalReaction.Initialize(rxn)
-        return rxn
-
-    def load(
-        self,
-        smirks,
-        num_reactant,
-        num_agent,
-        num_product,
-        reactant_template,
-        product_template,
-        agent_template,
-        available_reactants,
-        rxnname,
-        smiles,
-        reference,
-    ):
-        """
-        This function loads a set of elements and reconstructs a `Reaction` object.
-        """
-        self.smirks = smirks
-        self.num_reactant = num_reactant
-        self.num_agent = num_agent
-        self.num_product = num_product
-        self.reactant_template = list(reactant_template)
-        self.product_template = product_template
-        self.agent_template = agent_template
-        self.available_reactants = list(available_reactants)  # TODO: use Tuple[list,list] here
-        self.rxnname = rxnname
-        self.smiles = smiles
-        self.reference = reference
-        self.rxn = self.__init_reaction(self.smirks)
-        return self
-
-    @functools.lru_cache(maxsize=20)
-    def get_mol(self, smi: Union[str, Chem.Mol]) -> Chem.Mol:
-        """
-        A internal function that returns an `RDKit.Chem.Mol` object.
+    def __init__(self, template: str, name: Optional[str] = None, reference: Optional[Any] = None):
+        """Initialize a `Reaction`.
 
         Args:
-            smi (str or RDKit.Chem.Mol): The query molecule, as either a SMILES
-                string or an `RDKit.Chem.Mol` object.
-
-        Returns:
-            RDKit.Chem.Mol
+            template: SMARTS string representing a chemical reaction.
+            name: The name of the reaction for downstream analysis.
+            reference: (placeholder)
         """
+        self.smirks = template.strip()  # SMARTS pattern
+        self.name = name
+        self.reference = reference
+
+        # Initialize reaction
+        self.rxn = dm.reactions.rxn_from_smarts(self.smirks)
+
+        # Extract number of ...
+        self.num_reactant = self.rxn.GetNumReactantTemplates()
+        if self.num_reactant not in (1, 2):
+            raise ValueError("Reaction is neither uni- nor bi-molecular.")
+        self.num_agent = self.rxn.GetNumAgentTemplates()
+        self.num_product = self.rxn.GetNumProductTemplates()
+
+        # Extract reactants, agents, products
+        reactants, agents, products = self.smirks.split(">")
+
+        if self.num_reactant == 1:
+            self.reactant_template = list((reactants,))
+        elif self.num_reactant == 2:
+            self.reactant_template = list(reactants.split("."))
+
+        self.product_template = products
+        self.agent_template = agents
+
+    def __repr__(self) -> str:
+        return f"Reaction(smarts='{self.smirks}')"
+
+    @classmethod
+    def from_dict(cls, attrs: dict):
+        """Populate all attributes of the `Reaction` object from a dictionary."""
+        rxn = cls(attrs["smirks"])  # only arg without a default
+        for k, v in attrs.items():
+            rxn.__setattr__(k, v)
+        return rxn
+
+    def to_dict(self) -> dict():
+        """Returns serializable fields as new dictionary mapping.
+        *Excludes* Not-easily-serializable `self.rxn: rdkit.Chem.ChemicalReaction`."""
+        import copy
+
+        out = copy.deepcopy(self.__dict__)
+        _ = out.pop("rxn")
+        return out
+
+    @functools.lru_cache(maxsize=20_000)
+    def get_mol(self, smi: Union[str, Chem.Mol]) -> Chem.Mol:
+        """Convert smiles to  `RDKit.Chem.Mol`."""
         if isinstance(smi, str):
-            return Chem.MolFromSmiles(smi)
+            return dm.to_mol(smi)
         elif isinstance(smi, Chem.Mol):
             return smi
         else:
             raise TypeError(f"{type(smi)} not supported, only `str` or `rdkit.Chem.Mol`")
 
-    def visualize(self, name="./reaction1_highlight.o.png"):
-        """
-        A function that plots the chemical translation into a PNG figure.
-        One can use "from IPython.display import Image ; Image(name)" to see it
-        in a Python notebook.
+    def to_image(self, size: tuple[int, int] = (800, 300)) -> bytes:
+        """Returns a png image of the visual represenation for this chemical reaction.
 
-        Args:
-            name (str): The path to the figure.
+        Usage:
+            * In Jupyter:
 
-        Returns:
-            name (str): The path to the figure.
+                >>> from IPython.display import Image
+                >>> img = rxn.to_image()
+                >>> Image(img)
+
+            * save as image:
+
+                >>> img = rxn.to_image()
+                >>> pathlib.Path("out.png").write_bytes(img)
+
         """
         rxn = AllChem.ReactionFromSmarts(self.smirks)
-        d2d = Draw.MolDraw2DCairo(800, 300)
+        d2d = Draw.MolDraw2DCairo(*size)
         d2d.DrawReaction(rxn, highlightByReactant=True)
-        png = d2d.GetDrawingText()
-        open(name, "wb+").write(png)
-        del rxn
-        return name
+        image = d2d.GetDrawingText()
+        return image
 
     def is_reactant(self, smi: Union[str, Chem.Mol]) -> bool:
         """Checks if `smi` is a reactant of this reaction."""
-        smi = self.get_mol(smi)
-        return self.rxn.IsMoleculeReactant(smi)
+        mol = self.get_mol(smi)
+        return self.rxn.IsMoleculeReactant(mol)
 
     def is_agent(self, smi: Union[str, Chem.Mol]) -> bool:
         """Checks if `smi` is an agent of this reaction."""
-        smi = self.get_mol(smi)
-        return self.rxn.IsMoleculeAgent(smi)
+        mol = self.get_mol(smi)
+        return self.rxn.IsMoleculeAgent(mol)
 
     def is_product(self, smi):
         """Checks if `smi` is a product of this reaction."""
-        smi = self.get_mol(smi)
-        return self.rxn.IsMoleculeProduct(smi)
+        mol = self.get_mol(smi)
+        return self.rxn.IsMoleculeProduct(mol)
 
     def is_reactant_first(self, smi: Union[str, Chem.Mol]) -> bool:
         """Check if `smi` is the first reactant in this reaction"""
@@ -178,7 +149,10 @@ class Reaction:
         return mol.HasSubstructMatch(pattern)
 
     def run_reaction(
-        self, reactants: Tuple[Union[str, Chem.Mol, None]], keep_main: bool = True
+        self,
+        reactants: Tuple[Union[str, Chem.Mol, None]],
+        keep_main: bool = True,
+        allow_to_fail: bool = False,
     ) -> Union[str, None]:
         """Run this reactions with reactants and return corresponding product.
 
@@ -195,29 +169,32 @@ class Reaction:
         if not len(reactants) in (1, 2):
             raise ValueError(f"Can only run reactions with 1 or 2 reactants, not {len(reactants)}.")
 
-        rxn = self.rxn  # TODO: investigate if this is necessary (if not, delete "delete rxn below")
-
         # Convert all reactants to `Chem.Mol`
-        r: Tuple = tuple(self.get_mol(smiles) for smiles in reactants if smiles is not None)
+        r = tuple(self.get_mol(smiles) for smiles in reactants if smiles is not None)
 
-        if self.num_reactant == 1:
-            if len(r) == 2:  # Provided two reactants for unimolecular reaction -> no rxn possible
-                return None
-            if not self.is_reactant(r[0]):
-                return None
-        elif self.num_reactant == 2:
+        # Validate reaction for these reactants
+        if self.num_reactant == 1 and len(r) == 2:
+            # Provided two reactants for unimolecular reaction -> no rxn possible
+            raise AssertionError(f"Provided two reactants ({r=}) for this unimolecular reaction.")
+        if self.num_reactant == 1 and not self.is_reactant(r[0]):
+            raise AssertionError(
+                f"Reactant ({r[0]=}) is not a reactant for this unimolecular reaction."
+            )
+
+        if self.num_reactant == 2:
             # Match reactant order with reaction template
             if self.is_reactant_first(r[0]) and self.is_reactant_second(r[1]):
                 pass
             elif self.is_reactant_first(r[1]) and self.is_reactant_second(r[0]):
                 r = tuple(reversed(r))
             else:  # No reaction possible
-                return None
-        else:
-            raise ValueError("This reaction is neither uni- nor bi-molecular.")
+                # TODO: Fix: Can happen if both are 1st or 2nd reactant simultanouesly
+                raise AssertionError(
+                    f"Reactants ({reactants=}) do not match this bimolecular reaction."
+                )
 
         # Run reaction with rdkit magic
-        ps = rxn.RunReactants(r)
+        ps = self.rxn.RunReactants(r)
 
         # Filter for unique products (less magic)
         # Note: Use chain() to flatten the tuple of tuples
@@ -228,52 +205,40 @@ class Reaction:
             # TODO: Raise (custom) exception?
             raise ValueError("Reaction did not yield any products.")
 
-        del rxn
-
         if keep_main:
             uniqps = uniqps[:1]
         # >>> TODO: Always return list[str] (currently depends on "keep_main")
         uniqps = uniqps[0]
         # <<< ^ delete this line if resolved.
-        return uniqps
+
+        # Sanity check: Convert SMILES to `Chem.Mol`, then to SMILES again.
+        mol = dm.to_mol(uniqps)
+        smiles = dm.to_smiles(mol, isomeric=False, allow_to_fail=False)
+        if allow_to_fail and smiles is None:
+            raise ValueError(f"rdkit.RunReactants() produced invalid product: {uniqps}")
+        return smiles
 
     def _filter_reactants(
         self, smiles: list[str], verbose: bool = False
     ) -> Tuple[list[str], list[str]]:
-        """
-        Filters reactants which do not match the reaction.
-
-        Args:
-            smiles: Possible reactants for this reaction.
-
-        Returns:
-            :lists of SMILES which match either the first
-                reactant, or, if applicable, the second reactant.
-
-        Raises:
-            ValueError: If `self` is not a uni- or bi-molecular reaction.
-        """
+        """Filters reactants which do not match the reaction."""
         smiles = tqdm(smiles) if verbose else smiles
 
         if self.num_reactant == 1:  # uni-molecular reaction
             reactants_1 = [smi for smi in smiles if self.is_reactant_first(smi)]
-            return (reactants_1,)
+            reactants = (reactants_1, [])
 
         elif self.num_reactant == 2:  # bi-molecular reaction
             reactants_1 = [smi for smi in smiles if self.is_reactant_first(smi)]
             reactants_2 = [smi for smi in smiles if self.is_reactant_second(smi)]
 
-            return (reactants_1, reactants_2)
-        else:
-            raise ValueError("This reaction is neither uni- nor bi-molecular.")
+            reactants = (reactants_1, reactants_2)
+
+        return reactants
 
     def set_available_reactants(self, building_blocks: list[str], verbose: bool = False):
-        """
-        Finds applicable reactants from a list of building blocks.
+        """Finds applicable reactants from a list of building blocks.
         Sets `self.available_reactants`.
-
-        Args:
-            building_blocks: Building blocks as SMILES strings.
         """
         self.available_reactants = self._filter_reactants(building_blocks, verbose=verbose)
         return self
@@ -282,15 +247,6 @@ class Reaction:
     def get_available_reactants(self) -> Set[str]:
         return {x for reactants in self.available_reactants for x in reactants}
 
-    def asdict(self) -> dict():
-        """Returns serializable fields as new dictionary mapping.
-        *Excludes* Not-easily-serializable `self.rxn: rdkit.Chem.ChemicalReaction`."""
-        import copy
-
-        out = copy.deepcopy(self.__dict__)  # TODO:
-        _ = out.pop("rxn")
-        return out
-
 
 class ReactionSet:
     """Represents a collection of reactions, for saving and loading purposes."""
@@ -298,40 +254,55 @@ class ReactionSet:
     def __init__(self, rxns: Optional[list[Reaction]] = None):
         self.rxns = rxns if rxns is not None else []
 
-    def load(self, file: str):
+    def __repr__(self) -> str:
+        return f"ReactionSet ({len(self.rxns)} reactions.)"
+
+    def __len__(self):
+        return len(self.rxns)
+
+    def __getitem__(self, index: int):
+        if self.rxns is None:
+            raise IndexError("No Reactions.")
+        return self.rxns[index]
+
+    @classmethod
+    def load(cls, file: str):
         """Load a collection of reactions from a `*.json.gz` file."""
         assert str(file).endswith(".json.gz"), f"Incompatible file extension for file {file}"
+
         with gzip.open(file, "r") as f:
             data = json.loads(f.read().decode("utf-8"))
 
-        for r in data["reactions"]:
-            rxn = Reaction().load(
-                **r
-            )  # TODO: `load()` relies on postional args, hence we cannot load a reaction that has no `available_reactants` for extample (or no template)
-            self.rxns.append(rxn)
-        return self
+        reactions = [Reaction.from_dict(_rxn) for _rxn in data["reactions"]]
+        return cls(reactions)
 
     def save(self, file: str) -> None:
         """Save a collection of reactions to a `*.json.gz` file."""
 
         assert str(file).endswith(".json.gz"), f"Incompatible file extension for file {file}"
 
-        r_list = {"reactions": [r.asdict() for r in self.rxns]}
+        rxns_as_json = {"reactions": [r.to_dict() for r in self.rxns]}
         with gzip.open(file, "w") as f:
-            f.write(json.dumps(r_list).encode("utf-8"))
+            f.write(json.dumps(rxns_as_json).encode("utf-8"))
 
-    def __len__(self):
-        return len(self.rxns)
-
-    def _print(self, x=3):
-        # For debugging
+    def _print(self, n: int = 3):
+        """Debugging-helper method to print `n` reactions as json"""
         for i, r in enumerate(self.rxns):
-            if i >= x:
+            if i >= n:
                 break
-            print(json.dumps(r.asdict(), indent=2))
+            print(json.dumps(r.to_dict(), indent=2))
+
+    @property
+    def num_unimolecular(self) -> int:
+        return sum([r.num_reactant == 1 for r in self])
+
+    @property
+    def num_bimolecular(self) -> int:
+        return sum([r.num_reactant == 2 for r in self])
 
 
 # the definition of classes for defining synthetic trees below
+@dataclass
 class NodeChemical:
     """Represents a chemical node in a synthetic tree.
 
@@ -345,109 +316,76 @@ class NodeChemical:
         index: Incremental index for all chemical nodes in the tree.
     """
 
-    def __init__(
-        self,
-        smiles: Union[str, None] = None,
-        parent: Union[int, None] = None,
-        child: Union[int, None] = None,
-        is_leaf: bool = False,
-        is_root: bool = False,
-        depth: float = 0,
-        index: int = 0,
-    ):
-        self.smiles = smiles
-        self.parent = parent
-        self.child = child
-        self.is_leaf = is_leaf
-        self.is_root = is_root
-        self.depth = depth
-        self.index = index
+    smiles: Union[str, None] = None
+    parent: Union[int, None] = None
+    child: Union[int, None] = None
+    is_leaf: bool = False
+    is_root: bool = False
+    depth: float = 0
+    index: int = 0
 
 
+@dataclass
 class NodeRxn:
     """Represents a chemical reaction in a synthetic tree.
 
 
     Args:
-        rxn_id (None or int): Index corresponding to reaction in a one-hot vector
-            of reaction templates.
-        rtype (None or int): Indicates if uni- (1) or bi-molecular (2) reaction.
-        parent (None or list):
-        child (None or list): Contains SMILES strings of reactants which lead to
-            the specified reaction.
-        depth (float):
-        index (int): Indicates the order of this reaction node in the tree.
+        rxn_id: Index to a reaction lookup table.
+        rtype: Indicator for uni (1) or bi-molecular (2) reaction.
+        parent:
+        child: Reactants for this reaction.
+        depth:
+        index: Order of this `NodeRxn` in a `SyntheticTree`.
     """
 
-    def __init__(
-        self,
-        rxn_id: Union[int, None] = None,
-        rtype: Union[int, None] = None,
-        parent: Union[list, None] = [],
-        child: Union[list, None] = None,
-        depth: float = 0,
-        index: int = 0,
-    ):
-        self.rxn_id = rxn_id
-        self.rtype = rtype
-        self.parent = parent
-        self.child = child
-        self.depth = depth
-        self.index = index
+    rxn_id: Union[int, None] = (None,)
+    rtype: Union[int, None] = (None,)
+    parent: Union[list, None] = field(default_factory=list)
+    child: Union[list, None] = (None,)
+    depth: float = (0,)
+    index: int = (0,)
 
 
 class SyntheticTree:
-    """
-    A class representing a synthetic tree.
+    """Representation of a synthetic tree (syntree).
 
     Args:
         chemicals (list): A list of chemical nodes, in order of addition.
         reactions (list): A list of reaction nodes, in order of addition.
         actions (list): A list of actions, in order of addition.
         root (NodeChemical): The root node.
-        depth (int): The depth of the tree.
+        depth (int): Depth of the tree, actions "add" "expand" and "merge" increase depth by 1.
         rxn_id2type (dict): A dictionary that maps reaction indices to reaction
             type (uni- or bi-molecular).
     """
 
-    def __init__(self, tree=None):
+    def __init__(self):
         self.chemicals: list[NodeChemical] = []
         self.reactions: list[NodeRxn] = []
-        self.root = None
+        self.root: Union[NodeChemical, None] = None
         self.depth: float = 0
-        self.actions = []
-        self.rxn_id2type = None
+        self.actions: list[int] = []
+        self.rxn_id2type: dict = None
 
-        if tree is not None:
-            self.read(tree)
+    def __repr__(self) -> str:
+        return f"SynTree(depth={self.depth})"
 
-    def read(self, data):
-        """
-        A function that loads a dictionary from synthetic tree data.
+    @classmethod
+    def from_dict(cls, attrs: dict):
+        """Initialize a `SyntheticTree` from a dictionary."""
+        syntree = cls()
+        syntree.root = NodeChemical(**attrs["root"])
+        syntree.depth = attrs["depth"]
+        syntree.actions = attrs["actions"]
+        syntree.rxn_id2type = attrs["rxn_id2type"]
 
-        Args:
-            data (dict): A dictionary representing a synthetic tree.
-        """
-        self.root = NodeChemical(**data["root"])
-        self.depth = data["depth"]
-        self.actions = data["actions"]
-        self.rxn_id2type = data["rxn_id2type"]
+        syntree.reactions = [NodeRxn(**_rxn_dict) for _rxn_dict in attrs["reactions"]]
+        syntree.chemicals = [NodeChemical(**_chem_dict) for _chem_dict in attrs["chemicals"]]
+        return syntree
 
-        for r_dict in data["reactions"]:
-            r = NodeRxn(**r_dict)
-            self.reactions.append(r)
-
-        for m_dict in data["chemicals"]:
-            r = NodeChemical(**m_dict)
-            self.chemicals.append(r)
-
-    def output_dict(self):
-        """
-        A function that exports dictionary-formatted synthetic tree data.
-
-        Returns:
-            data (dict): A dictionary representing a synthetic tree.
-        """
+    def to_dict(self) -> dict:
+        """Export this `SyntheticTree` to a dictionary."""
         return {
             "reactions": [r.__dict__ for r in self.reactions],
             "chemicals": [m.__dict__ for m in self.chemicals],
@@ -458,28 +396,23 @@ class SyntheticTree:
         }
 
     def _print(self):
-        """
-        A function that prints the contents of the synthetic tree.
-        """
+        """Print the contents of this `SyntheticTree`."""
+        print(f"============SynTree (depth={self.depth:>4.1f})==============")
         print("===============Stored Molecules===============")
         for node in self.chemicals:
-            print(node.smiles, node.is_root)
+            suffix = " (root mol)" if node.is_root else ""
+            print(node.smiles, suffix)
         print("===============Stored Reactions===============")
         for node in self.reactions:
-            print(node.rxn_id, node.rtype)
+            print(f"{node.rxn_id} ({'bi ' if node.rtype==2 else 'uni'})")
         print("===============Followed Actions===============")
         print(self.actions)
+        print("==============================================")
 
-    def get_node_index(self, smi):
-        """
-        Returns the index of the node matching the input SMILES.
+    def get_node_index(self, smi: str) -> int:
+        """Return the index of the node matching the input SMILES.
 
-        Args:
-            smi (str): A SMILES string that represents the query molecule.
-
-        Returns:
-            index (int): Index of chemical node corresponding to the query
-                molecule. If the query moleucle is not in the tree, return None.
+        If the query moleucle is not in the tree, return None.
         """
         for node in self.chemicals:
             if smi == node.smiles:
@@ -692,15 +625,28 @@ class SyntheticTree:
 
         else:
             raise ValueError("Check input")
-
+        self.depth = max([node.depth for node in self.reactions]) + 0.5
         return None
+
+    @property
+    def chemicals_as_smiles(self) -> list[str]:
+        return [node.smiles for node in self.chemicals]
+
+    @property
+    def leafs_as_smiles(self) -> list[str]:
+        return [node.smiles for node in self.chemicals if node.is_leaf]
 
 
 class SyntheticTreeSet:
     """Represents a collection of synthetic trees, for saving and loading purposes."""
 
+    sts: list[SyntheticTree]
+
     def __init__(self, sts: Optional[list[SyntheticTree]] = None):
         self.sts = sts if sts is not None else []
+
+    def __repr__(self) -> str:
+        return f"SyntheticTreeSet ({len(self.sts)} syntrees.)"
 
     def __len__(self):
         return len(self.sts)
@@ -710,26 +656,25 @@ class SyntheticTreeSet:
             raise IndexError("No Synthetic Trees.")
         return self.sts[index]
 
-    def load(self, file: str):
+    @classmethod
+    def load(cls, file: str):
         """Load a collection of synthetic trees from a `*.json.gz` file."""
         assert str(file).endswith(".json.gz"), f"Incompatible file extension for file {file}"
 
         with gzip.open(file, "rt") as f:
             data = json.loads(f.read())
 
-        for st in data["trees"]:
-            st = SyntheticTree(st) if st is not None else None
-            self.sts.append(st)
+        syntrees = [SyntheticTree.from_dict(_syntree) for _syntree in data["trees"]]
 
-        return self
+        return cls(syntrees)
 
     def save(self, file: str) -> None:
         """Save a collection of synthetic trees to a `*.json.gz` file."""
         assert str(file).endswith(".json.gz"), f"Incompatible file extension for file {file}"
 
-        st_list = {"trees": [st.output_dict() for st in self.sts if st is not None]}
+        syntrees_as_json = {"trees": [st.output_dict() for st in self.sts if st is not None]}
         with gzip.open(file, "wt") as f:
-            f.write(json.dumps(st_list))
+            f.write(json.dumps(syntrees_as_json))
 
     def _print(self, x=3):
         """Helper function for debugging."""

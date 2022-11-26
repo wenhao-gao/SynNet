@@ -13,7 +13,7 @@ from synnet.data_generation.preprocessing import (
 from synnet.utils.data_utils import ReactionSet
 
 RDLogger.DisableLog("rdApp.*")
-logger = logging.getLogger(__name__)
+logger = logging.getLogger(__file__)
 import json
 
 

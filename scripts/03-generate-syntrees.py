@@ -30,13 +30,11 @@ def get_args():
     parser.add_argument(
         "--building-blocks-file",
         type=str,
-        default="data/pre-process/building-blocks/enamine-us-smiles.csv.gz",  # TODO: change
         help="Input file with SMILES strings (First row `SMILES`, then one per line).",
     )
     parser.add_argument(
         "--rxn-templates-file",
         type=str,
-        default="data/assets/reaction-templates/hb.txt",  # TODO: change
         help="Input file with reaction templates as SMARTS(No header, one per line).",
     )
     parser.add_argument(
@@ -53,6 +51,7 @@ def get_args():
     # Processing
     parser.add_argument("--ncpu", type=int, default=MAX_PROCESSES, help="Number of cpus")
     parser.add_argument("--verbose", default=False, action="store_true")
+    parser.add_argument("--debug", default=False, action="store_true")
     return parser.parse_args()
 
 
@@ -97,6 +96,11 @@ if __name__ == "__main__":
     args = get_args()
     logger.info(f"Arguments: {json.dumps(vars(args),indent=2)}")
 
+    if args.debug:
+        st_logger = logging.getLogger("synnet.data_generation.syntrees")
+        st_logger.setLevel("DEBUG")
+        RDLogger.EnableLog("rdApp.*")
+
     # Load assets
     bblocks = BuildingBlockFileHandler().load(args.building_blocks_file)
     rxn_templates = ReactionTemplateFileHandler().load(args.rxn_templates_file)
@@ -124,6 +128,10 @@ if __name__ == "__main__":
 
     # Save synthetic trees on disk
     syntree_collection = SyntheticTreeSet(syntrees)
+    syntree_collection = SyntheticTreeSet(
+        [st for st in syntree_collection if st is not None and st.depth > 1]
+    )
     syntree_collection.save(args.output_file)
 
+    logger.info(f"Generated syntrees: {len(syntree_collection)}")
     logger.info(f"Completed.")

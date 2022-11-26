@@ -8,11 +8,12 @@ dependencies:
   - pytorch::torchvision
   - pytorch::pytorch=1.9.*
   - pytorch-lightning
-  - rdkit=2021.03.*
-  # - dglteam::dgl-cuda11.1 # only needed for gin
+  - rdkit=2022.03.*
+  - datamol
   - pytdc
   - scikit-learn>=1.1.*
-  - ipykernel=6.15.*
+  - numba
+  - ipykernel
   - nb_conda_kernels
   - black=22.6.*
   - black-jupyter=22.6.*

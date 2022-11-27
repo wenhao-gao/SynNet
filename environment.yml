@@ -11,7 +11,7 @@ dependencies:
   - pytorch-lightning
   - rdkit=2022.03.*
   - datamol
-  - pytdc
+  - pytdc<0.3.8 # https://github.com/mims-harvard/TDC/issues/180
   - scikit-learn>=1.1.*
   - numba
   - ipykernel

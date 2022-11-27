@@ -375,7 +375,7 @@ class SyntheticTree:
     def from_dict(cls, attrs: dict):
         """Initialize a `SyntheticTree` from a dictionary."""
         syntree = cls()
-        syntree.root = NodeChemical(**attrs["root"])
+        syntree.root = NodeChemical(**attrs["root"]) if attrs["root"] else None
         syntree.depth = attrs["depth"]
         syntree.actions = attrs["actions"]
         syntree.rxn_id2type = attrs["rxn_id2type"]
@@ -389,7 +389,7 @@ class SyntheticTree:
         return {
             "reactions": [r.__dict__ for r in self.reactions],
             "chemicals": [m.__dict__ for m in self.chemicals],
-            "root": self.root.__dict__,
+            "root": self.root.__dict__ if self.root else None,
             "depth": self.depth,
             "actions": self.actions,
             "rxn_id2type": self.rxn_id2type,
@@ -629,12 +629,24 @@ class SyntheticTree:
         return None
 
     @property
-    def chemicals_as_smiles(self) -> list[str]:
+    def nodes_as_smiles(self) -> list[str]:
+        """Returns all (leaf, inner, root) molecules in this tree as smiles"""
         return [node.smiles for node in self.chemicals]
 
     @property
     def leafs_as_smiles(self) -> list[str]:
+        """Returns all leaf molecules in this tree as smiles"""
         return [node.smiles for node in self.chemicals if node.is_leaf]
+
+    @property
+    def nonleafs_as_smiles(self) -> list[str]:
+        """Returns all non-leaf (inner + root) molecules in this tree as smiles"""
+        return [node.smiles for node in self.chemicals if not node.is_leaf]
+
+    @property
+    def is_valid(self):
+        """Valid if it has "actions" and has been ended properly with "end"-action"""
+        return self.actions.__len__() > 0 and self.actions[-1] == 3
 
 
 class SyntheticTreeSet:
@@ -672,11 +684,11 @@ class SyntheticTreeSet:
         """Save a collection of synthetic trees to a `*.json.gz` file."""
         assert str(file).endswith(".json.gz"), f"Incompatible file extension for file {file}"
 
-        syntrees_as_json = {"trees": [st.output_dict() for st in self.sts if st is not None]}
+        syntrees_as_json = {"trees": [st.to_dict() for st in self.sts if st is not None]}
         with gzip.open(file, "wt") as f:
             f.write(json.dumps(syntrees_as_json))
 
-    def split_by_depth(self) -> dict[int,list[SyntheticTree]]:
+    def split_by_depth(self) -> dict[int, list[SyntheticTree]]:
         """Splits syntrees by depths and returns a copy."""
         depths = sorted(list({st.depth for st in self}))
         out = {int(depth): [] for depth in depths}  # TODO: Think of a better variable name
@@ -689,7 +701,7 @@ class SyntheticTreeSet:
         for i, r in enumerate(self.sts):
             if i >= x:
                 break
-            print(r.output_dict())
+            print(r.to_dict())
 
 
 if __name__ == "__main__":

@@ -132,10 +132,14 @@ if __name__ == "__main__":
 
     logger.info(f"Successfully filtered syntrees.")
 
+    out_folder = Path(args.output_file).parent
+    out_folder.mkdir(parents=True, exist_ok=True)
+
     # Save filtered synthetic trees on disk
     SyntheticTreeSet(syntrees_filtered).save(args.output_file)
     logger.info(f"Successfully saved '{args.output_file}' with {len(syntrees_filtered)} syntrees.")
 
+    # Save short summary file
     summary_file = Path(args.output_file).parent / "filter-summary.txt"
     summary_file.parent.mkdir(parents=True, exist_ok=True)
     summary_file.write_text(json.dumps(outcomes, indent=2))

@@ -250,7 +250,7 @@ class SynTreeGenerator:
             raise NoBiReactionAvailableError(f"No reaction available for {reactants}.")
         return mask
 
-    def generate(self, max_depth: int = 15, retries: int = 3):
+    def generate(self, max_depth: int = 8, retries: int = 3):
         """Generate a syntree by random sampling."""
 
         # Init

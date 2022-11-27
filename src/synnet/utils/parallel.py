@@ -89,6 +89,13 @@ def chunked_parallel(
     """
     # originally from: https://github.com/samgoldman97
 
+    # Run plain list comp if when no mp is necessary.
+    # Keeping this here to have a single interface.
+    if max_cpu == 1:
+        if verbose:
+            input_list = tqdm(input_list)
+        return [function(i) for i in input_list]
+
     # Adding it here fixes some setting disrupted elsewhere
     def batch_func(list_inputs):
         return [function(i) for i in list_inputs]
@@ -108,6 +115,5 @@ def chunked_parallel(
     )
     # Unroll
     full_output = [item for sublist in list_outputs for item in sublist]
-
 
     return full_output

@@ -1,12 +1,13 @@
 name: synnet
 channels:
   - pytorch
-  # - dglteam # only needed for gin
+  - nvidia
   - conda-forge
 dependencies:
   - python=3.9.*
-  - pytorch::torchvision
-  - pytorch::pytorch=1.9.*
+  - pytorch
+  - torchvision
+  - pytorch-cuda=11.7
   - pytorch-lightning
   - rdkit=2022.03.*
   - datamol
@@ -14,6 +15,7 @@ dependencies:
   - scikit-learn>=1.1.*
   - numba
   - ipykernel
+  - ipywidgets # Silence warning, see https://github.com/tqdm/tqdm/issues/187
   - nb_conda_kernels
   - black=22.6.*
   - black-jupyter=22.6.*
@@ -22,9 +24,9 @@ dependencies:
   - pip
   - pip:
     - setuptools==59.5.0 # https://github.com/pytorch/pytorch/issues/69894
-#    - dgllife # only needed for gin, will force scikit-learn < 1.0
     - pathos
     - rich
     - pyyaml
     - fcd_torch # for evaluators in pytdc
     - wandb
+    - tabulate # for df.to_markdown()

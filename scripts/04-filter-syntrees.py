@@ -3,16 +3,15 @@
 
 import json
 import logging
-import multiprocessing as mp
 from pathlib import Path
 from typing import Union
 
 import numpy as np
 from rdkit import Chem, RDLogger
-from tqdm import tqdm
 
 from synnet.config import MAX_PROCESSES
 from synnet.utils.data_utils import SyntheticTree, SyntheticTreeSet
+from synnet.utils.parallel import chunked_parallel
 
 logger = logging.getLogger(__name__)
 
@@ -113,13 +112,7 @@ if __name__ == "__main__":
 
     logger.info(f"Start filtering {len(syntrees)} syntrees.")
 
-    if args.ncpu == 1:
-        syntrees = tqdm(syntrees) if args.verbose else syntrees
-        results = [filter_syntree(syntree) for syntree in syntree_collection]
-    else:
-        with mp.Pool(processes=args.ncpu) as pool:
-            logger.info(f"Starting MP with ncpu={args.ncpu}")
-            results = pool.map(filter_syntree, syntrees)
+    results = chunked_parallel(syntrees, filter_syntree, verbose=args.verbose)
 
     logger.info("Finished decoding.")
 

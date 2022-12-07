@@ -10,13 +10,14 @@ dependencies:
   - pytorch-lightning
   - rdkit=2021.03.*
   # - dglteam::dgl-cuda11.1 # only needed for gin
-  - pytdc
+  - pytdc=0.3.7
   - scikit-learn>=1.1.*
   - ipykernel=6.15.*
   - nb_conda_kernels
   - black=22.6.*
   - black-jupyter=22.6.*
   - isort=5.10.*
+  - jupyter
   - pip
   - pip:
     - setuptools==59.5.0 # https://github.com/pytorch/pytorch/issues/69894

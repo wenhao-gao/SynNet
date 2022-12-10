@@ -1,9 +1,9 @@
 # === custom ===
-
+reproducibility/intermediates/
 data/
 figures/syntrees/
 results/
-checkpoints/
+original_checkpoints/
 oracle/
 logs/
 tmp/

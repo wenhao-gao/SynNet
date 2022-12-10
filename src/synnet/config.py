@@ -16,4 +16,4 @@ DATA_FEATURIZED_DIR = "data/featurized"
 DATA_RESULT_DIR = "results"
 
 # Checkpoints (& pre-trained weights)
-CHECKPOINTS_DIR = "checkpoints"
+CHECKPOINTS_DIR = "original_checkpoints"

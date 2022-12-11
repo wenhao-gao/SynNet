@@ -46,7 +46,7 @@ def synthesis(targets: list[str],
               bblocks: list[str],
               checkpoints: list,
               rxn_collection: ReactionSet,
-              molembedder: MolEmbedder,
+              mol_embedder: MolEmbedder,
               output_dir: Path,
               cpu_cores: int):
     print("Start.")
@@ -55,8 +55,8 @@ def synthesis(targets: list[str],
     bblocks_dict = {block: i for i, block in enumerate(bblocks)}
 
     # building block embedding
-    bblocks_molembedder = molembedder.init_balltree(cosine_distance)
-    bb_emb = bblocks_molembedder.get_embeddings()
+    bblocks_mol_embedder = mol_embedder.init_balltree(cosine_distance)
+    bb_emb = bblocks_mol_embedder.get_embeddings()
 
     # checkpoints
     act_net, rt1_net, rxn_net, rt2_net = checkpoints
@@ -66,7 +66,7 @@ def synthesis(targets: list[str],
                            building_blocks=bblocks,
                            bb_dict=bblocks_dict,
                            reaction_templates=rxn_collection.rxns,
-                           mol_embedder=bblocks_molembedder.kdtree,
+                           mol_embedder=bblocks_mol_embedder.kdtree,
                            action_net=act_net,
                            reactant1_net=rt1_net,
                            rxn_net=rxn_net,

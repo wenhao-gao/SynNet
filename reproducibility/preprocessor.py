@@ -5,7 +5,7 @@ from synnet.data_generation.preprocessing import (
     BuildingBlockFilter,
     ReactionTemplateFileHandler,
 )
-from downloader import should_skip, safe_remove
+from file_utils import should_skip, safe_remove
 from synnet.utils.data_utils import ReactionSet
 from synnet.encoding.fingerprints import mol_fp
 from synnet.MolEmbedder import MolEmbedder
@@ -55,14 +55,14 @@ def filter_bblocks(project_root: Path, bblocks_filtered, cpu_cores, force=False)
 
 
 def compute_embeddings(project_root, bblocks, cpu_cores, force=False):
-    molembedder_path = project_root / "data" / "pre-process" / "embeddings" / "hb-enamine-embeddings.npy"
+    mol_embedder_path = project_root / "data" / "pre-process" / "embeddings" / "hb-enamine-embeddings.npy"
 
-    molembedder = MolEmbedder(processes=cpu_cores)
+    mol_embedder = MolEmbedder(processes=cpu_cores)
 
-    if should_skip("embeddings", "compute", molembedder_path, force):
-        return molembedder.load_precomputed(molembedder_path)
+    if should_skip("embeddings", "compute", mol_embedder_path, force):
+        return mol_embedder.load_precomputed(mol_embedder_path)
 
     func = partial(mol_fp, _radius=2, _nBits=256)
-    molembedder = molembedder.compute_embeddings(func, bblocks)
-    molembedder.save_precomputed(molembedder_path)
-    return molembedder
+    mol_embedder = mol_embedder.compute_embeddings(func, bblocks)
+    mol_embedder.save_precomputed(mol_embedder_path)
+    return mol_embedder

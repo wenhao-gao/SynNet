@@ -12,6 +12,7 @@ import numpy as np
 from tdc import Oracle
 
 from synnet.encoding.distances import cosine_distance
+from synnet.encoding.fingerprints import mol_fp
 from synnet.utils.ga_utils import crossover, mutation
 from synnet.utils.predict_utils import synthetic_tree_decoder, tanimoto_similarity
 
@@ -196,7 +197,7 @@ def mut_probability_scheduler(n, total):
         return 0.5
 
 
-def optimize(population,
+def optimize(starting_smiles,
              bblocks,
              rxns_collection,
              checkpoints,
@@ -206,9 +207,12 @@ def optimize(population,
              num_gen,
              objective,
              num_offspring):
+    print("Start.")
     # define some constants (here, for the Hartenfeller-Button test set)
     nbits = 4096
     rxn_template = "hb"
+
+    population = np.array([mol_fp(smi, 2, nbits) for smi in starting_smiles])
 
     # load the purchasable building block embeddings
     bblocks_mol_embedder = mol_embedder.init_balltree(cosine_distance)
@@ -223,6 +227,7 @@ def optimize(population,
     # load the pre-trained modules
     act_net, rt1_net, rxn_net, rt2_net = checkpoints
 
+    print("Data loaded")
     func = partial(processor,
                    building_blocks=bblocks,
                    bb_dict=bb_dict,

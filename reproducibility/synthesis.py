@@ -23,10 +23,6 @@ def wrapper_decoder(smiles: str, **kwargs) -> Tuple[str, float, SyntheticTree]:
     try:
         smi, similarity, tree, action = synthetic_tree_decoder_greedy_search(
             z_target=emb,
-            rxn_template="hb",
-            n_bits=4096,
-            beam_width=3,
-            max_step=15,
             **kwargs
         )
     except Exception as e:
@@ -71,7 +67,11 @@ def synthesis(targets: list[str],
                            reactant1_net=rt1_net,
                            rxn_net=rxn_net,
                            reactant2_net=rt2_net,
-                           bb_emb=bb_emb)
+                           bb_emb=bb_emb,
+                           rxn_template="hb",
+                           n_bits=4096,
+                           beam_width=3,
+                           max_step=15)
 
     # Decode queries, i.e. the target molecules.
     print(f"Start to decode {len(targets)} target molecules.")

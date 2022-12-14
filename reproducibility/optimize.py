@@ -1,20 +1,26 @@
 """
-Generates synthetic trees where the root molecule optimizes for a specific objective
-based on Therapeutics Data Commons (TDC) oracle functions.
-Uses a genetic algorithm to optimize embeddings before decoding.
-"""  # TODO: Refactor/Consolidate with generic inference script
+This script is a rewriting of script/optimize_ga.py such that it can be used in a notebook.
+
+A bug with the parallelization has also been fixed
+"""
 import json
 import multiprocessing as mp
 import time
 from functools import partial
+from pathlib import Path
 
 import numpy as np
 from tdc import Oracle
 
+from synnet.MolEmbedder import MolEmbedder
 from synnet.encoding.distances import cosine_distance
 from synnet.encoding.fingerprints import mol_fp
+from synnet.models.mlp import MLP
+from synnet.utils.data_utils import ReactionSet
 from synnet.utils.ga_utils import crossover, mutation
 from synnet.utils.predict_utils import synthetic_tree_decoder, tanimoto_similarity
+
+from file_utils import smile
 
 
 def processor(emb, **kwargs):
@@ -197,20 +203,37 @@ def mut_probability_scheduler(n, total):
         return 0.5
 
 
-def optimize(starting_smiles,
-             bblocks,
-             rxns_collection,
-             checkpoints,
-             mol_embedder,
-             output_dir,
-             cpu_cores,
-             num_gen,
-             objective,
-             num_offspring):
+def optimize(starting_smiles: list[smile],
+             bblocks: list[smile],
+             rxns_collection: ReactionSet,
+             checkpoints: list[MLP],
+             mol_embedder: MolEmbedder,
+             output_dir: Path,
+             num_gen: int,
+             objective: str,
+             num_offspring: int,
+             nbits,
+             rxn_template,
+             cpu_cores: int):
+    """
+    Optimize given smiles with the model
+
+    Args:
+        starting_smiles: Smiles of the molecules to optimize
+        bblocks: Building blocks (filtered) of the model
+        rxns_collection: Reactions set
+        checkpoints: Checkpoints of the model
+        mol_embedder: Molecule Embedder
+        output_dir: Directory to output results of the optimization
+        num_gen: Number of successive generation to do
+        objective: Objective function to optimize
+        num_offspring: Number of offsprings to generate each iteration
+        nbits: Length of fingerprint
+        rxn_template: Template of the reactions
+        cpu_cores: Number of CPU cores to use
+    """
     print("Start.")
     # define some constants (here, for the Hartenfeller-Button test set)
-    nbits = 4096
-    rxn_template = "hb"
 
     population = np.array([mol_fp(smi, 2, nbits) for smi in starting_smiles])
 

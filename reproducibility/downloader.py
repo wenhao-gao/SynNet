@@ -8,30 +8,34 @@ import pandas as pd
 from rdkit import Chem
 
 from synnet.data_generation.preprocessing import BuildingBlockFileHandler
-from synnet.models.common import find_best_model_ckpt, load_mlp_from_ckpt
+from synnet.models.mlp import MLP
 
+# Where the intermediates file of the downloader are store
 intermediates_path = Path('.') / "intermediates"
+# Where the downloaded files are stored
 download_path = intermediates_path / "downloads"
 
 intermediates_path.mkdir(exist_ok=True)
 download_path.mkdir(exist_ok=True)
 
 
-def save_smiles(smiles, output_path):
-    df = pd.DataFrame(smiles, columns=["smiles"])
-    df.to_csv(output_path, index=False, compression="gzip")
+def download_file(url: str, output: Path, force: bool, progress_bar: bool = True) -> Path:
+    """
+    Download a file and store it in the provided output path.
 
+    If the file already exist, it will not be downloaded. This can be bypassed with the force flag.
 
-def load_smiles(output_path):
-    return pd.read_csv(output_path)["smiles"]
+    A progress bar will be displayed, it can be disabled.
 
+    Args:
+        url: The url of the file to download
+        output: Where to store the downloaded file, can be a directory
+        force: If True and the file already exists, it will be re-downloaded
+        progress_bar (True): If True, a progress bar of the download will be displayed
 
-def load_checkpoints(checkpoint_path: Path):
-    ckpt_files = [find_best_model_ckpt(str(checkpoint_path / model)) for model in "act rt1 rxn rt2".split()]
-    return [load_mlp_from_ckpt(str(file)) for file in ckpt_files]
-
-
-def download_file(url: str, output: Path, force: bool, progress_bar=True) -> Path:
+    Returns:
+        The Path to the downloaded file
+    """
     # Make an HTTP request within a context manager
     with requests.get(url, stream=True) as r:
         # Retrieve file name and update output if needed
@@ -45,7 +49,7 @@ def download_file(url: str, output: Path, force: bool, progress_bar=True) -> Pat
         else:
             name = output.name
 
-        if should_skip(name, "downloade", output, force):
+        if should_skip(name, "download", output, force):
             return output
 
         # check header to get content length, in bytes
@@ -64,7 +68,18 @@ def download_file(url: str, output: Path, force: bool, progress_bar=True) -> Pat
         return output
 
 
-def convert_sdf_to_smiles(input_path: Path, sample=None):
+def convert_sdf_to_smiles(input_path: Path, sample: int = None) -> list[smile]:
+    """
+    Convert an input sdf file to a smiles list
+
+    Args:
+        input_path: The path to the sdf file
+        sample: (Optional) Number of smiles to extract from the sdf file.
+                If it is not set, every smiles will be extracted
+
+    Returns:
+        A list containing the smiles
+    """
     print("Loading sdf...  ", end="")
     supplier = Chem.SDMolSupplier(str(input_path))
     size = len(supplier)
@@ -79,9 +94,61 @@ def convert_sdf_to_smiles(input_path: Path, sample=None):
     return [Chem.MolToSmiles(mol, canonical=True, isomericSmiles=False) for mol in mols]
 
 
-def get_building_blocks(project_root: Path, force=False) -> list[str]:
+def get_original_checkpoints(project_root: Path, force=False) -> list[MLP]:
     """
-    Download .sdf file containing the molecule building blocks to train the model
+    Retrieve the original checkpoint of the model trained by the paper's Authors
+
+    Download and process it if needed. If the file is already present, it will not be recomputed.
+    But you can set force to True to bypass any existing intermediate file.
+
+    Args:
+        project_root: Path to the project root
+        force (False): If set, any stored file will be bypassed
+
+    Returns:
+        A list containing the checkpoints
+    """
+    tar_file = download_path / "original_checkpoints.tar.gz"
+    checkpoint_path = project_root / "original_checkpoints"
+
+    # Check that it does not exist yet
+    if should_skip("original_checkpoints", "compute", checkpoint_path, force):
+        return load_checkpoints(checkpoint_path)
+
+    # retrieve the checkpoint tar file
+    download_file("https://figshare.com/ndownloader/files/31067692", tar_file, force)
+    # extract it
+    extract_output = extract_tar(tar_file, intermediates_path, force)
+    checkpoint_temp_path = extract_output / "hb_fp_2_4096_256"
+
+    # move original_checkpoints to their respective folders
+    checkpoint_path.mkdir()
+
+    for model in ["act", "rt1", "rxn", "rt2"]:
+        model_path = checkpoint_path / model
+        model_path.mkdir()
+
+        shutil.move(
+            checkpoint_temp_path / f"{model}.ckpt",
+            model_path / "ckpts.dummy-val_loss=0.00.ckpt"
+        )
+
+    return load_checkpoints(checkpoint_path)
+
+
+def get_building_blocks(project_root: Path, force=False) -> list[smile]:
+    """
+    Retrieve the building blocks smiles.
+
+    Download and process it if needed. If the file is already present, it will not be recomputed.
+    But you can set force to True to bypass any existing intermediate file.
+
+    Args:
+        project_root: Path to the project root
+        force (False): If set, any stored file will be bypassed
+
+    Returns:
+        A list containing the building block smiles
     """
 
     output_path = project_root / "data" / "assets" / "building-blocks" / "enamine-us-smiles.csv.gz"
@@ -100,14 +167,22 @@ def get_building_blocks(project_root: Path, force=False) -> list[str]:
     return smiles
 
 
-def get_chembl_dataset(project_root: Path, sample_size=None, force=False) -> list[str]:
+def get_chembl_dataset(project_root: Path, sample_size: int = None, force=False) -> list[smile]:
     """
-    Download file containing a sample from ChEMBL database.
+    Retrieve the ChEMBL smiles.
 
-    Original source: https://ftp.ebi.ac.uk/pub/databases/chembl/ChEMBLdb/latest/
+    Website: https://ftp.ebi.ac.uk/pub/databases/chembl/ChEMBLdb/latest/
+
+    Download and process it if needed. If the file is already present, it will not be recomputed.
+    But you can set force to True to bypass any existing intermediate file.
 
     Args:
-        sample_size: number of molecules to sample from full dataset
+        project_root: Path to the project root
+        sample_size (Optional): If set, only a sample of the dataset will be retrieved
+        force: If set, any stored file will be bypassed
+
+    Returns:
+        A list containing the ChEMBL smiles
     """
 
     sdf_file = intermediates_path / "chembl_31.sdf"
@@ -137,9 +212,20 @@ def get_chembl_dataset(project_root: Path, sample_size=None, force=False) -> lis
 
 def get_zinc_dataset(project_root: Path, sample_size=None, force=False) -> list[str]:
     """
-    Download file containing a sample of drug-like molecules from ZINC15 database.
+    Retrieve the ZINC smiles.
 
     Website: https://zinc.docking.org/tranches/home/
+
+    Download and process it if needed. If the file is already present, it will not be recomputed.
+    But you can set force to True to bypass any existing intermediate file.
+
+    Args:
+        project_root: Path to the project root
+        sample_size (Optional): If set, only a sample of the dataset will be retrieved
+        force: If set, any stored file will be bypassed
+
+    Returns:
+        A list containing the ZINC smiles
     """
 
     urls_path = project_root / "reproducibility" / "ZINC-downloader-2D.csv"
@@ -200,32 +286,3 @@ def get_zinc_dataset(project_root: Path, sample_size=None, force=False) -> list[
     save_smiles(smiles, output_path)
 
     return smiles
-
-
-def get_original_checkpoints(project_root: Path, force=False) -> list:
-    tar_file = download_path / "original_checkpoints.tar.gz"
-    checkpoint_path = project_root / "original_checkpoints"
-
-    # Check that it does not exist yet
-    if should_skip("original_checkpoints", "compute", checkpoint_path, force):
-        return load_checkpoints(checkpoint_path)
-
-    # retrieve the checkpoint tar file
-    download_file("https://figshare.com/ndownloader/files/31067692", tar_file, force)
-    # extract it
-    extract_output = extract_tar(tar_file, intermediates_path, force)
-    checkpoint_temp_path = extract_output / "hb_fp_2_4096_256"
-
-    # move original_checkpoints to their respective folders
-    checkpoint_path.mkdir()
-
-    for model in ["act", "rt1", "rxn", "rt2"]:
-        model_path = checkpoint_path / model
-        model_path.mkdir()
-
-        shutil.move(
-            checkpoint_temp_path / f"{model}.ckpt",
-            model_path / "ckpts.dummy-val_loss=0.00.ckpt"
-        )
-
-    return load_checkpoints(checkpoint_path)

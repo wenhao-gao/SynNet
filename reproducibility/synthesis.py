@@ -1,3 +1,8 @@
+"""
+This script is a rewriting of script/20-predict-targets.py such that it can be used in a notebook.
+
+A bug with the parallelization has also been fixed
+"""
 import multiprocessing as mp
 import sys
 from functools import partial
@@ -9,8 +14,11 @@ import pandas as pd
 
 from synnet.encoding.distances import cosine_distance
 from synnet.MolEmbedder import MolEmbedder
+from synnet.models.mlp import MLP
 from synnet.utils.data_utils import ReactionSet, SyntheticTree, SyntheticTreeSet
 from synnet.utils.predict_utils import mol_fp, synthetic_tree_decoder_greedy_search
+
+from file_utils import smile
 
 
 def wrapper_decoder(smiles: str, **kwargs) -> Tuple[str, float, SyntheticTree]:
@@ -38,13 +46,33 @@ def wrapper_decoder(smiles: str, **kwargs) -> Tuple[str, float, SyntheticTree]:
     return smi, similarity, tree
 
 
-def synthesis(targets: list[str],
-              bblocks: list[str],
-              checkpoints: list,
-              rxn_collection: ReactionSet,
+def synthesis(targets: list[smile],
+              bblocks: list[smile],
+              checkpoints: list[MLP],
+              rxns_collection: ReactionSet,
               mol_embedder: MolEmbedder,
               output_dir: Path,
+              rxn_template: str,
+              n_bits: int,
+              beam_width: int,
+              max_step: int,
               cpu_cores: int):
+    """
+    Generate synthetic trees for a set of specified query molecules.
+
+    Args:
+        targets: Target molecules (as smiles)
+        bblocks: Building blocks (filtered) of the model
+        checkpoints: Checkpoints of the model
+        rxns_collection: Reactions set
+        mol_embedder: Molecule Embedder
+        output_dir: Directory to output results of the synthesis
+        rxn_template: Template of the reactions
+        n_bits: Length of fingerprint
+        beam_width: Beam width
+        max_step: Max number of steps
+        cpu_cores: Number of CPU cores to use
+    """
     print("Start.")
 
     # A dict is used as lookup table for 2nd reactant during inference:
@@ -61,26 +89,23 @@ def synthesis(targets: list[str],
     wrapper_func = partial(wrapper_decoder,
                            building_blocks=bblocks,
                            bb_dict=bblocks_dict,
-                           reaction_templates=rxn_collection.rxns,
+                           reaction_templates=rxns_collection.rxns,
                            mol_embedder=bblocks_mol_embedder.kdtree,
                            action_net=act_net,
                            reactant1_net=rt1_net,
                            rxn_net=rxn_net,
                            reactant2_net=rt2_net,
                            bb_emb=bb_emb,
-                           rxn_template="hb",
-                           n_bits=4096,
-                           beam_width=3,
-                           max_step=15)
+                           rxn_template=rxn_template,
+                           n_bits=n_bits,
+                           beam_width=beam_width,
+                           max_step=max_step)
 
     # Decode queries, i.e. the target molecules.
     print(f"Start to decode {len(targets)} target molecules.")
-    if cpu_cores == 1:
-        results = [wrapper_func(smi) for smi in targets]
-    else:
-        with mp.Pool(processes=cpu_cores) as pool:
-            print(f"Starting MP with ncpu={cpu_cores}")
-            results = pool.map(wrapper_func, targets)
+    with mp.Pool(processes=cpu_cores) as pool:
+        print(f"Starting MP with ncpu={cpu_cores}")
+        results = pool.map(wrapper_func, targets)
     print("\nFinished decoding.")
 
     # Print some results from the prediction

@@ -87,7 +87,7 @@ class BuildingBlockFileHandler:
         file = (file_no_ext).with_suffix(".csv.gz")
         # Save
         df = pd.DataFrame({"SMILES": building_blocks})
-        df.to_csv(file, compression="gzip")
+        df.to_csv(file, compression="gzip",index=False)
         return None
 
     def save(self, file: str, building_blocks: list[str]):
@@ -112,6 +112,11 @@ class ReactionTemplateFileHandler:
             raise ValueError("Not all reaction templates are valid.")
 
         return rxn_templates
+
+    def save(self,file: str, rxn_templates: list[str]):
+        """Save reaction templates to file."""
+        with open(file, "wt") as f:
+            f.writelines(t + '\n' for t in rxn_templates)
 
     def _validate(self, rxn_template: str) -> bool:
         """Validate reaction templates.

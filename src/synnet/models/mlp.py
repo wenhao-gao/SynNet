@@ -132,7 +132,7 @@ class MLP(pl.LightningModule):
             y_hat = torch.argmax(y_hat, axis=1)
             accuracy = (y_hat == y).sum() / len(y)
             loss = 1 - accuracy
-        elif self.valid_loss[:11] == "nn_accuracy":
+        elif self.valid_loss == "nn_accuracy":
             # NOTE: Very slow!
             # Performing the knn-search can easily take a couple of minutes,
             # even for small datasets.

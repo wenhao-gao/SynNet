@@ -1,145 +1,160 @@
+import logging
+import subprocess
+import sys
+import tempfile
 from pathlib import Path
-from typing import Union
 
-from synnet.utils.data_utils import NodeChemical, NodeRxn, SyntheticTree
+from jinja2 import Template
+
+from synnet.utils.data_utils import NodeChemical, SyntheticTree
 from synnet.visualize.drawers import MolDrawer
-from synnet.visualize.writers import subgraph
+
+logger = logging.getLogger(__file__)
+
+GRAPHVIZ_TMPLT = """
+digraph {
+    size="8,5!"
+    layout="dot"
+    rankdir="BT"
+    fontsize="12pt"
+    font="Helvetica"
+    node [shape=box]
+
+    // Nodes
+    {% for node in nodes %}
+    {{node.id}} [
+        label=""
+        color="{{node.color}}"
+        image="{{node.filename}}"
+    ]
+    {% endfor %}
+    // End node added manually
+    nend [
+        shape=plaintext,
+        label="END",
+        fontsize="10pt"
+    ]
+
+    // Edges
+    {% for node_pair in edges %}
+    n{{ node_pair[0] }} -> n{{ node_pair[1] }}
+    {% endfor %}
+
+    // TODO: Add target on same rank as root mol
+
+}
+"""
 
 
 class SynTreeVisualizer:
-    actions_taken: dict[int, str]
-    CHEMICALS: dict[str, NodeChemical]
-    outfolder: Union[str, Path]
-    version: int
+    def __init__(self, drawer: MolDrawer = MolDrawer()):
+        self._check_dot_installation()
+        self.drawer = drawer  # must implement plot(mol: Chem.Molecule) -> {smiles: filename}
 
-    ACTIONS = {
-        0: "Add",
-        1: "Expand",
-        2: "Merge",
-        3: "End",
-    }
+        # Atrributes that get filled for a SynTree
+        self._nodes: list[dict[str, str]]
+        self._edges: list[tuple[int, int]]
+        self.__lookup_nodes_from_smiles: dict[str, NodeChemical]
 
-    def __init__(self, syntree: SyntheticTree, outfolder: str = "./syntree-viz/st"):
-        self.syntree = syntree
-        self.actions_taken = {
-            depth: self.ACTIONS[action] for depth, action in enumerate(syntree.actions)
-        }
-        self.CHEMICALS = {node.smiles: node for node in syntree.chemicals}
+    def _check_dot_installation(self) -> None:
+        """Check if dot is installed and how to call it."""
+        # Dermine if on Windows or unix:
+        self._dot_cmd = "dot" + (".exe" if sys.platform.startswith("win") else "")
 
-        # Placeholder for images for molecues.
-        self.drawer: Union[MolDrawer, None]
-        self.molecule_filesnames: Union[None, dict[str, str]] = None
-
-        # Folders
-        outfolder = Path(outfolder)
-        self.version = self._get_next_version(outfolder)
-        self.path = outfolder.with_name(outfolder.name + f"_{self.version}")
+        try:
+            subprocess.run(
+                [self._dot_cmd, "-V"],
+                check=True,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
+        except Exception as e:
+            raise RuntimeError(
+                f"Cannot find `{self._dot_cmd}`. Install from https://graphviz.org/."
+            )
         return None
 
-    def _get_next_version(self, dir: str) -> int:
-        root_dir = Path(dir).parent
-        name = Path(dir).name
+    def _plot(self, syntree: SyntheticTree):
+        moldrawer = self.drawer.plot([node.smiles for node in syntree.chemicals])
+        return moldrawer
 
-        existing_versions = []
-        for d in Path(root_dir).glob(f"{name}_*"):
-            d = str(d.resolve())
-            existing_versions.append(int(d.split("_")[1]))
-
-        if len(existing_versions) == 0:
-            return 0
-
-        return max(existing_versions) + 1
-
-    def with_drawings(self, drawer: MolDrawer):
-        """Init `MolDrawer` to plot molecules in the nodes."""
-        self.path.mkdir(parents=True)
-        self.drawer = drawer(self.path)
-        return self
-
-    def plot(self):
-        """Plots molecules via `self.drawer.plot()`."""
-        if self.drawer is None:
-            raise ValueError("Must initialize drawer beforehand.")
-        self.drawer.plot(self.CHEMICALS)
-        self.molecule_filesnames = self.drawer.get_molecule_filesnames()
-        return self
-
-    def _define_chemicals(
-        self,
-        chemicals: dict[str, NodeChemical] = None,
-    ) -> list[str]:
-        chemicals = self.CHEMICALS if chemicals is None else chemicals
-
-        if self.drawer.outfolder is None or self.molecule_filesnames is None:
-            raise NotImplementedError("Must provide drawer via `_with_drawings()` before plotting.")
-
-        out: list[str] = []
-
-        for node in chemicals.values():
-            name = f'"node.smiles"'
-            name = f'<img src=""{self.drawer.outfolder.name}/{self.molecule_filesnames[node.smiles]}.svg"" height=75px/>'
-            classdef = self._map_node_type_to_classdef(node)
-            info = f"n{node.index}[{name}]:::{classdef}"
-            out += [info]
-        return out
-
-    def _map_node_type_to_classdef(self, node: NodeChemical) -> str:
-        """Map a node to pre-defined mermaid class for styling."""
+    def get_node_color(self, node: NodeChemical) -> str:
         if node.is_leaf:
-            classdef = "buildingblock"
+            color = "#fcbf49"  # oragne
         elif node.is_root:
-            classdef = "final"
+            color = "#d62828"  # red
         else:
-            classdef = "intermediate"
-        return classdef
+            color = "#588157"  # green
+        return color
 
-    def _write_reaction_connectivity(
-        self, reactants: list[NodeChemical], product: NodeChemical
-    ) -> list[str]:
-        """Write the connectivity of the graph.
-        Unimolecular reactions have one edge, bimolecular two.
+    def _get_nodes(self, syntree: SyntheticTree):
+        self.drawer._lookup
+        nodes = []
+        for i, (smi, filename) in enumerate(self.drawer._lookup.items()):
+            node = self.__lookup_nodes_from_smiles[smi]
+            nodes += [
+                {"color": self.get_node_color(node), "filename": filename, "id": f"n{node.index}"}
+            ]
+        self._nodes = nodes
+        return nodes
 
-        Examples:
-            n1 --> n3
-            n2 --> n3
-        """
-        NODE_PREFIX = "n"
-        r1, r2 = reactants
-        out = [f"{NODE_PREFIX}{r1.index} --> {NODE_PREFIX}{product.index}"]
-        if r2 is not None:
-            out += [f"{NODE_PREFIX}{r2.index} --> {NODE_PREFIX}{product.index}"]
-        return out
+    def _get_edges(self, syntree: SyntheticTree):
+        edges = []
+        for action_id, rxn in zip(syntree.actions, syntree.reactions):
+            # Info: Recall that "end"-action has no reaction, reactions is 1 shorter than actions.
 
-    def write(self) -> list[str]:
-        """Write markdown with mermaid block."""
-        # 1. Plot images
-        self.plot()
-        # 2. Write markdown (with reference to image files.)
-        rxns: list[NodeRxn] = self.syntree.reactions
-        text = []
+            smi_r1 = rxn.child[0]
+            smi_r2 = rxn.child[1] if len(rxn.child) == 2 else None
+            smi_p = rxn.parent
 
-        # Add node definitions
-        text.extend(self._define_chemicals(self.CHEMICALS))
+            # Get nodes corresponding to SMILES
+            r1 = self.__lookup_nodes_from_smiles[smi_r1]
+            r2 = self.__lookup_nodes_from_smiles.get(smi_r2, None)
+            p = self.__lookup_nodes_from_smiles[smi_p]
 
-        # Add paragraphs (<=> actions taken)
-        for i, action in self.actions_taken.items():
-            if action == "End":
-                continue
-            rxn = rxns[i]
-            product: str = rxn.parent
-            reactant1: str = rxn.child[0]
-            reactant2: str = rxn.child[1] if rxn.rtype == 2 else None
+            # Add edges
+            edges.append((r1.index, p.index))
+            if r2 is not None:
+                edges.append((r2.index, p.index))
 
-            @subgraph(f'"{i:>2d} : {action}"')
-            def __printer():
-                return self._write_reaction_connectivity(
-                    [self.CHEMICALS.get(reactant1), self.CHEMICALS.get(reactant2)],
-                    self.CHEMICALS.get(product),
-                )
+        # Handle end action:
+        # Product of last reaction is the root of the tree
+        smi_p = syntree.reactions[-1].parent
+        p = self.__lookup_nodes_from_smiles[smi_p]
+        edges.append((p.index, "end"))
 
-            out = __printer()
-            text.extend(out)
-        return text
+        self._edges = edges
+        return edges
+
+    def to_image(self, syntree: SyntheticTree, file: str):
+        # Helper lookup table: map smiles to node
+        # TODO: Fix this and use a proper index/hash to indetify nodes in the syntree.
+        #       This would also fix a bug anyways if two nodes share the same SMILES.
+        self.__lookup_nodes_from_smiles = {node.smiles: node for node in syntree.chemicals}
+
+        file = Path(file).with_suffix(".png")
+
+        # Plot all nodes
+        self.drawer.plot([node.smiles for node in syntree.chemicals])
+
+        nodes = self._get_nodes(syntree)
+        edges = self._get_edges(syntree)
+
+        template = Template(GRAPHVIZ_TMPLT)
+        text = template.render(edges=edges, nodes=nodes)
+
+        _, graphvizfile = tempfile.mkstemp(dir=self.drawer.tmpdir, suffix=".dot")
+        Path(graphvizfile).write_text(text)
+
+        # Use `dot` to convert to png
+        # TODO: Figure out how to embedd svg in graphviz
+        # dot -Tpng -o tmp.png tmp.dot
+        logger.debug(
+            f"""Will execute: {' '.join(["dot", "-Tpng", "-o", f"{file}", graphvizfile])}"""
+        )
+        subprocess.run(["dot", "-Tpng", "-o", f"{file}", graphvizfile])
+
+        return self
 
 
 def demo():
@@ -148,28 +163,16 @@ def demo():
     import json
 
     infile = "tests/assets/syntree-small.json"
-    with open(infile, "rt") as f:
-        data = json.load(f)
+    data = json.loads(Path(infile).read_text())
 
-    st = SyntheticTree()
-    st.read(data)
+    st = SyntheticTree.from_dict(data)
 
     from synnet.visualize.drawers import MolDrawer
     from synnet.visualize.visualizer import SynTreeVisualizer
-    from synnet.visualize.writers import SynTreeWriter
 
-    outpath = Path("./figures/syntrees/generation/st")
-    outpath.mkdir(parents=True, exist_ok=True)
-
-    # 2. Plot & Write mermaid markup diagram
-    stviz = SynTreeVisualizer(syntree=st, outfolder=outpath).with_drawings(drawer=MolDrawer)
-    mermaid_txt = stviz.write()
-    # 3. Write everything to a markdown doc
-    outfile = stviz.path / "syntree.md"
-    SynTreeWriter().write(mermaid_txt).to_file(outfile)
-    print(f"Generated markdown file.")
-    print(f"  Input file:", infile)
-    print(f"  Output file:", outfile)
+    # 2. Plot & Write graphviz diagram to file
+    stviz = SynTreeVisualizer(drawer=MolDrawer()).to_image(st, "demo.png")
+    print("Wrote syntree to demo.png")
     return None
 
 

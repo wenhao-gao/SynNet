@@ -250,7 +250,7 @@ class SynTreeGenerator:
             raise NoBiReactionAvailableError(f"No reaction available for {reactants}.")
         return mask
 
-    def generate(self, max_depth: int = 15, retries: int = 3):
+    def generate(self, max_depth: int = 8, retries: int = 3):
         """Generate a syntree by random sampling."""
 
         # Init
@@ -420,14 +420,14 @@ class MorganFingerprintEncoder(Encoder):
         if not allow_none and smi is None:
             raise ValueError(f"SMILES ({smi=}) cannot be None if `{allow_none=}`.")
         if smi is None:
-            fp = np.zeros((1, self.nbits))  # (d)
+            fp = np.zeros((1, self.nbits))  # (1,d)
         else:
             mol = Chem.MolFromSmiles(smi)  # TODO: sanity check mol here or use datmol?
             bv = Chem.AllChem.GetMorganFingerprintAsBitVect(mol, self.radius, self.nbits)
             fp = np.empty(self.nbits)
             Chem.DataStructs.ConvertToNumpyArray(bv, fp)
-            # fp = fp[None, :]
-        return fp  # (d,)
+            fp = fp[None, :]
+        return fp  # (1,d)
 
 
 class IdentityIntEncoder(Encoder):
@@ -481,7 +481,7 @@ class SynTreeFeaturizer:
             # 1. Encode "state"
             z_root_mol_1 = self.mol_embedder.encode(root_mol_1)
             z_root_mol_2 = self.mol_embedder.encode(root_mol_2)
-            state = np.concatenate((z_root_mol_1, z_root_mol_2, z_target_mol), axis=1)  # (1,3d)
+            state = np.atleast_2d(np.concatenate((z_root_mol_1, z_root_mol_2, z_target_mol), axis=1))  # (1,3d)
 
             # 2. Encode "super"-step
             if action == 3:  # end

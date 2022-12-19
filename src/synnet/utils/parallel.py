@@ -2,7 +2,7 @@
 """
 import logging
 from typing import Callable, Iterable, Optional
-
+from synnet.config import MAX_PROCESSES
 from tqdm import tqdm
 
 
@@ -64,7 +64,7 @@ def chunked_parallel(
     input_list: Iterable,
     function: Callable,
     chunks: Optional[int] = None,
-    max_cpu: int = 4,
+    max_cpu: int = MAX_PROCESSES,
     timeout: int = 4000,
     max_retries=3,
     verbose: bool = False,

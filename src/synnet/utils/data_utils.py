@@ -646,7 +646,16 @@ class SyntheticTree:
     @property
     def is_valid(self):
         """Valid if it has "actions" and has been ended properly with "end"-action"""
-        return self.actions.__len__() > 0 and self.actions[-1] == 3
+        return self.num_actions > 0 and self.actions[-1] == 3
+
+    @property
+    def num_actions(self):
+        """Number of actions
+        Info:
+            Thee depth of a tree is not a perfect metric for complexity,
+            as a 2nd subtree that gets merged does not add depth.
+        """
+        return len(self.actions)
 
 
 class SyntheticTreeSet:

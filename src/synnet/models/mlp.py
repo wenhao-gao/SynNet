@@ -47,7 +47,7 @@ class MLP(pl.LightningModule):
         if not optimizer in self.OPTIMIZERS:
             raise ValueError(f"Unsupported optimizer {optimizer}")
         if num_dropout_layers > num_layers - 2:
-            raise Warning("Requested more dropout layers than there are linear layers.")
+            raise Warning("Requested more dropout layers than there are hidden layers.")
         if class_weights is not None and task == "regression":
             raise Warning(f"Provided argument `{class_weights=}` for a regression task")
 
@@ -65,18 +65,20 @@ class MLP(pl.LightningModule):
 
         # Create modules
         modules = []
+
+        # Input layer
         modules.append(nn.Linear(input_dim, hidden_dim))
-        modules.append(nn.BatchNorm1d(hidden_dim))
         modules.append(nn.ReLU())
 
+        # Hidden layers
         for i in range(num_layers - 2):  # "-2" for first & last layer
             modules.append(nn.Linear(hidden_dim, hidden_dim))
-            modules.append(nn.BatchNorm1d(hidden_dim))
             modules.append(nn.ReLU())
-            # Add dropout?
-            if i > num_layers - 3 - num_dropout_layers:
+            # Add dropout, starting from last layer
+            if i >= num_layers - 2 - num_dropout_layers:
                 modules.append(nn.Dropout(dropout))
 
+        # Output layer
         modules.append(nn.Linear(hidden_dim, output_dim))
 
         self.layers = nn.Sequential(*modules)
@@ -130,10 +132,11 @@ class MLP(pl.LightningModule):
             y_hat = torch.argmax(y_hat, axis=1)
             accuracy = (y_hat == y).sum() / len(y)
             loss = 1 - accuracy
-        elif self.valid_loss[:11] == "nn_accuracy":
+        elif self.valid_loss == "nn_accuracy":
             # NOTE: Very slow!
             # Performing the knn-search can easily take a couple of minutes,
             # even for small datasets.
+
             kdtree = self.molembedder.kdtree
             y = nn_search_list(y.detach().cpu().numpy(), kdtree)
             y_hat = nn_search_list(y_hat.detach().cpu().numpy(), kdtree)

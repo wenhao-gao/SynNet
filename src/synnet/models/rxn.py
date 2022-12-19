@@ -32,7 +32,7 @@ def get_args():
     parser.add_argument("--name", default=None, type=str)
     parser.add_argument("--project", default="synnet", type=str)
     parser.add_argument("--description", default="default config", type=str)
-    parser.add_argument("--group", default="act", type=str)
+    parser.add_argument("--group", default="rxn", type=str)
     parser.add_argument("--result_dir", default="results/ft/rxn", type=str)
 
     # Sweep?

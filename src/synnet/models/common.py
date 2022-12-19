@@ -126,6 +126,12 @@ def _load_mlp_from_iclr_ckpt(ckpt_file: str):
     """Load a model from a checkpoint for inference.
     Info: hparams were not saved, so we specify the ones needed for inference again."""
     model = Path(ckpt_file).parent.name  # assume "<dirs>/<model>/<file>.ckpt"
+    kwargs = {
+        "num_dropout_layers": 1,
+        "optimizer": "adam",
+        "learning_rate": 1e-4,
+        "val_freq": 10,
+    }
     if model == "act":
         model = MLP.load_from_checkpoint(
             ckpt_file,
@@ -135,6 +141,9 @@ def _load_mlp_from_iclr_ckpt(ckpt_file: str):
             num_layers=5,
             task="classification",
             dropout=0.5,
+            loss="cross_entropy",
+            valid_loss="accuracy",
+            **kwargs,
         )
     elif model == "rt1":
         model = MLP.load_from_checkpoint(
@@ -145,6 +154,9 @@ def _load_mlp_from_iclr_ckpt(ckpt_file: str):
             num_layers=5,
             task="regression",
             dropout=0.5,
+            loss="mse",
+            valid_loss="mse",  # Info: Used to be accuracy on kNN in embedding space, but that's very slow
+            **kwargs,
         )
     elif model == "rxn":
         model = MLP.load_from_checkpoint(
@@ -155,6 +167,9 @@ def _load_mlp_from_iclr_ckpt(ckpt_file: str):
             num_layers=5,
             task="classification",
             dropout=0.5,
+            loss="mse",
+            valid_loss="mse",  # Info: Used to be accuracy on kNN in embedding space, but that's very slow
+            **kwargs,
         )
     elif model == "rt2":
         model = MLP.load_from_checkpoint(
@@ -165,6 +180,9 @@ def _load_mlp_from_iclr_ckpt(ckpt_file: str):
             num_layers=5,
             task="regression",
             dropout=0.5,
+            loss="mse",
+            valid_loss="mse",  # Info: Used to be accuracy on kNN in embedding space, but that's very slow
+            **kwargs,
         )
 
     else:

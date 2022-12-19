@@ -31,7 +31,7 @@ def clean(df):
 
 def to_file(df, file):
 
-    df.to_csv(file, sep="\t")
+    df.to_csv(file, sep="\t",index=False)
     print(f"Saved to: {file}")
     return None
 
